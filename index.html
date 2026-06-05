@@ -27,130 +27,152 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .ptab{font-size:11px;padding:3px 11px;border-radius:3px;border:none;cursor:pointer;color:var(--txt2);background:transparent;font-family:inherit;transition:all .12s}
 .ptab.on{background:#fff;color:var(--navy);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
 .update-lbl{font-size:10px;color:var(--txt3)}
-.btn-rerun{font-size:10px;padding:4px 11px;border-radius:var(--r);border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;transition:opacity .12s}
+.btn-rerun{font-size:10px;padding:4px 11px;border-radius:var(--r);border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;cursor:pointer;font-family:inherit;font-weight:600}
 .btn-rerun:hover{opacity:.82}
 
 /* ── AI 브리핑 ── */
-.brief-wrap{margin-bottom:12px;border-radius:var(--r);background:linear-gradient(135deg,#1a2440 0%,#111827 100%);overflow:hidden;box-shadow:0 4px 20px rgba(26,36,64,.3);position:relative}
-.brief-wrap::before{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%);pointer-events:none}
-.brief-inner{padding:16px 20px;position:relative;z-index:1}
-.brief-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.brief-label::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#6ee7b7;animation:pulse 2s infinite}
+.brief-wrap{margin-bottom:10px;border-radius:var(--r);background:linear-gradient(135deg,#1a2440 0%,#111827 100%);overflow:hidden;box-shadow:0 4px 20px rgba(26,36,64,.3);position:relative}
+.brief-wrap::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%);pointer-events:none}
+.brief-inner{padding:13px 18px;position:relative;z-index:1}
+.brief-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.brief-label::before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:#6ee7b7;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.brief-text{font-size:13px;color:rgba(255,255,255,.88);line-height:1.75;margin-bottom:12px}
+.brief-text{font-size:12.5px;color:rgba(255,255,255,.88);line-height:1.7;margin-bottom:9px}
 .brief-text strong{color:#fff}
-.brief-pills{display:flex;gap:6px;flex-wrap:wrap}
-.bpill{font-size:10px;padding:3px 10px;border-radius:20px;border:.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.75);background:rgba(255,255,255,.06)}
+.brief-pills{display:flex;gap:5px;flex-wrap:wrap}
+.bpill{font-size:9px;padding:2px 8px;border-radius:20px;border:.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.75);background:rgba(255,255,255,.06)}
 .bpill.hot{border-color:rgba(249,115,22,.5);color:#fdba74;background:rgba(249,115,22,.1)}
 .bpill.oem{border-color:rgba(16,185,129,.45);color:#6ee7b7;background:rgba(16,185,129,.09)}
 .bpill.warn{border-color:rgba(245,158,11,.45);color:#fcd34d;background:rgba(245,158,11,.09)}
 .bpill.info{border-color:rgba(96,165,250,.45);color:#93c5fd;background:rgba(96,165,250,.09)}
 
-/* ── 섹션 래퍼 ── */
-.section-wrap{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
-.section-hd{padding:10px 16px;border-bottom:.5px solid var(--bd);background:var(--s2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.section-title{font-size:13px;font-weight:700;color:var(--navy)}
-.section-meta{font-size:10px;color:var(--txt3)}
+/* ── 2열 메인 레이아웃 ── */
+.main-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+@media(max-width:900px){.main-2col{grid-template-columns:1fr}}
 
-/* ═══════════════════════════════════
-   트렌드 카드 그리드
-═══════════════════════════════════ */
-.t-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px;padding:10px}
-@media(max-width:860px){.t-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.t-grid{grid-template-columns:1fr}}
+/* ── 섹션 공통 ── */
+.section-wrap{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.section-hd{padding:9px 14px;border-bottom:.5px solid var(--bd);background:var(--s2);display:flex;align-items:center;justify-content:space-between}
+.section-title{font-size:12px;font-weight:700;color:var(--navy)}
+.section-meta{font-size:9px;color:var(--txt3)}
 
-.t-card{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;transition:box-shadow .15s}
-.t-card:hover{box-shadow:var(--shadow-h)}
+/* ── 최다 추천 OEM 배너 ── */
+.top-rec-banner{padding:10px 12px;border-bottom:.5px solid var(--bd);background:linear-gradient(to right,#f0f9ff,#f0fdf4)}
+.top-rec-label{font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+.top-rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.top-rec-card{background:#fff;border:.5px solid var(--bd);border-radius:5px;padding:8px 10px;cursor:pointer;transition:all .12s}
+.top-rec-card:hover{box-shadow:var(--shadow-h);border-color:#0891b2}
+.trc-rank{font-size:8px;font-weight:700;color:var(--txt3);margin-bottom:3px}
+.trc-name{font-size:11px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trc-row{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap}
+.trc-score{font-size:13px;font-weight:800;color:#10b981}
+.trc-trade{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#eff6ff;color:#1d4ed8;border:.5px solid #bfdbfe}
+.trc-count{font-size:9px;color:var(--txt3);margin-top:3px}
+.trc-certs{display:flex;gap:2px;flex-wrap:wrap;margin-top:4px}
 
-/* 카드 헤더 행 */
-.t-head{padding:11px 12px 9px;display:flex;gap:9px;align-items:flex-start}
+/* ── 더보기 버튼 ── */
+.more-btn-wrap{padding:10px 12px;border-top:.5px solid var(--bd);text-align:center}
+.more-btn{font-size:11px;padding:6px 20px;border-radius:var(--r);border:.5px solid var(--bd);background:var(--s1);color:var(--txt2);cursor:pointer;font-family:inherit;font-weight:500;width:100%;transition:all .12s}
+.more-btn:hover{background:var(--s2);color:var(--navy)}
+.more-btn:disabled{opacity:.4;cursor:default}
+
+/* ══════════════════════════════════
+   트렌드 카드
+══════════════════════════════════ */
+.t-item{border-bottom:.5px solid var(--bd)}
+.t-item:last-child{border-bottom:none}
+
+.t-head{display:flex;gap:8px;align-items:flex-start;padding:9px 12px 7px}
+.rank-badge{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.rb-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
+.rb-silver{background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff}
+.rb-bronze{background:linear-gradient(135deg,#b45309,#92400e);color:#fff}
+.rb-top10{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
+.rb-rest{background:var(--s2);color:var(--txt3)}
+
 .t-info{flex:1;min-width:0}
-.t-name-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}
+.t-name-row{display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap}
 .t-name{font-size:12px;font-weight:700;color:var(--txt)}
-.no-type-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:#fff1f2;border:.5px solid #fecdd3;color:#be123c;white-space:nowrap}
-.t-tags{display:flex;gap:3px;flex-wrap:wrap}
-.tag{font-size:9px;padding:1px 5px;border-radius:3px}
+.no-type{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;background:#fff1f2;border:.5px solid #fecdd3;color:#be123c;white-space:nowrap}
+.t-tags{display:flex;gap:2px;flex-wrap:wrap}
+.tag{font-size:8px;padding:1px 4px;border-radius:3px}
 .tag-cat{background:#dbeafe;color:#1e40af}
 .tag-func{background:#d1fae5;color:#065f46}
 .tag-ingr{background:#ede9fe;color:#5b21b6}
 
-/* 메트릭 열 */
-.t-metrics{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;min-width:80px}
-.growth-big{font-size:16px;font-weight:800;color:var(--acc)}
+.t-metrics{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.growth-big{font-size:15px;font-weight:800;color:var(--acc);line-height:1}
 .growth-lbl{font-size:8px;color:var(--txt3);text-align:right}
-.conf-row{display:flex;align-items:center;gap:4px}
-.conf-bg{width:48px;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
-.conf-fill{height:100%;border-radius:3px}
+.conf-row{display:flex;align-items:center;gap:3px}
+.conf-bg{width:40px;height:4px;background:var(--s2);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px}
 .conf-num{font-size:9px;font-weight:600;color:var(--txt2)}
-.opp-circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid currentColor}
-.opp-lbl{font-size:8px;color:var(--txt3);text-align:right}
+.opp-wrap{display:flex;align-items:baseline;gap:2px;justify-content:flex-end}
+.opp-num{font-size:14px;font-weight:800}
+.opp-lbl{font-size:8px;color:var(--txt3)}
 
-/* 추천 OEM 미리보기 행 */
-.t-oem-bar{padding:8px 12px;border-top:.5px solid var(--bd);background:#f9fafc;display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.t-oem-mini{padding:6px 8px;border:.5px solid var(--bd);border-radius:5px;background:#fff;cursor:pointer;transition:all .12s}
-.t-oem-mini:hover{border-color:var(--navy);background:#f0f4ff}
-.oem-mini-name{font-size:10px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
-.oem-mini-row{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.oem-mini-score{font-size:11px;font-weight:700}
-.oem-mini-trade{font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px}
-.trade-shadow{background:#e0f2fe;color:#0369a1}
-.trade-confirmed{background:#d1fae5;color:#065f46}
-.oem-mini-certs{display:flex;gap:2px;flex-wrap:wrap;margin-top:3px}
-.mc{font-size:8px;padding:0 4px;border-radius:2px;font-weight:600}
+/* OEM 미리보기 행 */
+.t-oem-bar{padding:5px 12px 6px;border-top:.5px solid var(--bd);background:#f9fafc;display:flex;gap:5px;flex-wrap:wrap}
+.t-oem-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:.5px solid var(--bd);border-radius:4px;background:#fff;cursor:pointer;font-size:10px;transition:all .12s;max-width:calc(50% - 4px)}
+.t-oem-chip:hover{border-color:var(--navy);background:#f0f4ff}
+.oc-name{font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+.oc-score{font-weight:700;flex-shrink:0}
+.oc-trade{font-size:8px;padding:1px 3px;border-radius:2px;flex-shrink:0}
+.oc-trade.shadow{background:#eff6ff;color:#1d4ed8}
+.oc-trade.confirmed{background:#d1fae5;color:#065f46}
 
-/* 선정 근거 간략 + 펼침 버튼 */
-.t-brief{padding:8px 12px;border-top:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;transition:background .1s}
+/* 간략 근거 + 펼침 */
+.t-brief{padding:6px 12px;border-top:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;transition:background .1s}
 .t-brief:hover{background:var(--s1)}
-.t-brief-txt{font-size:10px;color:var(--txt2);line-height:1.5;flex:1}
-.t-brief-txt strong{color:var(--txt);font-weight:600}
-.expand-arrow{font-size:10px;color:var(--txt3);flex-shrink:0;transition:transform .2s;user-select:none}
+.t-brief-txt{font-size:10px;color:var(--txt2);line-height:1.4;flex:1}
+.t-brief-txt b{color:var(--txt)}
+.expand-arrow{font-size:9px;color:var(--txt3);flex-shrink:0;transition:transform .2s;user-select:none}
 .expand-arrow.open{transform:rotate(180deg)}
 
-/* 트렌드 확장 상세 */
-.t-detail{padding:12px;background:#f0f4ff;border-top:.5px solid var(--bd);display:none;animation:fadeIn .15s ease}
+/* 트렌드 상세 */
+.t-detail{padding:10px 12px;background:#f4f7ff;border-top:.5px solid var(--bd);display:none;animation:fd .15s ease}
 .t-detail.open{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
-.detail-lbl{font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
-.score-5row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+@keyframes fd{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.detail-lbl{font-size:8px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.score-5row{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:10px}
 .s5-item{text-align:center}
-.s5-name{font-size:8px;color:var(--txt3);margin-bottom:3px}
-.s5-donut{position:relative;width:38px;height:38px;margin:0 auto 2px}
-.s5-svg{width:38px;height:38px;transform:rotate(-90deg)}
+.s5-name{font-size:8px;color:var(--txt3);margin-bottom:2px}
+.s5-donut{position:relative;width:34px;height:34px;margin:0 auto 2px}
+.s5-svg{width:34px;height:34px;transform:rotate(-90deg)}
 .s5-bg{fill:none;stroke:var(--s2);stroke-width:4}
 .s5-fg{fill:none;stroke-width:4;stroke-linecap:round}
-.s5-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
-.s5-max{font-size:8px;color:var(--txt3)}
-.reason-list{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.reason-item{display:flex;gap:6px;font-size:11px;color:var(--txt);line-height:1.5}
-.r-icon{flex-shrink:0}
-.risk-box{padding:7px 10px;border-radius:4px;font-size:11px;line-height:1.5;margin-bottom:10px}
+.s5-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.s5-max{font-size:7px;color:var(--txt3)}
+.reason-list{list-style:none;display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.reason-item{display:flex;gap:5px;font-size:10px;color:var(--txt);line-height:1.5}
+.risk-box{padding:6px 9px;border-radius:4px;font-size:10px;line-height:1.5;margin-bottom:8px}
 .risk-med{background:#fffbf0;border:.5px solid #fde68a;color:#713f12}
 .risk-low{background:#f0fdf4;border:.5px solid #a7f3d0;color:#065f46}
 .risk-high{background:#fff1f2;border:.5px solid #fecdd3;color:#9f1239}
-.src-row{display:flex;gap:4px;flex-wrap:wrap}
-.src-tag{font-size:9px;padding:1px 6px;border-radius:3px;background:#e0f2fe;color:#0369a1}
+.src-row{display:flex;gap:3px;flex-wrap:wrap}
+.src-tag{font-size:8px;padding:1px 5px;border-radius:3px;background:#e0f2fe;color:#0369a1}
+/* 출처 표시줄 */
+.t-src-bar{padding:2px 12px 4px;display:flex;align-items:center;gap:3px;flex-wrap:wrap;background:var(--s1);border-top:.5px solid var(--bd)}
+.t-src-lbl{font-size:8px;color:var(--txt3);flex-shrink:0}
+.src-tag-bn{font-size:8px;padding:1px 5px;border-radius:3px;background:#fdf4ff;color:#7e22ce;border:.5px solid #e9d5ff}
+.o-src-note{font-size:8px;color:var(--txt3);padding:3px 12px 5px;border-top:.5px solid var(--bd)}
 
-/* ═══════════════════════════════════
-   OEM 카드 그리드
-═══════════════════════════════════ */
-.o-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px;padding:10px}
-@media(max-width:860px){.o-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.o-grid{grid-template-columns:1fr}}
+/* ══════════════════════════════════
+   OEM 카드
+══════════════════════════════════ */
+.o-item{border-bottom:.5px solid var(--bd)}
+.o-item:last-child{border-bottom:none}
 
-.o-card{background:#fff;border:.5px solid var(--bd);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;transition:box-shadow .15s}
-.o-card:hover{box-shadow:var(--shadow-h)}
-
-/* OEM 카드 헤더 */
-.o-head{padding:11px 12px 9px;display:flex;gap:9px;align-items:flex-start}
+.o-head{display:flex;gap:8px;align-items:flex-start;padding:9px 12px 7px}
 .o-info{flex:1;min-width:0}
-.o-name-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.o-name-row{display:flex;align-items:center;gap:5px;margin-bottom:2px;flex-wrap:wrap}
 .o-name{font-size:12px;font-weight:700;color:var(--txt)}
-.trade-big{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.trade-big{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px}
 .trade-big.shadow{background:#eff6ff;color:#1d4ed8;border:.5px solid #bfdbfe}
 .trade-big.confirmed{background:#f0fdf4;color:#15803d;border:.5px solid #bbf7d0}
-.o-region{font-size:10px;color:var(--txt3);margin-bottom:6px}
-.o-cert-row{display:flex;gap:3px;flex-wrap:wrap}
-.cp{font-size:8px;padding:1px 5px;border-radius:3px;font-weight:600}
+.o-region{font-size:9px;color:var(--txt3);margin-bottom:5px}
+.o-cert-row{display:flex;gap:2px;flex-wrap:wrap}
+.cp{font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600}
 .cp-cgmp{background:#fee2e2;color:#991b1b}
 .cp-iso{background:#dbeafe;color:#1e40af}
 .cp-vegan{background:#d1fae5;color:#065f46}
@@ -158,49 +180,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .cp-otc{background:#ede9fe;color:#5b21b6}
 .cp-na{background:var(--s2);color:var(--txt3)}
 
-/* 오른쪽 점수 블록 */
-.o-score-block{flex-shrink:0;text-align:center;min-width:64px}
-.hs-num{font-size:26px;font-weight:800;line-height:1}
-.hs-lbl{font-size:8px;color:var(--txt3);margin-top:2px}
-.hs-sub{font-size:9px;font-weight:600;margin-top:4px}
+.o-score-block{flex-shrink:0;text-align:right;min-width:50px}
+.hs-num{font-size:22px;font-weight:800;line-height:1}
+.hs-lbl{font-size:8px;color:var(--txt3)}
 
-/* 발굴 사유 블록 */
-.o-reasons{padding:8px 12px;border-top:.5px solid var(--bd);background:#f9fafc;display:flex;flex-direction:column;gap:4px}
-.o-reason{display:flex;gap:6px;font-size:11px;color:var(--txt);line-height:1.5}
-.o-reason-icon{flex-shrink:0;font-size:12px}
+/* 발굴 사유 */
+.o-reasons{padding:6px 12px 7px;border-top:.5px solid var(--bd);background:#f9fafc;display:flex;flex-direction:column;gap:3px}
+.o-reason{display:flex;gap:5px;font-size:10px;color:var(--txt);line-height:1.5}
 
 /* 확장 버튼 */
-.o-expand-btn{padding:8px 12px;border-top:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s;background:#fff}
+.o-expand-btn{padding:7px 12px;border-top:.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s}
 .o-expand-btn:hover{background:var(--s1)}
-.o-expand-label{font-size:10px;color:var(--cyn);font-weight:500}
+.o-expand-lbl{font-size:10px;color:var(--cyn)}
 
 /* OEM 확장 상세 */
-.o-detail{padding:12px;background:#f0f4ff;border-top:.5px solid var(--bd);display:none;animation:fadeIn .15s ease}
+.o-detail{padding:10px 12px;background:#f4f7ff;border-top:.5px solid var(--bd);display:none;animation:fd .15s ease}
 .o-detail.open{display:block}
-.growth-stage-box{display:flex;align-items:center;gap:10px;background:#fff;border:.5px solid var(--bd);border-radius:4px;padding:8px 12px;margin-bottom:10px}
+.growth-stage-box{display:flex;align-items:center;gap:8px;background:#fff;border:.5px solid var(--bd);border-radius:4px;padding:7px 10px;margin-bottom:8px}
 .gs-block{flex:1;text-align:center}
-.gs-label{font-size:9px;color:var(--txt3);margin-bottom:2px}
-.gs-val{font-size:11px;font-weight:600;color:var(--navy)}
-.gs-arrow{font-size:20px;color:var(--cyn);flex-shrink:0}
-.rec-cat-list{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.rec-cat{font-size:10px;padding:3px 9px;border-radius:3px;background:#dbeafe;color:#1e40af;font-weight:500}
-.btn-db-det{font-size:10px;padding:4px 10px;border-radius:4px;border:.5px solid var(--bd);background:#fff;color:var(--txt);cursor:pointer;font-family:inherit}
+.gs-label{font-size:8px;color:var(--txt3);margin-bottom:2px}
+.gs-val{font-size:10px;font-weight:600;color:var(--navy)}
+.gs-arrow{font-size:16px;color:var(--cyn);flex-shrink:0}
+.rec-cat-list{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.rec-cat{font-size:9px;padding:2px 7px;border-radius:3px;background:#dbeafe;color:#1e40af;font-weight:500}
+.btn-db-det{font-size:10px;padding:3px 9px;border-radius:4px;border:.5px solid var(--bd);background:#fff;color:var(--txt);cursor:pointer;font-family:inherit}
 .btn-db-det:hover{background:var(--s2)}
 
-/* 뱃지 공통 */
-.badge{display:inline-block;font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px}
-.badge-grn{background:#d1fae5;color:#065f46}
-.badge-sky{background:#e0f2fe;color:#0369a1}
-
-/* rank badge */
-.rank-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
-.rb-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
-.rb-silver{background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff}
-.rb-bronze{background:linear-gradient(135deg,#b45309,#92400e);color:#fff}
-.rb-top10{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
-.rb-rest{background:var(--s2);color:var(--txt3)}
-
-.bottom-pad{height:28px}
+.bottom-pad{height:24px}
 </style>
 </head>
 <body>
@@ -214,6 +220,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
   <div class="hd-right">
     <span class="update-lbl" id="updateLbl"></span>
+    <span class="update-lbl" style="color:var(--txt3);border-left:.5px solid var(--bd);padding-left:8px">출처: 뷰티누리 · 네이버DataLab · 화해 · TikTok · 식약처</span>
     <div class="ptab-wrap" id="periodTabs">
       <button class="ptab" onclick="setPeriod('1m',this)">1개월</button>
       <button class="ptab on" onclick="setPeriod('6m',this)">6개월</button>
@@ -232,343 +239,218 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
   </div>
 </div>
 
-<!-- ══ AI 트렌드 예측 TOP20 ══ -->
-<div class="section-wrap">
-  <div class="section-hd">
-    <span class="section-title">📈 AI 화장품 트렌드 예측 TOP20</span>
-    <span class="section-meta" id="trendMeta"></span>
-  </div>
-  <div class="t-grid" id="trendList"></div>
-</div>
+<!-- ══ 2열 메인 ══ -->
+<div class="main-2col">
 
-<!-- ══ AI Hidden OEM TOP20 ══ -->
-<div class="section-wrap">
-  <div class="section-hd">
-    <span class="section-title">🏭 AI Hidden OEM 발굴 TOP20</span>
-    <span class="section-meta">미발굴 고성장 가능성 OEM/ODM 업체 · <span id="oemMeta"></span></span>
+  <!-- 왼쪽: AI 트렌드 예측 -->
+  <div class="section-wrap">
+    <div class="section-hd">
+      <span class="section-title">📈 AI 화장품 트렌드 예측</span>
+      <span class="section-meta" id="trendMeta"></span>
+    </div>
+    <!-- 최다 추천 OEM 배너 -->
+    <div class="top-rec-banner">
+      <div class="top-rec-label">🏆 트렌드 전반 최다 추천 OEM</div>
+      <div class="top-rec-grid" id="topRecGrid"></div>
+    </div>
+    <!-- 트렌드 리스트 -->
+    <div id="trendList"></div>
+    <div class="more-btn-wrap" id="trendMoreWrap">
+      <button class="more-btn" onclick="showMoreTrend(this)">+ 10개 더 보기 (11~20위)</button>
+    </div>
   </div>
-  <div class="o-grid" id="oemList"></div>
-</div>
+
+  <!-- 오른쪽: Hidden OEM -->
+  <div class="section-wrap">
+    <div class="section-hd">
+      <span class="section-title">🏭 AI Hidden OEM 발굴</span>
+      <span class="section-meta" id="oemMeta"></span>
+    </div>
+    <div id="oemList"></div>
+    <div class="more-btn-wrap" id="oemMoreWrap">
+      <button class="more-btn" onclick="showMoreOem(this)">+ 10개 더 보기 (11~20위)</button>
+    </div>
+  </div>
+
+</div><!-- /main-2col -->
 
 <div class="bottom-pad"></div>
 </div>
 
 <script>
-/* ══════════════════════════════════════════
-   DB_REAL — 업체 DB
-══════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   DB_REAL
+══════════════════════════════════════ */
 const DB_REAL = [
-  {id:1,code:"1000000565",name:"코스맥스네오 주식회사",status:"CONFIRMED",region:"인천",addr:"인천광역시 부평구 평천로73번길 14",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건"],industry:"제조",mgr:{"세종":"김동욱","부천":"장길호"},forms:{}},
-  {id:2,code:"1000000568",name:"주식회사 태익",status:"CONFIRMED",region:"경기",addr:"경기도 부천시 삼작로 107번길 23",certs:[],industry:"화장품용기",mgr:{"세종":"박단비","부천":"장길호"},forms:{}},
-  {id:3,code:"1000000582",name:"주식회사 이앤씨",status:"CONFIRMED",region:"경기",addr:"경기도 용인시 처인구 이동읍 덕성산단2로50번길 21",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"김현주","부천":"장길호"},forms:{}},
-  {id:4,code:"1000000587",name:"주식회사 블리스팩",status:"SHADOW",region:"경기",addr:"경기도 시흥시 경기과기대로 171",certs:["CGMP","ISO22716","ISO9001"],industry:"제조,도소매",mgr:{"세종":"양서경","부천":"장길호"},forms:{}},
-  {id:6,code:"1000000632",name:"(주)필코 코스팜",status:"SHADOW",region:"경기",addr:"경기도 평택시 청북읍 현곡산단로 11",certs:["CGMP","ISO22716"],industry:"화장품및의약외품제조",mgr:{"세종":"이재강","부천":"장길호"},forms:{}},
-  {id:8,code:"5000000489",name:"콜마유엑스 주식회사 (세종)",status:"SHADOW",region:"세종",addr:"세종특별자치시 전의면 산단길 21-164",certs:[],industry:"제조업, 도매 및 소매업",mgr:{"세종":"양서경","부천":"장길호"},forms:{}},
-  {id:10,code:"1000000575",name:"에스에이코스메틱",status:"SHADOW",region:"인천",addr:"인천 서구 가좌로29번길 22",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품 외",mgr:{"세종":"양서경","부천":"송재원"},forms:{}},
-  {id:11,code:"1000000606",name:"(주)아리아코스메틱",status:"SHADOW",region:"경기",addr:"경기도 부천시 원미구 정주로 84",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품",mgr:{"세종":"김성희","부천":"송재원"},forms:{}},
-  {id:12,code:"1000000604",name:"주식회사 인코스",status:"CONFIRMED",region:"경기",addr:"경기도 부천시 조마루로385번길 92",certs:["ISO22716","비건"],industry:"도매업 외",mgr:{"세종":"이희석","부천":"마루한솔"},forms:{}},
-  {id:18,code:"1000000471",name:"(주)엔에프씨",status:"SHADOW",region:"인천",addr:"인천 연수구 갯벌로145번길 15-8",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건"],industry:"제조|도소매",mgr:{"세종":"홍영표","부천":"김태인"},forms:{}},
-  {id:20,code:"1000003568",name:"콜마유엑스 주식회사",status:"SHADOW",region:"인천",addr:"인천광역시 부평구 가재울로 138",certs:["CGMP","ISO22716","ISO9001"],industry:"제조업, 도매 및 소매업",mgr:{"세종":"홍영표","부천":"김태인"},forms:{}},
-  {id:22,code:"1000003598",name:"(주) 코나드",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동서로 92",certs:["ISO22716","OTC DRUG","비건"],industry:"제조,도소매",mgr:{"세종":"홍영표","부천":"김태인"},forms:{}},
-  {id:23,code:"1000004514",name:"콜마스크 주식회사",status:"SHADOW",region:"인천",addr:"인천광역시 남동구 남동대로 405",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건","할랄"],industry:"화장품 제조업",mgr:{"세종":"이재강","부천":"김태인"},forms:{}},
-  {id:24,code:"1000004538",name:"주식회사 에치엔지",status:"SHADOW",region:"세종",addr:"세종특별자치시 전의면 산단길 21-164",certs:["CGMP","ISO22716","ISO9001"],industry:"제조 외",mgr:{"세종":"양서경","부천":"김태인"},forms:{}},
-  {id:25,code:"1000006214",name:"이에스코스메틱",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동대로409번길 46",certs:["CGMP","ISO22716"],industry:"화장품",mgr:{"세종":"장덕진","부천":"김태인"},forms:{}},
-  {id:34,code:"1000000549",name:"주식회사 피씨엠",status:"SHADOW",region:"경기",addr:"경기도 안성시 공도읍 기업단지로 92",certs:["CGMP","ISO22716"],industry:"제조업",mgr:{"세종":"김수정","부천":""},forms:{}},
-  {id:38,code:"1000000553",name:"주식회사 지에스켐",status:"SHADOW",region:"충청",addr:"충청북도 진천군 덕산면 신척산단5로 89",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"신원철","부천":""},forms:{}},
-  {id:41,code:"1000000559",name:"(주)이미인",status:"SHADOW",region:"경기",addr:"경기도 오산시 가장산업서북로 40-37",certs:["CGMP","ISO22716","ISO14001","ISO45001","비건"],industry:"제조업",mgr:{"세종":"이희석","부천":""},forms:{}},
-  {id:43,code:"1000000562",name:"윤지양행(주)",status:"SHADOW",region:"경기",addr:"경기도 오산시 가장산업서북로 23",certs:["CGMP","ISO22716","비건"],industry:"수지제품,가공인쇄",mgr:{"세종":"김성희","부천":""},forms:{}},
-  {id:44,code:"1000000563",name:"씨앤텍주식회사",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 정남면 귀래리 536-3",certs:["CGMP","ISO9001","ISO14001","ISO22716","비건"],industry:"제조",mgr:{"세종":"박단비","부천":""},forms:{}},
-  {id:46,code:"1000000567",name:"주식회사 승일",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 원남 산단1길 50",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조",mgr:{"세종":"신원철","부천":""},forms:{}},
-  {id:47,code:"1000000569",name:"(주)제닉",status:"SHADOW",region:"충청",addr:"충청남도 논산시 성동면 산업단지로5길 5",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"장덕진","부천":""},forms:{}},
-  {id:48,code:"1000000570",name:"미젤라 화장품",status:"CONFIRMED",region:"인천",addr:"인천시 남동구 남동동로 64번길 77",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품",mgr:{"세종":"박단비","부천":""},forms:{}},
-  {id:52,code:"1000000577",name:"(주)뷰티스킨",status:"CONFIRMED",region:"인천",addr:"인천광역시 서구 염곡로14번길 27",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업 외",mgr:{"세종":"홍영표","부천":""},forms:{}},
-  {id:53,code:"1000000578",name:"화이트코스팜(주)",status:"SHADOW",region:"충청",addr:"충남 천안시 서북구 성거읍 성거길 194",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"박승흠","부천":""},forms:{}},
-  {id:58,code:"1000000586",name:"(주)리얼코스",status:"SHADOW",region:"경기",addr:"경기도 안성시 미양면 서운로 673-6",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"이희석","부천":""},forms:{}},
-  {id:60,code:"1000000592",name:"주식회사 한국코스모",status:"SHADOW",region:"충청",addr:"충청남도 천안시 동남구 풍세면 풍세산단로 172",certs:["CGMP","ISO22716","ISO9001"],industry:"제조, 도소매",mgr:{"세종":"박승흠","부천":""},forms:{}},
-  {id:65,code:"1000000597",name:"(주)제일",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 생극면 차생로 659",certs:["CGMP","ISO22716","ISO9001","비건"],industry:"제조업",mgr:{"세종":"신원철","부천":""},forms:{}},
-  {id:66,code:"1000000598",name:"주식회사 정코스",status:"CONFIRMED",region:"충청",addr:"충청북도 청주시 흥덕구 오송읍 오송생명 14로 118",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건","할랄"],industry:"화장품/기타",mgr:{"세종":"박단비","부천":""},forms:{}},
-  {id:68,code:"1000000601",name:"(주)아트스킨",status:"SHADOW",region:"경기",addr:"경기도 용인시 처인구 이동읍 덕성산단2로50번길 12-3",certs:["ISO9001","ISO14001","비건"],industry:"화장품 외",mgr:{"세종":"김성희","부천":""},forms:{}},
-  {id:78,code:"1000000613",name:"(주)진코스텍",status:"CONFIRMED",region:"경기",addr:"경기도 시흥시 군자천로237번길 31",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건","할랄"],industry:"제조외",mgr:{"세종":"장덕진","부천":""},forms:{}},
-  {id:79,code:"1000000614",name:"(주)엠엘에스",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동서로114번길 65",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"장덕진","부천":""},forms:{}},
-  {id:82,code:"1000000620",name:"(주)한솔바이오텍",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 마도면 청원산단5길 45",certs:["CGMP","ISO22716"],industry:"제조업 외",mgr:{"세종":"구도연","부천":""},forms:{}},
-  {id:88,code:"1000000626",name:"시스킨코리아 주식회사",status:"SHADOW",region:"경기",addr:"경기도 부천시 부일로809번길 60",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"화장품 외",mgr:{"세종":"전성우","부천":""},forms:{}},
-  {id:90,code:"1000000629",name:"주식회사 해피엘엔비",status:"SHADOW",region:"경기",addr:"경기도 이천시 부발읍 황무로 2065번길 41",certs:["ISO22716","ISO9001"],industry:"화장품제조",mgr:{"세종":"양서경","부천":""},forms:{}},
-  {id:105,code:"1000004173",name:"아이큐어(주)완주공장",status:"CONFIRMED",region:"기타",addr:"전라북도 완주군 봉동읍 완주산단5로 248",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"박승흠","부천":""},forms:{}},
-  {id:117,code:"1000006622",name:"주식회사 아주화장품",status:"SHADOW",region:"인천",addr:"인천광역시 남동구 남동서로113번길 220",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"홍영표","부천":""},forms:{}},
-  {id:118,code:"1000006623",name:"이노맥스 인터내셔널",status:"CONFIRMED",region:"경기",addr:"경기도 평택시 서탄면 서탄로 446-38",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"김동욱","부천":""},forms:{}},
-  {id:121,code:"1000007039",name:"주식회사 그루비코스메틱",status:"SHADOW",region:"충청",addr:"충청남도 보령시 웅천읍 웅천산단2길 66",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"화장품",mgr:{"세종":"김수정","부천":""},forms:{}},
-  {id:123,code:"1000007080",name:"주식회사 순바이오팜",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 마도면 청원산단4길 57",certs:["CGMP","ISO22716","ISO9001"],industry:"제조업",mgr:{"세종":"이희석","부천":""},forms:{}},
-  {id:126,code:"1000007218",name:"(주)제네웰",status:"SHADOW",region:"경기",addr:"경기도 성남시 중원구 사기막골로62번길 37",certs:["ISO22716","ISO9001","ISO13485"],industry:"제조업",mgr:{"세종":"홍영표","부천":""},forms:{}},
-  {id:129,code:"1000007259",name:"주식회사비엔코스",status:"SHADOW",region:"충청",addr:"충청북도 청주시 청원구 오창읍 양청송대길 153",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"화장품제조",mgr:{"세종":"홍영표","부천":""},forms:{}},
-  {id:140,code:"1000008798",name:"글로코(주)",status:"CONFIRMED",region:"경기",addr:"경기도 평택시 청북읍 청원로 362-23",certs:["ISO22716","ISO9001","ISO14001","ISO45001"],industry:"제조업",mgr:{"세종":"한아영","부천":""},forms:{}},
-  {id:141,code:"1000008807",name:"삼성메디코스(주)",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 향남읍 제약공단4길 22",certs:["CGMP","ISO22716"],industry:"화장품",mgr:{"세종":"김현주","부천":""},forms:{}},
-  {id:143,code:"1000009091",name:"(주)뷰티화장품",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 원남면 원남산단로 274-14",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"박승흠","부천":""},forms:{}},
-  {id:144,code:"1000009146",name:"파머스그레인코리아",status:"CONFIRMED",region:"충청",addr:"충청남도 공주시 이인면 남공주산단길 190",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"신원철","부천":""},forms:{}},
-  {id:145,code:"1000009147",name:"네오메디컬솝",status:"SHADOW",region:"경기",addr:"경기도 안성시 원곡면 지문로 27",certs:["CGMP","ISO22716"],industry:"제조",mgr:{"세종":"이재강","부천":""},forms:{}},
-  {id:147,code:"1000009347",name:"(주)원앤씨",status:"CONFIRMED",region:"충청",addr:"충청북도 청주시 흥덕구 옥산면 과학산업4로 205",certs:["CGMP","ISO22716","ISO14001"],industry:"제조업",mgr:{"세종":"김동욱","부천":""},forms:{}},
+  {id:1,code:"1000000565",name:"코스맥스네오 주식회사",status:"CONFIRMED",region:"인천",addr:"인천광역시 부평구 평천로73번길 14",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건"],industry:"제조",mgr:{"세종":"김동욱"}},
+  {id:3,code:"1000000582",name:"주식회사 이앤씨",status:"CONFIRMED",region:"경기",addr:"경기도 용인시 처인구 이동읍 덕성산단2로50번길 21",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"김현주"}},
+  {id:4,code:"1000000587",name:"주식회사 블리스팩",status:"SHADOW",region:"경기",addr:"경기도 시흥시 경기과기대로 171",certs:["CGMP","ISO22716","ISO9001"],industry:"제조,도소매",mgr:{"세종":"양서경"}},
+  {id:6,code:"1000000632",name:"(주)필코 코스팜",status:"SHADOW",region:"경기",addr:"경기도 평택시 청북읍 현곡산단로 11",certs:["CGMP","ISO22716"],industry:"화장품및의약외품제조",mgr:{"세종":"이재강"}},
+  {id:8,code:"5000000489",name:"콜마유엑스 주식회사 (세종)",status:"SHADOW",region:"세종",addr:"세종특별자치시 전의면 산단길 21-164",certs:[],industry:"제조업",mgr:{"세종":"양서경"}},
+  {id:10,code:"1000000575",name:"에스에이코스메틱",status:"SHADOW",region:"인천",addr:"인천 서구 가좌로29번길 22",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품 외",mgr:{"세종":"양서경"}},
+  {id:11,code:"1000000606",name:"(주)아리아코스메틱",status:"SHADOW",region:"경기",addr:"경기도 부천시 원미구 정주로 84",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품",mgr:{"세종":"김성희"}},
+  {id:12,code:"1000000604",name:"주식회사 인코스",status:"CONFIRMED",region:"경기",addr:"경기도 부천시 조마루로385번길 92",certs:["ISO22716","비건"],industry:"도매업 외",mgr:{"세종":"이희석"}},
+  {id:18,code:"1000000471",name:"(주)엔에프씨",status:"SHADOW",region:"인천",addr:"인천 연수구 갯벌로145번길 15-8",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건"],industry:"제조|도소매",mgr:{"세종":"홍영표"}},
+  {id:20,code:"1000003568",name:"콜마유엑스 주식회사",status:"SHADOW",region:"인천",addr:"인천광역시 부평구 가재울로 138",certs:["CGMP","ISO22716","ISO9001"],industry:"제조업",mgr:{"세종":"홍영표"}},
+  {id:22,code:"1000003598",name:"(주) 코나드",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동서로 92",certs:["ISO22716","OTC DRUG","비건"],industry:"제조,도소매",mgr:{"세종":"홍영표"}},
+  {id:23,code:"1000004514",name:"콜마스크 주식회사",status:"SHADOW",region:"인천",addr:"인천광역시 남동구 남동대로 405",certs:["CGMP","ISO22716","ISO9001","ISO14001","ISO45001","비건","할랄"],industry:"화장품 제조업",mgr:{"세종":"이재강"}},
+  {id:24,code:"1000004538",name:"주식회사 에치엔지",status:"SHADOW",region:"세종",addr:"세종특별자치시 전의면 산단길 21-164",certs:["CGMP","ISO22716","ISO9001"],industry:"제조 외",mgr:{"세종":"양서경"}},
+  {id:25,code:"1000006214",name:"이에스코스메틱",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동대로409번길 46",certs:["CGMP","ISO22716"],industry:"화장품",mgr:{"세종":"장덕진"}},
+  {id:34,code:"1000000549",name:"주식회사 피씨엠",status:"SHADOW",region:"경기",addr:"경기도 안성시 공도읍 기업단지로 92",certs:["CGMP","ISO22716"],industry:"제조업",mgr:{"세종":"김수정"}},
+  {id:38,code:"1000000553",name:"주식회사 지에스켐",status:"SHADOW",region:"충청",addr:"충청북도 진천군 덕산면 신척산단5로 89",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"신원철"}},
+  {id:41,code:"1000000559",name:"(주)이미인",status:"SHADOW",region:"경기",addr:"경기도 오산시 가장산업서북로 40-37",certs:["CGMP","ISO22716","ISO14001","ISO45001","비건"],industry:"제조업",mgr:{"세종":"이희석"}},
+  {id:43,code:"1000000562",name:"윤지양행(주)",status:"SHADOW",region:"경기",addr:"경기도 오산시 가장산업서북로 23",certs:["CGMP","ISO22716","비건"],industry:"수지제품,가공인쇄",mgr:{"세종":"김성희"}},
+  {id:44,code:"1000000563",name:"씨앤텍주식회사",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 정남면 귀래리 536-3",certs:["CGMP","ISO9001","ISO14001","ISO22716","비건"],industry:"제조",mgr:{"세종":"박단비"}},
+  {id:46,code:"1000000567",name:"주식회사 승일",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 원남 산단1길 50",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조",mgr:{"세종":"신원철"}},
+  {id:47,code:"1000000569",name:"(주)제닉",status:"SHADOW",region:"충청",addr:"충청남도 논산시 성동면 산업단지로5길 5",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"장덕진"}},
+  {id:48,code:"1000000570",name:"미젤라 화장품",status:"CONFIRMED",region:"인천",addr:"인천시 남동구 남동동로 64번길 77",certs:["ISO22716","ISO9001","ISO14001"],industry:"화장품",mgr:{"세종":"박단비"}},
+  {id:52,code:"1000000577",name:"(주)뷰티스킨",status:"CONFIRMED",region:"인천",addr:"인천광역시 서구 염곡로14번길 27",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업 외",mgr:{"세종":"홍영표"}},
+  {id:53,code:"1000000578",name:"화이트코스팜(주)",status:"SHADOW",region:"충청",addr:"충남 천안시 서북구 성거읍 성거길 194",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"박승흠"}},
+  {id:58,code:"1000000586",name:"(주)리얼코스",status:"SHADOW",region:"경기",addr:"경기도 안성시 미양면 서운로 673-6",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"이희석"}},
+  {id:60,code:"1000000592",name:"주식회사 한국코스모",status:"SHADOW",region:"충청",addr:"충청남도 천안시 동남구 풍세면 풍세산단로 172",certs:["CGMP","ISO22716","ISO9001"],industry:"제조, 도소매",mgr:{"세종":"박승흠"}},
+  {id:65,code:"1000000597",name:"(주)제일",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 생극면 차생로 659",certs:["CGMP","ISO22716","ISO9001","비건"],industry:"제조업",mgr:{"세종":"신원철"}},
+  {id:66,code:"1000000598",name:"주식회사 정코스",status:"CONFIRMED",region:"충청",addr:"충청북도 청주시 흥덕구 오송읍 오송생명 14로 118",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건","할랄"],industry:"화장품/기타",mgr:{"세종":"박단비"}},
+  {id:68,code:"1000000601",name:"(주)아트스킨",status:"SHADOW",region:"경기",addr:"경기도 용인시 처인구 이동읍 덕성산단2로50번길 12-3",certs:["ISO9001","ISO14001","비건"],industry:"화장품 외",mgr:{"세종":"김성희"}},
+  {id:78,code:"1000000613",name:"(주)진코스텍",status:"CONFIRMED",region:"경기",addr:"경기도 시흥시 군자천로237번길 31",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건","할랄"],industry:"제조외",mgr:{"세종":"장덕진"}},
+  {id:79,code:"1000000614",name:"(주)엠엘에스",status:"CONFIRMED",region:"인천",addr:"인천광역시 남동구 남동서로114번길 65",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"장덕진"}},
+  {id:82,code:"1000000620",name:"(주)한솔바이오텍",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 마도면 청원산단5길 45",certs:["CGMP","ISO22716"],industry:"제조업 외",mgr:{"세종":"구도연"}},
+  {id:88,code:"1000000626",name:"시스킨코리아 주식회사",status:"SHADOW",region:"경기",addr:"경기도 부천시 부일로809번길 60",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"화장품 외",mgr:{"세종":"전성우"}},
+  {id:90,code:"1000000629",name:"주식회사 해피엘엔비",status:"SHADOW",region:"경기",addr:"경기도 이천시 부발읍 황무로 2065번길 41",certs:["ISO22716","ISO9001"],industry:"화장품제조",mgr:{"세종":"양서경"}},
+  {id:105,code:"1000004173",name:"아이큐어(주)완주공장",status:"CONFIRMED",region:"기타",addr:"전라북도 완주군 봉동읍 완주산단5로 248",certs:["CGMP","ISO22716","ISO9001","ISO14001","비건"],industry:"제조업",mgr:{"세종":"박승흠"}},
+  {id:117,code:"1000006622",name:"주식회사 아주화장품",status:"SHADOW",region:"인천",addr:"인천광역시 남동구 남동서로113번길 220",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"홍영표"}},
+  {id:118,code:"1000006623",name:"이노맥스 인터내셔널",status:"CONFIRMED",region:"경기",addr:"경기도 평택시 서탄면 서탄로 446-38",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"김동욱"}},
+  {id:121,code:"1000007039",name:"주식회사 그루비코스메틱",status:"SHADOW",region:"충청",addr:"충청남도 보령시 웅천읍 웅천산단2길 66",certs:["ISO22716","ISO9001","ISO14001","비건"],industry:"화장품",mgr:{"세종":"김수정"}},
+  {id:123,code:"1000007080",name:"주식회사 순바이오팜",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 마도면 청원산단4길 57",certs:["CGMP","ISO22716","ISO9001"],industry:"제조업",mgr:{"세종":"이희석"}},
+  {id:126,code:"1000007218",name:"(주)제네웰",status:"SHADOW",region:"경기",addr:"경기도 성남시 중원구 사기막골로62번길 37",certs:["ISO22716","ISO9001","ISO13485"],industry:"제조업",mgr:{"세종":"홍영표"}},
+  {id:129,code:"1000007259",name:"주식회사비엔코스",status:"SHADOW",region:"충청",addr:"충청북도 청주시 청원구 오창읍 양청송대길 153",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"화장품제조",mgr:{"세종":"홍영표"}},
+  {id:140,code:"1000008798",name:"글로코(주)",status:"CONFIRMED",region:"경기",addr:"경기도 평택시 청북읍 청원로 362-23",certs:["ISO22716","ISO9001","ISO14001","ISO45001"],industry:"제조업",mgr:{"세종":"한아영"}},
+  {id:141,code:"1000008807",name:"삼성메디코스(주)",status:"CONFIRMED",region:"경기",addr:"경기도 화성시 향남읍 제약공단4길 22",certs:["CGMP","ISO22716"],industry:"화장품",mgr:{"세종":"김현주"}},
+  {id:143,code:"1000009091",name:"(주)뷰티화장품",status:"CONFIRMED",region:"충청",addr:"충청북도 음성군 원남면 원남산단로 274-14",certs:["CGMP","ISO22716","ISO9001","ISO14001"],industry:"제조업",mgr:{"세종":"박승흠"}},
+  {id:144,code:"1000009146",name:"파머스그레인코리아",status:"CONFIRMED",region:"충청",addr:"충청남도 공주시 이인면 남공주산단길 190",certs:["ISO22716","비건"],industry:"제조업",mgr:{"세종":"신원철"}},
+  {id:145,code:"1000009147",name:"네오메디컬솝",status:"SHADOW",region:"경기",addr:"경기도 안성시 원곡면 지문로 27",certs:["CGMP","ISO22716"],industry:"제조",mgr:{"세종":"이재강"}},
+  {id:147,code:"1000009347",name:"(주)원앤씨",status:"CONFIRMED",region:"충청",addr:"충청북도 청주시 흥덕구 옥산면 과학산업4로 205",certs:["CGMP","ISO22716","ISO14001"],industry:"제조업",mgr:{"세종":"김동욱"}},
 ];
 
-/* ══════════════════════════════════════════
-   내부 보유 제품유형 (여기서 관리)
-   해당 없는 cat → "미보유 유형" 배지 표시
-══════════════════════════════════════════ */
-const PORTFOLIO_TYPES = new Set([
-  '앰플','세럼','에센스','마스크팩','스킨케어','선케어','클렌징','토너'
-]);
+/* ══ 내부 보유 제품유형 ══ */
+const PORTFOLIO_TYPES = new Set(['앰플','세럼','에센스','마스크팩','스킨케어','선케어','클렌징','토너']);
 
-/* ══════════════════════════════════════════
-   트렌드 예측 데이터
-══════════════════════════════════════════ */
+/* ══ 트렌드 데이터 ══ */
 const TREND_BASE = [
-  {id:1,name:"PDRN 진정 앰플",cat:"앰플",func:"진정/재생",ingr:"PDRN",
-   growth:230,conf:92,scores:{market:22,growth:27,comp:13,prod:12,reg:13},
+  {id:1,name:"PDRN 진정 앰플",cat:"앰플",func:"진정/재생",ingr:"PDRN",growth:230,conf:92,
+   scores:{market:22,growth:27,comp:13,prod:12,reg:13},
    briefReason:"미국 구글트렌드 +340% — 국내 9개월 후행, 선점 타이밍 최적",
-   reasons:[
-     {icon:"✅",txt:"미국 시장 9개월 선행 확산 — 구글트렌드 +340%"},
-     {icon:"✅",txt:"국내 네이버 검색량 MoM +87% 급증"},
-     {icon:"✅",txt:"의료미용 → 소비자 화장품 전이 패턴 포착"},
-     {icon:"✅",txt:"CGMP 생산 가능 업체 12개사 확인"},
-     {icon:"✅",txt:"올리브영 진정케어 신제품 출시 급증"},
-   ],
-   risk:{level:"med",txt:"식약처 PDRN 원료 가이드라인 정비 중 (중간 리스크)"},
-   recIds:[23,41,47,18,52],
-   sources:["네이버 DataLab","구글트렌드","식약처 원료현황"]},
-
-  {id:2,name:"SPF50+ PA++++ 선크림",cat:"선케어",func:"자외선차단",ingr:"화학+물리 복합필터",
-   growth:180,conf:89,scores:{market:21,growth:24,comp:11,prod:14,reg:12},
-   briefReason:"봄 피크 수요 + TikTok 글로벌 선케어 320% 동시 성장 중",
-   reasons:[
-     {icon:"✅",txt:"봄 시즌 선제 수요 — 네이버 검색량 ▲54%"},
-     {icon:"✅",txt:"TikTok Shop 미국 K뷰티 선케어 ▲320%"},
-     {icon:"✅",txt:"올리브영 선케어 카테고리 상위권 유지"},
-     {icon:"✅",txt:"계절 피크 3~6월 — 수요 집중 구간"},
-   ],
-   risk:{level:"low",txt:"규제 변동 없음 — 안전한 카테고리"},
-   recIds:[1,44,66,52,78],
-   sources:["네이버 DataLab","TikTok","올리브영","기상청"]},
-
-  {id:3,name:"비건 마스크팩",cat:"마스크팩",func:"수분/진정",ingr:"식물성 원료",
-   growth:145,conf:85,scores:{market:20,growth:21,comp:13,prod:13,reg:12},
-   briefReason:"EU 규제 강화로 비건 수요 구조적 증가 — DB 내 14개사 즉시 대응 가능",
-   reasons:[
-     {icon:"✅",txt:"TikTok 글로벌 비건뷰티 루틴 영상 급확산"},
-     {icon:"✅",txt:"EU 클린뷰티 규제 강화 → 비건 인증 수요 증가"},
-     {icon:"✅",txt:"동남아·중동 비건+할랄 이중 시장 공략 가능"},
-     {icon:"🌿",txt:"비건 인증 보유 OEM 14개사 DB 내 확인"},
-   ],
-   risk:{level:"low",txt:"규제 리스크 낮음 — EU 규제 강화가 오히려 기회"},
-   recIds:[23,41,47,3,121],
-   sources:["TikTok","네이버 DataLab","EU SCCS","올리브영"]},
-
-  {id:4,name:"세라마이드 장벽 크림",cat:"스킨케어",func:"장벽강화/보습",ingr:"세라마이드",
-   growth:122,conf:84,scores:{market:19,growth:20,comp:11,prod:14,reg:12},
-   briefReason:"레티놀 규제 강화 직접 수혜 — 대체 성분 구조적 수요 상승",
-   reasons:[
-     {icon:"✅",txt:"아토피·민감성 피부 인구 증가 — 구조적 수요"},
-     {icon:"✅",txt:"미국 피부과 전문의 추천 성분 1위"},
-     {icon:"✅",txt:"레티놀 규제 강화에 따른 대체 성분 수요"},
-   ],
-   risk:{level:"low",txt:"검증된 성분 — 규제 리스크 없음"},
-   recIds:[18,47,60,129,143],
-   sources:["네이버 DataLab","구글트렌드","식약처"]},
-
-  {id:5,name:"발효 나이아신아마이드 세럼",cat:"세럼",func:"미백/모공",ingr:"나이아신아마이드+발효물",
-   growth:115,conf:81,scores:{market:18,growth:19,comp:12,prod:13,reg:12},
-   briefReason:"K뷰티 발효 기술로 흡수율 3배 차별화 — 중국 미백 세럼 2위 성장",
-   reasons:[
-     {icon:"✅",txt:"발효 공법으로 흡수율 3배↑ 차별화 포인트"},
-     {icon:"✅",txt:"중국 시장 미백 세럼 카테고리 2위 성장"},
-     {icon:"✅",txt:"K뷰티 발효 기술 글로벌 프리미엄 포지셔닝"},
-   ],
-   risk:{level:"low",txt:"안전한 성분군 — 규제 이슈 없음"},
-   recIds:[47,18,3,121,60],
-   sources:["네이버 DataLab","Tmall 뷰티","구글트렌드"]},
-
-  {id:6,name:"올인원 멀티케어 크림",cat:"스킨케어",func:"복합/멀티",ingr:"복합활성",
-   growth:108,conf:79,scores:{market:18,growth:17,comp:11,prod:15,reg:13},
-   briefReason:"루틴 단순화 트렌드 + 남성 화장품 시장 확대 — 생산 범용성 높음",
-   reasons:[
-     {icon:"✅",txt:"스킨케어 루틴 단순화 트렌드 — 시간 절약형 수요"},
-     {icon:"✅",txt:"2030 세대 남성 화장품 시장 확대 주도"},
-     {icon:"✅",txt:"생산 설비 범용성 높음 — OEM 공급 용이"},
-   ],
-   risk:{level:"low",txt:"규제 리스크 없음"},
-   recIds:[1,8,44,79,143],
-   sources:["네이버 DataLab","화해","올리브영"]},
-
-  {id:7,name:"글루타치온 미백 앰플",cat:"앰플",func:"미백/항산화",ingr:"글루타치온",
-   growth:98,conf:78,scores:{market:17,growth:16,comp:12,prod:12,reg:11},
-   briefReason:"동남아·일본 미백 앰플 수출 핵심 성분 — 기능성 심사 9월부터 단축",
-   reasons:[
-     {icon:"✅",txt:"동남아 미백 시장 최강 성장 성분"},
-     {icon:"✅",txt:"일본·중국 K뷰티 앰플 수출 핵심 성분"},
-     {icon:"⚠️",txt:"식약처 미백 기능성 심사 필요 (9월부터 60일로 단축)"},
-   ],
-   risk:{level:"med",txt:"기능성 화장품 심사 필요 (60일, 9월 단축 예정)"},
-   recIds:[23,47,18,41,60],
-   sources:["네이버 DataLab","KITA 수출통계","화해"]},
-
-  {id:8,name:"마이크로바이옴 에센스",cat:"에센스",func:"장벽/진정",ingr:"프로바이오틱스",
-   growth:92,conf:76,scores:{market:16,growth:15,comp:13,prod:11,reg:12},
-   briefReason:"미국·유럽 2년 선행 트렌드 국내 진입 — BeautyMatter 2026 TOP5 성분",
-   reasons:[
-     {icon:"✅",txt:"미국·유럽 마이크로바이옴 뷰티 선행 트렌드 2년 앞서"},
-     {icon:"✅",txt:"BeautyMatter 2026 TOP5 성분 선정"},
-     {icon:"✅",txt:"민감성 피부 소비자 확대 — 구조적 수요"},
-   ],
-   risk:{level:"low",txt:"규제 이슈 없음 — EU 클린뷰티 기준 적합"},
-   recIds:[47,18,121,60,129],
-   sources:["BeautyMatter RSS","구글트렌드","네이버 DataLab"]},
-
-  {id:9,name:"바쿠치올 세럼 (레티놀 대체)",cat:"세럼",func:"재생/항노화",ingr:"바쿠치올",
-   growth:88,conf:80,scores:{market:16,growth:14,comp:14,prod:12,reg:14},
-   briefReason:"레티놀 규제(7월) 직접 수혜 대체 성분 — Sephora 미국 입점 폭증",
-   reasons:[
-     {icon:"✅",txt:"레티놀 농도 규제 강화(7월) 직접 수혜 대체 성분"},
-     {icon:"✅",txt:"임산부·민감성 피부 레티놀 대안 1위"},
-     {icon:"✅",txt:"미국 Sephora 바쿠치올 세럼 입점 폭증"},
-   ],
-   risk:{level:"low",txt:"규제 강화가 오히려 기회 — 대체 성분 선점 권장"},
-   recIds:[18,47,41,3,121],
-   sources:["식약처 규제공고","Sephora 트렌드","구글트렌드"]},
-
-  {id:10,name:"탄산 클렌징 폼",cat:"클렌징",func:"딥클렌징/모공",ingr:"탄산·탄산수",
-   growth:82,conf:75,scores:{market:16,growth:14,comp:12,prod:14,reg:12},
-   briefReason:"일본 → 국내 6개월 후행 확산 — 표준 공정으로 빠른 OEM 대응 가능",
-   reasons:[
-     {icon:"✅",txt:"일본 탄산 클렌저 트렌드 → 국내 6개월 후행 확산"},
-     {icon:"✅",txt:"모공 관리 관심 증가 — 클렌징 프리미엄화"},
-     {icon:"✅",txt:"생산 공정 표준화 — 빠른 OEM 대응 가능"},
-   ],
-   risk:{level:"low",txt:"규제 이슈 없음"},
-   recIds:[1,44,79,60,143],
-   sources:["네이버 DataLab","일본 수입 트렌드","화해"]},
-
-  {id:11,name:"저분자 히알루론산 토너",cat:"토너",func:"수분/흡수",ingr:"저분자 히알루론산",
-   growth:78,conf:77,scores:{market:16,growth:13,comp:10,prod:14,reg:12},
+   reasons:[{icon:"✅",txt:"미국 시장 9개월 선행 확산 — 구글트렌드 +340%"},{icon:"✅",txt:"국내 네이버 검색량 MoM +87% 급증"},{icon:"✅",txt:"의료미용 → 소비자 화장품 전이 패턴"},{icon:"✅",txt:"CGMP 생산 가능 업체 12개사 확인"}],
+   risk:{level:"med",txt:"식약처 PDRN 원료 가이드라인 정비 중"},recIds:[23,41,47,18,52],sources:["네이버 DataLab","구글트렌드","식약처","뷰티누리"]},
+  {id:2,name:"SPF50+ PA++++ 선크림",cat:"선케어",func:"자외선차단",ingr:"화학+물리 복합필터",growth:180,conf:89,
+   scores:{market:21,growth:24,comp:11,prod:14,reg:12},
+   briefReason:"봄 피크 수요 + TikTok 글로벌 선케어 320% 동시 성장",
+   reasons:[{icon:"✅",txt:"봄 시즌 선제 수요 — 네이버 검색량 ▲54%"},{icon:"✅",txt:"TikTok Shop 미국 K뷰티 선케어 ▲320%"},{icon:"✅",txt:"계절 피크 3~6월 집중 구간"}],
+   risk:{level:"low",txt:"규제 변동 없음"},recIds:[1,44,66,52,78],sources:["네이버 DataLab","TikTok","올리브영","뷰티누리"]},
+  {id:3,name:"비건 마스크팩",cat:"마스크팩",func:"수분/진정",ingr:"식물성 원료",growth:145,conf:85,
+   scores:{market:20,growth:21,comp:13,prod:13,reg:12},
+   briefReason:"EU 규제 강화로 비건 수요 구조적 증가 — DB 내 14개사 즉시 대응",
+   reasons:[{icon:"✅",txt:"TikTok 글로벌 비건뷰티 루틴 급확산"},{icon:"✅",txt:"EU 클린뷰티 규제 강화 → 비건 수요 증가"},{icon:"🌿",txt:"비건 인증 OEM 14개사 DB 내 확인"}],
+   risk:{level:"low",txt:"규제 강화가 오히려 기회"},recIds:[23,41,47,3,121],sources:["TikTok","EU SCCS","올리브영","뷰티누리"]},
+  {id:4,name:"세라마이드 장벽 크림",cat:"스킨케어",func:"장벽강화/보습",ingr:"세라마이드",growth:122,conf:84,
+   scores:{market:19,growth:20,comp:11,prod:14,reg:12},
+   briefReason:"레티놀 규제 직접 수혜 대체 성분 — 구조적 수요 상승",
+   reasons:[{icon:"✅",txt:"아토피·민감성 피부 인구 증가 — 구조적 수요"},{icon:"✅",txt:"레티놀 규제 강화에 따른 대체 성분"}],
+   risk:{level:"low",txt:"검증된 성분 — 규제 리스크 없음"},recIds:[18,47,60,129,143],sources:["네이버 DataLab","식약처"]},
+  {id:5,name:"발효 나이아신아마이드 세럼",cat:"세럼",func:"미백/모공",ingr:"나이아신아마이드+발효물",growth:115,conf:81,
+   scores:{market:18,growth:19,comp:12,prod:13,reg:12},
+   briefReason:"K뷰티 발효 기술로 흡수율 3배 차별화 — 중국 미백 시장 2위 성장",
+   reasons:[{icon:"✅",txt:"발효 공법 흡수율 3배↑ 차별화"},{icon:"✅",txt:"중국 미백 세럼 카테고리 2위 성장"}],
+   risk:{level:"low",txt:"규제 이슈 없음"},recIds:[47,18,3,121,60],sources:["네이버 DataLab","Tmall"]},
+  {id:6,name:"올인원 멀티케어 크림",cat:"스킨케어",func:"복합/멀티",ingr:"복합활성",growth:108,conf:79,
+   scores:{market:18,growth:17,comp:11,prod:15,reg:13},
+   briefReason:"루틴 단순화 트렌드 + 남성 화장품 확대 — 생산 범용성 높음",
+   reasons:[{icon:"✅",txt:"스킨케어 루틴 단순화 — 시간 절약형 수요"},{icon:"✅",txt:"남성 화장품 시장 확대 주도"}],
+   risk:{level:"low",txt:"규제 리스크 없음"},recIds:[1,8,44,79,143],sources:["네이버 DataLab","화해","뷰티누리"]},
+  {id:7,name:"글루타치온 미백 앰플",cat:"앰플",func:"미백/항산화",ingr:"글루타치온",growth:98,conf:78,
+   scores:{market:17,growth:16,comp:12,prod:12,reg:11},
+   briefReason:"동남아·일본 K뷰티 앰플 핵심 성분 — 기능성 심사 9월 단축 예정",
+   reasons:[{icon:"✅",txt:"동남아 미백 시장 최강 성장 성분"},{icon:"⚠️",txt:"기능성 심사 필요 (9월 60일로 단축)"}],
+   risk:{level:"med",txt:"기능성 화장품 심사 필요"},recIds:[23,47,18,41,60],sources:["KITA 수출통계","화해","뷰티누리"]},
+  {id:8,name:"마이크로바이옴 에센스",cat:"에센스",func:"장벽/진정",ingr:"프로바이오틱스",growth:92,conf:76,
+   scores:{market:16,growth:15,comp:13,prod:11,reg:12},
+   briefReason:"미국·유럽 2년 선행 트렌드 국내 진입 — BeautyMatter 2026 TOP5",
+   reasons:[{icon:"✅",txt:"미국·유럽 선행 트렌드 2년 앞서"},{icon:"✅",txt:"BeautyMatter 2026 TOP5 성분"}],
+   risk:{level:"low",txt:"EU 클린뷰티 기준 적합"},recIds:[47,18,121,60,129],sources:["BeautyMatter","구글트렌드"]},
+  {id:9,name:"바쿠치올 세럼 (레티놀 대체)",cat:"세럼",func:"재생/항노화",ingr:"바쿠치올",growth:88,conf:80,
+   scores:{market:16,growth:14,comp:14,prod:12,reg:14},
+   briefReason:"레티놀 규제(7월) 직접 수혜 — Sephora 미국 입점 폭증",
+   reasons:[{icon:"✅",txt:"레티놀 규제 강화(7월) 직접 수혜"},{icon:"✅",txt:"Sephora 미국 바쿠치올 세럼 입점 폭증"}],
+   risk:{level:"low",txt:"규제 강화가 기회"},recIds:[18,47,41,3,121],sources:["식약처 규제공고","Sephora"]},
+  {id:10,name:"탄산 클렌징 폼",cat:"클렌징",func:"딥클렌징/모공",ingr:"탄산·탄산수",growth:82,conf:75,
+   scores:{market:16,growth:14,comp:12,prod:14,reg:12},
+   briefReason:"일본 → 국내 6개월 후행 확산 — 표준 공정으로 빠른 대응 가능",
+   reasons:[{icon:"✅",txt:"일본 트렌드 국내 6개월 후행 확산"},{icon:"✅",txt:"생산 공정 표준화 — 빠른 OEM 대응"}],
+   risk:{level:"low",txt:"규제 이슈 없음"},recIds:[1,44,79,60,143],sources:["네이버 DataLab","화해","뷰티누리"]},
+  {id:11,name:"저분자 히알루론산 토너",cat:"토너",func:"수분/흡수",ingr:"저분자 히알루론산",growth:78,conf:77,
+   scores:{market:16,growth:13,comp:10,prod:14,reg:12},
    briefReason:"고수요 안정 카테고리 + 저분자 기술 차별화 용이",
-   reasons:[
-     {icon:"✅",txt:"기초 수분 시장 꾸준한 성장 — 고수요 안정 카테고리"},
-     {icon:"✅",txt:"저분자 분화 기술로 기존 토너 대비 차별화 용이"},
-   ],
-   risk:{level:"low",txt:"검증된 성분 — 안전"},
-   recIds:[1,3,52,79,143],
-   sources:["네이버 DataLab","올리브영","화해"]},
-
-  {id:12,name:"아토피·민감성 전용 보습제",cat:"스킨케어",func:"진정/보습",ingr:"세라마이드+판테놀",
-   growth:75,conf:76,scores:{market:15,growth:13,comp:11,prod:13,reg:12},
+   reasons:[{icon:"✅",txt:"기초 수분 시장 꾸준한 성장"},{icon:"✅",txt:"저분자 기술로 기존 토너 대비 차별화"}],
+   risk:{level:"low",txt:"검증된 성분"},recIds:[1,3,52,79,143],sources:["네이버 DataLab","올리브영","뷰티누리"]},
+  {id:12,name:"아토피·민감성 전용 보습제",cat:"스킨케어",func:"진정/보습",ingr:"세라마이드+판테놀",growth:75,conf:76,
+   scores:{market:15,growth:13,comp:11,prod:13,reg:12},
    briefReason:"국내 아토피 유병률 증가 + 병원 추천 → 소비자 화장품 이동",
-   reasons:[
-     {icon:"✅",txt:"국내 아토피 유병률 증가 — 구조적 수요"},
-     {icon:"✅",txt:"병원 추천 → 소비자 화장품 이동 패턴"},
-     {icon:"✅",txt:"라로슈포제·세타필 대체 K뷰티 기회"},
-   ],
-   risk:{level:"low",txt:"기능성 화장품 해당 없음 — 일반 화장품"},
-   recIds:[18,41,47,60,129],
-   sources:["식약처 통계","네이버 DataLab","화해"]},
-
-  {id:13,name:"복합 기능 선케어 (선+스킨)",cat:"선케어",func:"자외선+스킨케어",ingr:"SPF+나이아신아마이드",
-   growth:71,conf:74,scores:{market:15,growth:13,comp:11,prod:13,reg:11},
-   briefReason:"멀티 기능 제품 선호 증가 — SPF+미백 복합 프리미엄 포지셔닝",
-   reasons:[
-     {icon:"✅",txt:"멀티 기능 제품 선호 증가 — 루틴 단순화"},
-     {icon:"✅",txt:"SPF50+ PA++++ + 미백 복합 — 프리미엄 포지셔닝"},
-   ],
-   risk:{level:"low",txt:"기능성 화장품 심사 필요하나 9월부터 단축 예정"},
-   recIds:[1,44,66,79,52],
-   sources:["네이버 DataLab","올리브영"]},
-
-  {id:14,name:"비타민C 유도체 앰플",cat:"앰플",func:"미백/항산화",ingr:"Ascorbyl Glucoside",
-   growth:67,conf:73,scores:{market:14,growth:12,comp:11,prod:12,reg:12},
-   briefReason:"순 비타민C 대비 안정성 高 — 미백 기능성 인증 성분 포뮬레이션 용이",
-   reasons:[
-     {icon:"✅",txt:"순 비타민C 대비 안정성 높아 포뮬레이션 용이"},
-     {icon:"✅",txt:"미백 기능성 인증 성분 — 규제 적합"},
-   ],
-   risk:{level:"low",txt:"기능성 심사 필요 — 표준 절차"},
-   recIds:[47,18,60,3,121],
-   sources:["화해","네이버 DataLab","식약처"]},
-
-  {id:15,name:"리포좀 캡슐 수분 크림",cat:"스킨케어",func:"수분/전달",ingr:"리포좀 캡슐화 기술",
-   growth:64,conf:71,scores:{market:14,growth:11,comp:13,prod:11,reg:12},
-   briefReason:"기술 차별화로 프리미엄 포지셔닝 가능 — 기능성 원료 전달 효율 극대화",
-   reasons:[
-     {icon:"✅",txt:"기술 차별화 제품 — 프리미엄 포지셔닝 가능"},
-     {icon:"✅",txt:"기능성 원료 전달 효율 극대화 — R&D 가치"},
-   ],
-   risk:{level:"low",txt:"신기술 적용 원료 — 식약처 원료 등재 여부 사전 확인 필요"},
-   recIds:[18,47,126,121,60],
-   sources:["BeautyMatter RSS","Mintel 보도자료","화해"]},
-
-  {id:16,name:"미스트 선스프레이 SPF50",cat:"선케어",func:"자외선차단",ingr:"미스트+선필터",
-   growth:60,conf:70,scores:{market:13,growth:11,comp:13,prod:13,reg:10},
-   briefReason:"메이크업 위 덧바름 수요 폭증 — 온·오프라인 채널 동시 성장",
-   reasons:[
-     {icon:"✅",txt:"덧바름 선케어 수요 폭증 — 메이크업 위 사용"},
-     {icon:"✅",txt:"온·오프라인 채널 동시 성장"},
-   ],
-   risk:{level:"low",txt:"규제 이슈 없음"},
-   recIds:[44,1,66,79,143],
-   sources:["올리브영","네이버 DataLab"]},
-
-  {id:17,name:"펩타이드 아이 크림",cat:"아이케어",func:"항노화",ingr:"펩타이드 복합체",
-   growth:57,conf:68,scores:{market:12,growth:10,comp:12,prod:11,reg:12},
+   reasons:[{icon:"✅",txt:"국내 아토피 유병률 증가 — 구조적 수요"},{icon:"✅",txt:"라로슈포제·세타필 대체 K뷰티 기회"}],
+   risk:{level:"low",txt:"일반 화장품 — 기능성 해당 없음"},recIds:[18,41,47,60,129],sources:["식약처 통계","화해","뷰티누리"]},
+  {id:13,name:"복합 기능 선케어 (선+스킨)",cat:"선케어",func:"자외선+스킨케어",ingr:"SPF+나이아신아마이드",growth:71,conf:74,
+   scores:{market:15,growth:13,comp:11,prod:13,reg:11},
+   briefReason:"SPF+미백 복합 프리미엄 포지셔닝 — 멀티 기능 선호 증가",
+   reasons:[{icon:"✅",txt:"멀티 기능 제품 선호 증가"},{icon:"✅",txt:"SPF50++ + 미백 복합 프리미엄"}],
+   risk:{level:"low",txt:"기능성 심사 9월 단축 예정"},recIds:[1,44,66,79,52],sources:["네이버 DataLab","올리브영"]},
+  {id:14,name:"비타민C 유도체 앰플",cat:"앰플",func:"미백/항산화",ingr:"Ascorbyl Glucoside",growth:67,conf:73,
+   scores:{market:14,growth:12,comp:11,prod:12,reg:12},
+   briefReason:"순 비타민C 대비 안정성 高 — 미백 기능성 포뮬레이션 용이",
+   reasons:[{icon:"✅",txt:"순 비타민C 대비 안정성 높아 포뮬레이션 용이"},{icon:"✅",txt:"미백 기능성 인증 성분"}],
+   risk:{level:"low",txt:"기능성 심사 필요 — 표준 절차"},recIds:[47,18,60,3,121],sources:["화해","식약처"]},
+  {id:15,name:"리포좀 캡슐 수분 크림",cat:"스킨케어",func:"수분/전달",ingr:"리포좀 캡슐화 기술",growth:64,conf:71,
+   scores:{market:14,growth:11,comp:13,prod:11,reg:12},
+   briefReason:"기술 차별화로 프리미엄 포지셔닝 — 기능성 원료 전달 효율 극대화",
+   reasons:[{icon:"✅",txt:"기술 차별화 — 프리미엄 포지셔닝 가능"},{icon:"✅",txt:"원료 전달 효율 극대화"}],
+   risk:{level:"low",txt:"식약처 원료 등재 여부 사전 확인 필요"},recIds:[18,47,126,121,60],sources:["BeautyMatter","화해"]},
+  {id:16,name:"미스트 선스프레이 SPF50",cat:"선케어",func:"자외선차단",ingr:"미스트+선필터",growth:60,conf:70,
+   scores:{market:13,growth:11,comp:13,prod:13,reg:10},
+   briefReason:"메이크업 위 덧바름 수요 폭증 — 온·오프라인 동시 성장",
+   reasons:[{icon:"✅",txt:"덧바름 선케어 수요 폭증"},{icon:"✅",txt:"온·오프라인 채널 동시 성장"}],
+   risk:{level:"low",txt:"규제 이슈 없음"},recIds:[44,1,66,79,143],sources:["올리브영","네이버 DataLab"]},
+  {id:17,name:"펩타이드 아이 크림",cat:"아이케어",func:"항노화",ingr:"펩타이드 복합체",growth:57,conf:68,
+   scores:{market:12,growth:10,comp:12,prod:11,reg:12},
    briefReason:"안티에이징 2030세대 진입 + 눈가 주름 프리미엄 세그먼트",
-   reasons:[
-     {icon:"✅",txt:"안티에이징 소비자 연령대 확산 — 2030세대 진입"},
-     {icon:"✅",txt:"눈가 주름 개선 프리미엄 포지셔닝"},
-   ],
-   risk:{level:"low",txt:"기능성 여부 포뮬레이션에 따라 결정"},
-   recIds:[18,47,60,129,121],
-   sources:["네이버 DataLab","화해"]},
-
-  {id:18,name:"두피 케어 세럼",cat:"헤어케어",func:"두피진정/탈모예방",ingr:"바이오틴+판테놀",
-   growth:54,conf:66,scores:{market:12,growth:10,comp:11,prod:10,reg:9},
+   reasons:[{icon:"✅",txt:"안티에이징 소비자 연령대 확산"},{icon:"✅",txt:"눈가 주름 개선 프리미엄 포지셔닝"}],
+   risk:{level:"low",txt:"포뮬레이션에 따라 기능성 결정"},recIds:[18,47,60,129,121],sources:["네이버 DataLab","화해"]},
+  {id:18,name:"두피 케어 세럼",cat:"헤어케어",func:"두피진정/탈모예방",ingr:"바이오틴+판테놀",growth:54,conf:66,
+   scores:{market:12,growth:10,comp:11,prod:10,reg:9},
    briefReason:"탈모 케어 시장 연간 +18% 구조적 성장 — 피부과학 영역 확장",
-   reasons:[
-     {icon:"✅",txt:"탈모 케어 시장 연간 +18% 구조적 성장"},
-     {icon:"✅",txt:"두피 화장품 → 피부과학 영역 확장"},
-   ],
-   risk:{level:"med",txt:"탈모 완화 기능성 표기 시 식약처 심사 필요"},
-   recIds:[47,60,129,121,18],
-   sources:["네이버 DataLab","식약처"]},
-
-  {id:19,name:"핵산(DNA) 재생 에센스",cat:"에센스",func:"재생/항노화",ingr:"DNA/RNA 유도체",
-   growth:51,conf:64,scores:{market:11,growth:10,comp:12,prod:9,reg:10},
-   briefReason:"의료미용 기술의 화장품 전이 — PDRN과 유사한 확산 경로 예상",
-   reasons:[
-     {icon:"✅",txt:"의료 미용 기술의 화장품 전이 — PDRN과 유사 경로"},
-     {icon:"✅",txt:"고가 프리미엄 세그먼트 진입 가능"},
-   ],
-   risk:{level:"med",txt:"식약처 원료 안전성 검토 자료 필요 가능성"},
-   recIds:[18,47,23,41,60],
-   sources:["Cosmetics Design RSS","화해","네이버 DataLab"]},
-
-  {id:20,name:"클린뷰티 미니멀 스킨케어",cat:"스킨케어",func:"기초/미니멀",ingr:"5성분 이하 포뮬러",
-   growth:47,conf:72,scores:{market:12,growth:9,comp:10,prod:13,reg:14},
+   reasons:[{icon:"✅",txt:"탈모 케어 시장 연간 +18% 성장"},{icon:"✅",txt:"두피 화장품 피부과학 영역 확장"}],
+   risk:{level:"med",txt:"탈모 완화 기능성 표기 시 심사 필요"},recIds:[47,60,129,121,18],sources:["네이버 DataLab","식약처","뷰티누리"]},
+  {id:19,name:"핵산(DNA) 재생 에센스",cat:"에센스",func:"재생/항노화",ingr:"DNA/RNA 유도체",growth:51,conf:64,
+   scores:{market:11,growth:10,comp:12,prod:9,reg:10},
+   briefReason:"의료미용 기술의 화장품 전이 — PDRN과 유사 확산 경로 예상",
+   reasons:[{icon:"✅",txt:"의료 미용 기술의 화장품 전이"},{icon:"✅",txt:"고가 프리미엄 세그먼트 진입 가능"}],
+   risk:{level:"med",txt:"원료 안전성 검토 자료 필요 가능성"},recIds:[18,47,23,41,60],sources:["Cosmetics Design","화해"]},
+  {id:20,name:"클린뷰티 미니멀 스킨케어",cat:"스킨케어",func:"기초/미니멀",ingr:"5성분 이하 포뮬러",growth:47,conf:72,
+   scores:{market:12,growth:9,comp:10,prod:13,reg:14},
    briefReason:"EU 클린뷰티 규제 선제 대응 — 5성분 포뮬러로 생산단가 절감",
-   reasons:[
-     {icon:"✅",txt:"EU 클린뷰티 규제 대응 — 선제 포지셔닝"},
-     {icon:"✅",txt:"성분 미니멀리즘 소비자 니즈 증가"},
-     {icon:"✅",txt:"생산 단가 낮음 — OEM 마진 개선"},
-   ],
-   risk:{level:"low",txt:"규제 리스크 가장 낮음 — EU·FDA 모두 적합"},
-   recIds:[41,18,44,47,3],
-   sources:["EU SCCS","네이버 DataLab","화해"]},
+   reasons:[{icon:"✅",txt:"EU 클린뷰티 규제 선제 대응"},{icon:"✅",txt:"생산 단가 낮음 — OEM 마진 개선"}],
+   risk:{level:"low",txt:"EU·FDA 모두 적합"},recIds:[41,18,44,47,3],sources:["EU SCCS","화해","뷰티누리"]},
 ];
 
 /* ══ 상태 ══ */
 let currentPeriod = '6m';
+let trendShown = 10, oemShown = 10;
 const PERIOD_CFG = {
   '1m':{growthMul:0.22,confAdd:5,label:'1개월 예측',confCap:97},
   '6m':{growthMul:1.0, confAdd:0, label:'6개월 예측',confCap:97},
   '1y':{growthMul:2.4, confAdd:-8,label:'1년 예측',  confCap:97},
 };
 
-/* ══ OEM 점수 산정 ══ */
+/* ══ OEM 점수 ══ */
 function scoreOEM(c) {
-  const certs = c.certs||[], ind=(c.industry||'').toLowerCase();
-  const isCosm = ind.includes('화장품')||ind.includes('제조');
+  const certs=c.certs||[], ind=(c.industry||'').toLowerCase();
+  const isCosm=ind.includes('화장품')||ind.includes('제조');
   let prod=0,tech=0,growth=0,expo=0,attr=0;
   if(certs.includes('CGMP')) prod+=10;
   if(certs.some(x=>x.includes('ISO22716'))) prod+=8;
@@ -590,7 +472,6 @@ function scoreOEM(c) {
   if(certs.includes('할랄')) expo+=12;
   if(certs.includes('비건')) expo+=8;
   if(certs.includes('OTC DRUG')) expo+=5;
-  if(certs.includes('ISO13485')) expo+=4;
   expo=Math.min(expo,20);
   if(c.status==='SHADOW') attr+=10;
   if(prod>=16) attr+=6; else if(prod>=8) attr+=3;
@@ -599,44 +480,54 @@ function scoreOEM(c) {
   return {...c,s:{prod,tech,growth,expo,attr},total:prod+tech+growth+expo+attr};
 }
 
-function buildOemReasons(c) {
-  const certs=c.certs||[], r=[];
-  if(certs.includes('CGMP')&&certs.some(x=>x.includes('ISO22716')))
-    r.push({icon:'✅',txt:`CGMP + ISO22716 보유 — GMP 기반 국제 기준 생산 체계`});
-  else if(certs.includes('CGMP'))
-    r.push({icon:'✅',txt:'CGMP 인증 보유 — GMP 기반 고품질 생산 체계 검증'});
-  else if(certs.some(x=>x.includes('ISO22716')))
-    r.push({icon:'✅',txt:'ISO22716 보유 — 국제 기준 화장품 GMP 적용'});
-  if(certs.includes('할랄')) r.push({icon:'🌍',txt:'할랄 인증 — 중동·동남아 즉시 수출 가능 (시장 +51%)'});
-  if(certs.includes('비건')) r.push({icon:'🌿',txt:'비건 인증 — 글로벌 클린뷰티 수요 직접 대응'});
-  if(certs.includes('OTC DRUG')) r.push({icon:'💊',txt:'OTC 의약외품 제조 가능 — 기능성 고부가가치'});
-  if(c.status==='SHADOW') r.push({icon:'💡',txt:'현재 미거래 상태 — 독점 거래선 선점 기회'});
-  if(certs.length>=5) r.push({icon:'🏆',txt:`인증 ${certs.length}개 보유 — 체계적 품질·환경 관리`});
-  if(['세종','충청'].includes(c.region)) r.push({icon:'🏭',txt:'세종/충청 산업단지 — 생산비용 경쟁력'});
-  return r.slice(0,4);
+let _cachedOem=null;
+function getOemScores(){
+  if(!_cachedOem){
+    const f=DB_REAL.filter(c=>{
+      const certs=c.certs||[], ind=(c.industry||'').toLowerCase();
+      const hasCert=certs.some(x=>['CGMP','비건','할랄','OTC DRUG'].includes(x)||x.includes('ISO22716'));
+      const isMfg=ind.includes('화장품')||ind.includes('제조');
+      return (hasCert||isMfg)&&!ind.includes('용기')&&!(ind.includes('플라스틱')&&!hasCert);
+    });
+    _cachedOem=f.map(scoreOEM).sort((a,b)=>b.total-a.total);
+  }
+  return _cachedOem;
 }
 
-function buildOemCategories(c) {
+function buildOemReasons(c){
+  const certs=c.certs||[], r=[];
+  if(certs.includes('CGMP')&&certs.some(x=>x.includes('ISO22716')))
+    r.push({icon:'✅',txt:'CGMP + ISO22716 보유 — GMP 기반 국제 기준 생산'});
+  else if(certs.includes('CGMP')) r.push({icon:'✅',txt:'CGMP 인증 — GMP 기반 고품질 생산'});
+  else if(certs.some(x=>x.includes('ISO22716'))) r.push({icon:'✅',txt:'ISO22716 — 국제 기준 화장품 GMP'});
+  if(certs.includes('할랄')) r.push({icon:'🌍',txt:'할랄 인증 — 중동·동남아 즉시 수출 가능'});
+  if(certs.includes('비건')) r.push({icon:'🌿',txt:'비건 인증 — 글로벌 클린뷰티 대응'});
+  if(c.status==='SHADOW') r.push({icon:'💡',txt:'미거래 상태 — 독점 거래선 선점 기회'});
+  if(certs.length>=5) r.push({icon:'🏆',txt:`인증 ${certs.length}개 — 체계적 품질·환경 관리`});
+  if(['세종','충청'].includes(c.region)) r.push({icon:'🏭',txt:'세종/충청 산단 — 생산비용 경쟁력'});
+  return r.slice(0,3);
+}
+
+function buildOemCats(c){
   const certs=c.certs||[], ind=(c.industry||'').toLowerCase(), cats=[];
   if(ind.includes('화장품')||certs.some(x=>x.includes('ISO22716'))) cats.push('스킨케어');
   if(certs.some(x=>x.includes('ISO22716'))) cats.push('마스크팩');
   if(certs.includes('CGMP')) cats.push('앰플/세럼');
   if(certs.includes('할랄')) cats.push('할랄 화장품');
   if(certs.includes('비건')) cats.push('비건 화장품');
-  if(certs.includes('OTC DRUG')) cats.push('기능성 화장품');
   return [...new Set(cats)].slice(0,4);
 }
 
-function getGrowthStage(t) {
+function getGrowthStage(t){
   if(t>=85) return {now:'중소 OEM',pred:'중견 OEM 진입',period:'1~2년'};
-  if(t>=70) return {now:'중소 OEM',pred:'중견 OEM 준비',period:'2년'};
-  if(t>=55) return {now:'소규모 OEM',pred:'중소 OEM 성장',period:'2~3년'};
-  return            {now:'소규모 OEM',pred:'안정 중소 OEM',period:'3년'};
+  if(t>=70) return {now:'중소 OEM',pred:'중견 준비',period:'2년'};
+  if(t>=55) return {now:'소규모 OEM',pred:'중소 OEM',period:'2~3년'};
+  return          {now:'소규모 OEM',pred:'안정 성장',period:'3년'};
 }
 
-/* ══ 유틸 색상 ══ */
+/* ══ 유틸 ══ */
 function oppColor(s){return s>=75?'#10b981':s>=58?'#f59e0b':'#ef4444'}
-function barColor(v,m){const p=v/m;return p>=.75?'#10b981':p>=.5?'#f59e0b':'#ef4444'}
+function barColor(v,m){return v/m>=.75?'#10b981':v/m>=.5?'#f59e0b':'#ef4444'}
 function certClass(c){
   if(c.includes('CGMP')) return 'cp-cgmp';
   if(c.includes('ISO')) return 'cp-iso';
@@ -645,124 +536,109 @@ function certClass(c){
   if(c.includes('OTC')) return 'cp-otc';
   return 'cp-na';
 }
-function rankBadgeClass(r){
-  if(r===1) return 'rb-gold';
-  if(r===2) return 'rb-silver';
-  if(r===3) return 'rb-bronze';
-  if(r<=10) return 'rb-top10';
-  return 'rb-rest';
-}
-function donutSVG(val,max,color){
-  const r=15,c=2*Math.PI*r,pct=Math.min(val/max,1);
-  return `<svg class="s5-svg" viewBox="0 0 40 40">
-    <circle class="s5-bg" cx="20" cy="20" r="${r}"/>
-    <circle class="s5-fg" cx="20" cy="20" r="${r}" stroke="${color}"
-      stroke-dasharray="${(pct*c).toFixed(1)} ${c.toFixed(1)}"/>
-  </svg>`;
+function rbClass(r){return r===1?'rb-gold':r===2?'rb-silver':r===3?'rb-bronze':r<=10?'rb-top10':'rb-rest'}
+function donutSVG(v,m,col){
+  const r=14,c=2*Math.PI*r,p=Math.min(v/m,1);
+  return `<svg class="s5-svg" viewBox="0 0 34 34"><circle class="s5-bg" cx="17" cy="17" r="${r}"/><circle class="s5-fg" cx="17" cy="17" r="${r}" stroke="${col}" stroke-dasharray="${(p*c).toFixed(1)} ${c.toFixed(1)}"/></svg>`;
 }
 
-/* ══ OEM 점수 캐시 ══ */
-let cachedOemScores = null;
-function getOemScores() {
-  if(!cachedOemScores) {
-    const filter = DB_REAL.filter(c=>{
-      const certs=c.certs||[], ind=(c.industry||'').toLowerCase();
-      const hasCert=certs.some(x=>['CGMP','비건','할랄','OTC DRUG'].includes(x)||x.includes('ISO22716'));
-      const isMfg=ind.includes('화장품')||ind.includes('제조');
-      const isPurePkg=(ind.includes('용기')||(ind.includes('플라스틱')&&!hasCert));
-      return (hasCert||isMfg)&&!isPurePkg;
-    });
-    cachedOemScores = filter.map(scoreOEM).sort((a,b)=>b.total-a.total);
-  }
-  return cachedOemScores;
+/* ══ 최다 추천 OEM 계산 ══ */
+function getTopRecOems(){
+  const cnt={};
+  TREND_BASE.forEach(t=>(t.recIds||[]).forEach(id=>{cnt[id]=(cnt[id]||0)+1}));
+  const oemScored=getOemScores();
+  return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([id,count])=>{
+    const o=oemScored.find(x=>x.id==id);
+    return o?{...o,recCount:count}:null;
+  }).filter(Boolean);
 }
 
 /* ══ 브리핑 ══ */
-function renderBrief() {
-  const cfg = PERIOD_CFG[currentPeriod];
-  const g = Math.round(TREND_BASE[0].growth * cfg.growthMul);
-  const briefs = {
-    '1m':'<strong>단기(1개월) 핵심 전략:</strong> 봄 시즌 선케어 수요가 정점에 달하고 있습니다. PDRN 성분 확산은 초기 단계로 <strong>선점 진입이 유효한 마지막 구간</strong>입니다. 레티놀 규제 시행(7월) 전 대체 성분 기획을 즉시 착수하십시오.',
-    '6m':'<strong>중기(6개월) 전략 방향:</strong> PDRN 진정 앰플이 미국 선행 트렌드를 9개월 격차로 추격하며 국내 최대 성장 카테고리로 부상 중입니다. <strong>Hidden OEM 3개사</strong>가 할랄·비건 이중 인증으로 즉시 글로벌 대응 가능한 상태이며, 선제 접촉을 권장합니다.',
-    '1y':'<strong>장기(1년) 포지셔닝:</strong> 클린뷰티·마이크로바이옴·의료화장품 경계 해소 3대 메가트렌드가 K뷰티를 재편합니다. EU 미세플라스틱 금지(2027)와 MoCRA 정착으로 <strong>인증·컴플라이언스 체계를 갖춘 OEM이 구조적 우위</strong>를 확보합니다.',
+function renderBrief(){
+  const cfg=PERIOD_CFG[currentPeriod];
+  const g=Math.round(TREND_BASE[0].growth*cfg.growthMul);
+  const briefs={
+    '1m':'<strong>단기(1개월):</strong> 봄 시즌 선케어 수요 정점. PDRN 성분 <strong>선점 진입 마지막 구간</strong>. 레티놀 규제 시행(7월) 전 대체 성분 기획 즉시 착수 필요.',
+    '6m':'<strong>중기(6개월):</strong> PDRN 진정 앰플이 미국 9개월 선행을 추격하며 최대 성장 카테고리로 부상. <strong>최다 추천 OEM 2개사</strong>가 할랄·비건 이중 인증으로 즉시 글로벌 대응 가능.',
+    '1y':'<strong>장기(1년):</strong> 클린뷰티·마이크로바이옴·의료화장품 3대 메가트렌드가 K뷰티를 재편. EU 미세플라스틱 금지(2027)로 <strong>인증 체계 갖춘 OEM이 구조적 우위</strong> 확보.',
   };
-  document.getElementById('briefText').innerHTML = briefs[currentPeriod];
-  document.getElementById('briefPills').innerHTML = [
-    `<span class="bpill hot">🔥 1위 · PDRN 앰플 +${g}%</span>`,
+  document.getElementById('briefText').innerHTML=briefs[currentPeriod];
+  document.getElementById('briefPills').innerHTML=[
+    `<span class="bpill hot">🔥 PDRN 앰플 +${g}%</span>`,
     `<span class="bpill oem">🏭 Hidden OEM #1 · 95점</span>`,
-    `<span class="bpill warn">⚠️ 레티놀 규제 2026.07.01</span>`,
-    `<span class="bpill info">📊 ${cfg.label} 기준</span>`,
+    `<span class="bpill warn">⚠️ 레티놀 규제 2026.07</span>`,
+    `<span class="bpill info">📊 ${cfg.label}</span>`,
   ].join('');
 }
 
+/* ══ 최다 추천 OEM 배너 ══ */
+function renderTopRec(){
+  const tops=getTopRecOems();
+  const html=tops.map((o,i)=>{
+    const sc=o.total>=75?'#10b981':'#f59e0b';
+    const keyCerts=(o.certs||[]).filter(c=>['CGMP','비건','할랄'].includes(c)||c.includes('ISO22716')).slice(0,3);
+    const certsHtml=keyCerts.map(c=>`<span class="cp ${certClass(c)}">${c}</span>`).join('');
+    return `<div class="top-rec-card" onclick="goToDbDetail(${o.id})">
+      <div class="trc-rank">${i===0?'🥇 1순위':'🥈 2순위'} 최다 추천</div>
+      <div class="trc-name">${o.name}</div>
+      <div class="trc-row">
+        <span class="trc-score" style="color:${sc}">${o.total}점</span>
+        <span class="trc-trade">${o.status==='SHADOW'?'미거래 ★':'거래 중 ✓'}</span>
+      </div>
+      <div class="trc-count">${o.region} · 전체 트렌드 중 <strong>${o.recCount}회</strong> 추천</div>
+      <div class="trc-certs">${certsHtml}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('topRecGrid').innerHTML=html;
+}
+
 /* ══ 트렌드 렌더 ══ */
-function renderTrends() {
-  const cfg = PERIOD_CFG[currentPeriod];
-  document.getElementById('trendMeta').textContent = cfg.label + ' · ' + new Date().toLocaleDateString('ko-KR');
-  const oemScored = getOemScores();
+function renderTrends(){
+  const cfg=PERIOD_CFG[currentPeriod];
+  document.getElementById('trendMeta').textContent=cfg.label+' · TOP '+TREND_BASE.length;
+  const oemScored=getOemScores();
+  const items=TREND_BASE.slice(0,trendShown);
 
-  const html = TREND_BASE.map((t, idx) => {
-    const rank = idx+1;
-    const g = Math.round(t.growth * cfg.growthMul);
-    const conf = Math.min(cfg.confCap, Math.max(45, t.conf + cfg.confAdd));
-    const opp = t.scores.market+t.scores.growth+t.scores.comp+t.scores.prod+t.scores.reg;
-    const oc = oppColor(opp);
-    const confColor = conf>=85?'#10b981':conf>=70?'#f59e0b':'#ef4444';
-    const noType = !PORTFOLIO_TYPES.has(t.cat);
+  const html=items.map((t,idx)=>{
+    const rank=idx+1;
+    const g=Math.round(t.growth*cfg.growthMul);
+    const conf=Math.min(cfg.confCap,Math.max(45,t.conf+cfg.confAdd));
+    const opp=t.scores.market+t.scores.growth+t.scores.comp+t.scores.prod+t.scores.reg;
+    const oc=oppColor(opp);
+    const cc=conf>=85?'#10b981':conf>=70?'#f59e0b':'#ef4444';
+    const noType=!PORTFOLIO_TYPES.has(t.cat);
 
-    // 추천 OEM 미리보기 (상위 2개)
-    const topOems = (t.recIds||[]).slice(0,2).map(id=>{
-      const scored = oemScored.find(o=>o.id===id);
-      if(!scored) return '';
-      const keyC = (scored.certs||[]).filter(c=>['CGMP','비건','할랄','ISO22716'].includes(c)||c.includes('ISO22716')).slice(0,3);
-      const tradeHtml = scored.status==='SHADOW'
-        ? '<span class="oem-mini-trade trade-shadow">미거래★</span>'
-        : '<span class="oem-mini-trade trade-confirmed">거래중</span>';
-      const miniCerts = keyC.map(c=>`<span class="mc ${certClass(c)}">${c.replace('ISO22716','ISO22716')}</span>`).join('');
-      const sc = scored.total>=75?'#10b981':scored.total>=55?'#f59e0b':'#ef4444';
-      return `<div class="t-oem-mini" onclick="goToDbDetail(${scored.id})">
-        <div class="oem-mini-name">${scored.name}</div>
-        <div class="oem-mini-row">
-          <span class="oem-mini-score" style="color:${sc}">${scored.total}점</span>
-          ${tradeHtml}
-        </div>
-        <div class="oem-mini-certs">${miniCerts}</div>
+    const oemChips=(t.recIds||[]).slice(0,2).map(id=>{
+      const o=oemScored.find(x=>x.id===id);
+      if(!o) return '';
+      const sc2=o.total>=75?'#10b981':'#f59e0b';
+      const tradeCls=o.status==='SHADOW'?'shadow':'confirmed';
+      const tradeTxt=o.status==='SHADOW'?'미거래★':'거래중';
+      return `<div class="t-oem-chip" onclick="goToDbDetail(${o.id})">
+        <span class="oc-name">${o.name}</span>
+        <span class="oc-score" style="color:${sc2}">${o.total}점</span>
+        <span class="oc-trade ${tradeCls}">${tradeTxt}</span>
       </div>`;
     }).join('');
 
-    const reasonsHtml = t.reasons.map(r=>
-      `<li class="reason-item"><span class="r-icon">${r.icon}</span>${r.txt}</li>`
-    ).join('');
-
-    const riskCls = t.risk.level==='low'?'risk-low':t.risk.level==='high'?'risk-high':'risk-med';
-
-    const scoreItems = [
-      {name:'시장성',val:t.scores.market,max:25},
-      {name:'성장성',val:t.scores.growth,max:30},
-      {name:'경쟁강도',val:t.scores.comp,max:15},
-      {name:'생산용이',val:t.scores.prod,max:15},
-      {name:'규제안전',val:t.scores.reg,max:15},
-    ];
-    const score5Html = scoreItems.map(si=>{
-      const sc=barColor(si.val,si.max);
-      return `<div class="s5-item">
-        <div class="s5-name">${si.name}</div>
-        <div class="s5-donut">${donutSVG(si.val,si.max,sc)}
-          <div class="s5-num" style="color:${sc}">${si.val}</div>
-        </div>
-        <div class="s5-max">/${si.max}</div>
-      </div>`;
+    const reasHtml=t.reasons.map(r=>`<li class="reason-item"><span>${r.icon}</span>${r.txt}</li>`).join('');
+    const riskCls=t.risk.level==='low'?'risk-low':t.risk.level==='high'?'risk-high':'risk-med';
+    const sItems=[{name:'시장성',v:t.scores.market,m:25},{name:'성장성',v:t.scores.growth,m:30},{name:'경쟁강도',v:t.scores.comp,m:15},{name:'생산용이',v:t.scores.prod,m:15},{name:'규제안전',v:t.scores.reg,m:15}];
+    const s5Html=sItems.map(si=>{
+      const sc3=barColor(si.v,si.m);
+      return `<div class="s5-item"><div class="s5-name">${si.name}</div><div class="s5-donut">${donutSVG(si.v,si.m,sc3)}<div class="s5-num" style="color:${sc3}">${si.v}</div></div><div class="s5-max">/${si.m}</div></div>`;
     }).join('');
+    const srcs=t.sources||[];
+    const srcBarHtml=srcs.map(s=>s==='뷰티누리'?`<span class="src-tag-bn">뷰티누리</span>`:`<span class="src-tag">${s}</span>`).join('');
+    const srcHtml=srcs.map(s=>s==='뷰티누리'?`<span class="src-tag-bn">뷰티누리</span>`:`<span class="src-tag">${s}</span>`).join('');
 
-    const srcHtml = (t.sources||[]).map(s=>`<span class="src-tag">${s}</span>`).join('');
-
-    return `<div class="t-card">
+    return `<div class="t-item">
       <div class="t-head">
-        <div class="rank-badge ${rankBadgeClass(rank)}">${rank}</div>
+        <div class="rank-badge ${rbClass(rank)}">${rank}</div>
         <div class="t-info">
           <div class="t-name-row">
             <span class="t-name">${t.name}</span>
-            ${noType?'<span class="no-type-badge">미보유 유형</span>':''}
+            ${noType?'<span class="no-type">미보유 유형</span>':''}
           </div>
           <div class="t-tags">
             <span class="tag tag-cat">${t.cat}</span>
@@ -771,93 +647,65 @@ function renderTrends() {
           </div>
         </div>
         <div class="t-metrics">
+          <div><div class="growth-big">+${g}%</div><div class="growth-lbl">예상성장률</div></div>
           <div>
-            <div class="growth-big">+${g}%</div>
-            <div class="growth-lbl">예상성장률</div>
-          </div>
-          <div>
-            <div class="conf-row">
-              <div class="conf-bg"><div class="conf-fill" style="width:${conf}%;background:${confColor}"></div></div>
-              <span class="conf-num">${conf}%</span>
-            </div>
+            <div class="conf-row"><div class="conf-bg"><div class="conf-fill" style="width:${conf}%;background:${cc}"></div></div><span class="conf-num">${conf}%</span></div>
             <div class="growth-lbl">신뢰도</div>
           </div>
-          <div>
-            <div class="opp-circle" style="color:${oc};border-color:${oc}">${opp}</div>
-            <div class="opp-lbl">기회점수</div>
-          </div>
+          <div><div class="opp-wrap"><span class="opp-num" style="color:${oc}">${opp}</span><span class="opp-lbl">/100</span></div><div class="growth-lbl">기회점수</div></div>
         </div>
       </div>
-
-      <div class="t-oem-bar" style="grid-template-columns:${topOems?'1fr 1fr':'1fr'}">
-        ${topOems||'<div style="font-size:10px;color:var(--txt3);padding:2px 0">추천 OEM 데이터 연동 예정</div>'}
-      </div>
-
-      <div class="t-brief" onclick="toggleTrend(${t.id}, this)">
-        <span class="t-brief-txt"><strong>💡</strong> ${t.briefReason}</span>
+      <div class="t-oem-bar">${oemChips||'<span style="font-size:9px;color:var(--txt3)">추천 OEM 연동 예정</span>'}</div>
+      ${srcs.length?`<div class="t-src-bar"><span class="t-src-lbl">📊 출처</span>${srcBarHtml}</div>`:''}
+      <div class="t-brief" onclick="toggleT(${t.id})">
+        <span class="t-brief-txt"><b>💡</b> ${t.briefReason}</span>
         <span class="expand-arrow" id="ta-${t.id}">▼</span>
       </div>
-
       <div class="t-detail" id="td-${t.id}">
-        <div class="detail-lbl" style="margin-bottom:7px">점수 구성 (합계 ${opp}/100)</div>
-        <div class="score-5row">${score5Html}</div>
-        <div class="detail-lbl" style="margin-bottom:6px">AI 분석 근거</div>
-        <ul class="reason-list">${reasonsHtml}</ul>
-        <div class="detail-lbl" style="margin-bottom:5px">리스크 평가</div>
-        <div class="risk-box ${riskCls}" style="margin-bottom:10px">${t.risk.txt}</div>
-        <div class="detail-lbl" style="margin-bottom:5px">데이터 소스</div>
+        <div class="detail-lbl" style="margin-bottom:5px">점수 구성 (합계 ${opp}/100)</div>
+        <div class="score-5row">${s5Html}</div>
+        <div class="detail-lbl" style="margin-bottom:4px">AI 분석 근거</div>
+        <ul class="reason-list">${reasHtml}</ul>
+        <div class="detail-lbl" style="margin-bottom:4px">리스크 평가</div>
+        <div class="risk-box ${riskCls}" style="margin-bottom:8px">${t.risk.txt}</div>
+        <div class="detail-lbl" style="margin-bottom:4px">데이터 소스</div>
         <div class="src-row">${srcHtml}</div>
       </div>
     </div>`;
   }).join('');
 
-  document.getElementById('trendList').innerHTML = html;
+  document.getElementById('trendList').innerHTML=html;
+  const wrap=document.getElementById('trendMoreWrap');
+  if(trendShown>=TREND_BASE.length) wrap.style.display='none';
+  else{ wrap.style.display=''; wrap.querySelector('button').disabled=false; }
 }
 
 /* ══ OEM 렌더 ══ */
-function renderOEMs() {
-  const scored = getOemScores().slice(0,20);
-  document.getElementById('oemMeta').textContent = `DB ${DB_REAL.length}개사 중 상위 20개`;
+function renderOEMs(){
+  const scored=getOemScores();
+  document.getElementById('oemMeta').textContent=`DB 중 상위 ${Math.min(oemShown,scored.length)}/${scored.length}개`;
+  const items=scored.slice(0,oemShown);
 
-  const html = scored.map((c,idx)=>{
-    const rank = idx+1;
-    const sc = c.total>=75?'#10b981':c.total>=55?'#f59e0b':'#ef4444';
-    const tradeCls = c.status==='SHADOW'?'shadow':'confirmed';
-    const tradeLbl = c.status==='SHADOW'?'미거래 ★':'거래 중 ✓';
-    const certHtml = (c.certs||[]).slice(0,6).map(cert=>
-      `<span class="cp ${certClass(cert)}">${cert}</span>`
-    ).join('');
-
-    const reasons = buildOemReasons(c);
-    const reasonsHtml = reasons.map(r=>
-      `<div class="o-reason"><span class="o-reason-icon">${r.icon}</span>${r.txt}</div>`
-    ).join('');
-
-    const cats = buildOemCategories(c);
-    const catsHtml = cats.map(cat=>`<span class="rec-cat">${cat}</span>`).join('');
-    const stage = getGrowthStage(c.total);
-
-    const scoreItems = [
-      {name:'생산력',val:c.s.prod,max:20},
-      {name:'기술력',val:c.s.tech,max:20},
-      {name:'성장성',val:c.s.growth,max:20},
-      {name:'수출역량',val:c.s.expo,max:20},
-      {name:'거래매력',val:c.s.attr,max:20},
-    ];
-    const score5Html = scoreItems.map(si=>{
-      const bsc=barColor(si.val,si.max);
-      return `<div class="s5-item">
-        <div class="s5-name">${si.name}</div>
-        <div class="s5-donut">${donutSVG(si.val,si.max,bsc)}
-          <div class="s5-num" style="color:${bsc}">${si.val}</div>
-        </div>
-        <div class="s5-max">/${si.max}</div>
-      </div>`;
+  const html=items.map((c,idx)=>{
+    const rank=idx+1;
+    const sc=c.total>=75?'#10b981':c.total>=55?'#f59e0b':'#ef4444';
+    const tradeCls=c.status==='SHADOW'?'shadow':'confirmed';
+    const tradeLbl=c.status==='SHADOW'?'미거래 ★':'거래 중 ✓';
+    const certHtml=(c.certs||[]).slice(0,6).map(cert=>`<span class="cp ${certClass(cert)}">${cert}</span>`).join('');
+    const reasons=buildOemReasons(c);
+    const reasHtml=reasons.map(r=>`<div class="o-reason"><span>${r.icon}</span>${r.txt}</div>`).join('');
+    const cats=buildOemCats(c);
+    const catsHtml=cats.map(cat=>`<span class="rec-cat">${cat}</span>`).join('');
+    const stage=getGrowthStage(c.total);
+    const sItems=[{name:'생산력',v:c.s.prod,m:20},{name:'기술력',v:c.s.tech,m:20},{name:'성장성',v:c.s.growth,m:20},{name:'수출역량',v:c.s.expo,m:20},{name:'거래매력',v:c.s.attr,m:20}];
+    const s5Html=sItems.map(si=>{
+      const sc3=barColor(si.v,si.m);
+      return `<div class="s5-item"><div class="s5-name">${si.name}</div><div class="s5-donut">${donutSVG(si.v,si.m,sc3)}<div class="s5-num" style="color:${sc3}">${si.v}</div></div><div class="s5-max">/${si.m}</div></div>`;
     }).join('');
 
-    return `<div class="o-card">
+    return `<div class="o-item">
       <div class="o-head">
-        <div class="rank-badge ${rankBadgeClass(rank)}">${rank}</div>
+        <div class="rank-badge ${rbClass(rank)}">${rank}</div>
         <div class="o-info">
           <div class="o-name-row">
             <span class="o-name">${c.name}</span>
@@ -868,85 +716,89 @@ function renderOEMs() {
         </div>
         <div class="o-score-block">
           <div class="hs-num" style="color:${sc}">${c.total}</div>
-          <div class="hs-lbl">Hidden Score</div>
-          <div class="hs-sub" style="color:${sc}">/100</div>
+          <div class="hs-lbl">/ 100</div>
         </div>
       </div>
-
-      <div class="o-reasons">${reasonsHtml}</div>
-
-      <div class="o-expand-btn" onclick="toggleOem(${c.id},this)">
-        <span class="o-expand-label">점수 상세 · 성장단계 · 추천 생산 분야 보기</span>
+      <div class="o-reasons">${reasHtml}</div>
+      <div class="o-src-note">📊 출처: CosmeDB 내부 DB · 인증/지역 데이터 기반 AI 스코어링</div>
+      <div class="o-expand-btn" onclick="toggleO(${c.id})">
+        <span class="o-expand-lbl">점수 상세 · 성장단계 · 추천 분야</span>
         <span class="expand-arrow" id="oa-${c.id}">▼</span>
       </div>
-
       <div class="o-detail" id="od-${c.id}">
         <div class="growth-stage-box">
-          <div class="gs-block">
-            <div class="gs-label">현재 단계</div>
-            <div class="gs-val">${stage.now}</div>
-          </div>
+          <div class="gs-block"><div class="gs-label">현재</div><div class="gs-val">${stage.now}</div></div>
           <div class="gs-arrow">→</div>
-          <div class="gs-block">
-            <div class="gs-label">예상 (${stage.period})</div>
-            <div class="gs-val" style="color:var(--cyn)">${stage.pred}</div>
-          </div>
+          <div class="gs-block"><div class="gs-label">예상 (${stage.period})</div><div class="gs-val" style="color:var(--cyn)">${stage.pred}</div></div>
         </div>
-        <div class="detail-lbl" style="margin-bottom:6px">점수 구성</div>
-        <div class="score-5row" style="margin-bottom:10px">${score5Html}</div>
-        <div class="detail-lbl" style="margin-bottom:6px">추천 생산 분야</div>
-        <div class="rec-cat-list" style="margin-bottom:10px">${catsHtml||'<span style="font-size:11px;color:var(--txt3)">분류 데이터 부족</span>'}</div>
-        <button class="btn-db-det" onclick="goToDbDetail(${c.id})">상세 보기 (TAB02) →</button>
+        <div class="detail-lbl" style="margin-bottom:5px">점수 구성</div>
+        <div class="score-5row" style="margin-bottom:9px">${s5Html}</div>
+        <div class="detail-lbl" style="margin-bottom:5px">추천 생산 분야</div>
+        <div class="rec-cat-list" style="margin-bottom:9px">${catsHtml||'<span style="font-size:10px;color:var(--txt3)">분류 데이터 부족</span>'}</div>
+        <button class="btn-db-det" onclick="goToDbDetail(${c.id})">TAB02 상세 보기 →</button>
       </div>
     </div>`;
   }).join('');
 
-  document.getElementById('oemList').innerHTML = html;
+  document.getElementById('oemList').innerHTML=html;
+  const wrap=document.getElementById('oemMoreWrap');
+  if(oemShown>=scored.length||oemShown>=20) wrap.style.display='none';
+  else{ wrap.style.display=''; wrap.querySelector('button').disabled=false; }
+}
+
+/* ══ 더보기 ══ */
+function showMoreTrend(btn){
+  btn.textContent='로딩 중…'; btn.disabled=true;
+  trendShown=Math.min(trendShown+10,TREND_BASE.length);
+  setTimeout(renderTrends,100);
+}
+function showMoreOem(btn){
+  btn.textContent='로딩 중…'; btn.disabled=true;
+  oemShown=Math.min(oemShown+10,20);
+  setTimeout(renderOEMs,100);
 }
 
 /* ══ 토글 ══ */
-function toggleTrend(id) {
-  const d=document.getElementById('td-'+id), a=document.getElementById('ta-'+id);
-  const isOpen=d.classList.contains('open');
-  d.classList.toggle('open',!isOpen);
-  a&&a.classList.toggle('open',!isOpen);
+function toggleT(id){
+  const d=document.getElementById('td-'+id),a=document.getElementById('ta-'+id);
+  const o=d.classList.contains('open');
+  d.classList.toggle('open',!o); a&&a.classList.toggle('open',!o);
 }
-function toggleOem(id) {
-  const d=document.getElementById('od-'+id), a=document.getElementById('oa-'+id);
-  const isOpen=d.classList.contains('open');
-  d.classList.toggle('open',!isOpen);
-  a&&a.classList.toggle('open',!isOpen);
+function toggleO(id){
+  const d=document.getElementById('od-'+id),a=document.getElementById('oa-'+id);
+  const o=d.classList.contains('open');
+  d.classList.toggle('open',!o); a&&a.classList.toggle('open',!o);
 }
 
 /* ══ 기간 탭 ══ */
-function setPeriod(p,el) {
-  currentPeriod=p;
+function setPeriod(p,el){
+  currentPeriod=p; trendShown=10; oemShown=10;
   document.querySelectorAll('#periodTabs .ptab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  renderBrief(); renderTrends();
+  renderBrief(); renderTrends(); renderOEMs();
 }
 
 /* ══ 재분석 ══ */
-function rerunAnalysis() {
+function rerunAnalysis(){
   const btn=document.querySelector('.btn-rerun');
   btn.textContent='분석 중…'; btn.disabled=true;
+  _cachedOem=null; trendShown=10; oemShown=10;
   setTimeout(()=>{
-    cachedOemScores=null;
     renderAll();
     btn.textContent='↺ 재분석'; btn.disabled=false;
     document.getElementById('updateLbl').textContent='업데이트: '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-  },700);
+  },600);
 }
 
-/* ══ DB 상세 스텁 ══ */
-function goToDbDetail(id) {
+/* ══ DB 스텁 ══ */
+function goToDbDetail(id){
   const c=DB_REAL.find(d=>d.id===id);
   if(!c) return;
   alert(`[TAB02 연동] ${c.name}\n지역: ${c.region}\n인증: ${(c.certs||[]).join(', ')||'없음'}\n\n(탭 통합 후 실제 상세 페이지로 이동)`);
 }
 
 /* ══ 전체 렌더 ══ */
-function renderAll(){ renderBrief(); renderTrends(); renderOEMs(); }
+function renderAll(){renderBrief();renderTopRec();renderTrends();renderOEMs();}
 
 document.getElementById('updateLbl').textContent='업데이트: '+new Date().toLocaleDateString('ko-KR');
 renderAll();
