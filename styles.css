@@ -68,7 +68,9 @@
 }
 
 /* ── Reset & Base ──────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -98,7 +100,8 @@ a {
   text-decoration: none;
 }
 
-ul, ol {
+ul,
+ol {
   list-style: none;
 }
 
@@ -658,7 +661,7 @@ ul, ol {
   border-color: var(--border);
 }
 
-/* Primary score */
+/* Primary score block */
 .tc-score-block {
   flex-shrink: 0;
   text-align: right;
@@ -732,6 +735,7 @@ ul, ol {
   background: var(--bg-muted);
   border-radius: 2px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .conf-bar-fill {
@@ -753,6 +757,7 @@ ul, ol {
   flex-shrink: 0;
   font-weight: 700;
   margin-top: 1px;
+  line-height: 1.6;
 }
 
 .action-text {
@@ -767,6 +772,7 @@ ul, ol {
 }
 
 .action-oem-link {
+  display: inline;
   font-size: 11px;
   font-weight: 700;
   color: var(--blue-txt);
@@ -777,7 +783,6 @@ ul, ol {
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
-  display: inline;
 }
 
 .action-oem-link:hover {
@@ -798,18 +803,19 @@ ul, ol {
   color: var(--txt-4);
 }
 
-/* Expand button */
+/* Expand button — trend card */
 .tc-expand-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  border-top: 1px solid var(--border);
+  border-width: 0;
+  border-top-width: 1px;
+  border-style: solid;
+  border-color: var(--border);
   cursor: pointer;
   background: var(--bg-muted);
   transition: background 0.1s;
-  border: none;
-  border-top: 1px solid var(--border);
   width: 100%;
   font-family: inherit;
 }
@@ -834,17 +840,17 @@ ul, ol {
   transform: rotate(180deg);
 }
 
-/* Detail */
+/* Detail panel — trend card */
 .tc-detail {
   display: none;
   padding: 12px 14px;
   border-top: 1px solid var(--border);
   background: var(--bg-subtle);
-  animation: slideDown 0.15s ease;
 }
 
 .tc-detail.open {
   display: block;
+  animation: slideDown 0.15s ease;
 }
 
 @keyframes slideDown {
@@ -893,6 +899,7 @@ ul, ol {
   border: 1px solid var(--border);
   flex-shrink: 0;
   white-space: nowrap;
+  align-self: flex-start;
 }
 
 .score-grid {
@@ -1140,6 +1147,7 @@ ul, ol {
   white-space: nowrap;
   text-align: center;
   margin-top: 3px;
+  display: inline-block;
 }
 
 /* Hidden reason */
@@ -1157,14 +1165,16 @@ ul, ol {
   font-weight: 600;
 }
 
-/* OEM Expand button */
+/* Expand button — OEM card */
 .oc-expand-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px;
-  border: none;
-  border-top: 1px solid var(--border);
+  border-width: 0;
+  border-top-width: 1px;
+  border-style: solid;
+  border-color: var(--border);
   cursor: pointer;
   background: var(--bg-muted);
   transition: background 0.1s;
@@ -1181,17 +1191,17 @@ ul, ol {
   color: var(--txt-3);
 }
 
-/* OEM Detail */
+/* OEM Detail panel */
 .oc-detail {
   display: none;
   padding: 12px 14px;
   border-top: 1px solid var(--border);
   background: var(--bg-subtle);
-  animation: slideDown 0.15s ease;
 }
 
 .oc-detail.open {
   display: block;
+  animation: slideDown 0.15s ease;
 }
 
 /* Score breakdown */
@@ -1258,6 +1268,7 @@ ul, ol {
   flex-shrink: 0;
   position: relative;
   font-family: inherit;
+  line-height: 1;
 }
 
 /* Tooltip */
@@ -1317,6 +1328,7 @@ ul, ol {
 .gs-arrow {
   font-size: 14px;
   color: var(--txt-4);
+  flex-shrink: 0;
 }
 
 /* Recommended fields */
@@ -1392,10 +1404,6 @@ footer,
     display: none;
   }
 
-  .top-rec-grid {
-    grid-template-columns: 1fr;
-  }
-
   .score-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1433,5 +1441,9 @@ footer,
 
   .score-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .top-rec-grid {
+    grid-template-columns: 1fr;
   }
 }
