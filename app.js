@@ -537,6 +537,7 @@ let _cachedOem = null;
 function getOemScores() {
   if (!_cachedOem) {
     const filtered = DB_REAL.filter(c => {
+      if (c.status !== 'SHADOW') return false; // Hidden OEM = 미거래 업체만
       const certs = c.certs || [];
       const ind = (c.industry || '').toLowerCase();
       const hasCert = certs.some(x =>
@@ -667,16 +668,16 @@ function oppScoreClass(s) {
 
 function barColor(v, m) {
   const r = v / m;
-  return r >= 0.75 ? 'var(--grn)' : r >= 0.5 ? 'var(--yel)' : 'var(--red)';
+  return r >= 0.75 ? 'var(--green)' : r >= 0.5 ? 'var(--amber)' : 'var(--red)';
 }
 
 function certClass(cert) {
-  if (cert.includes('CGMP')) return 'cp-cgmp';
-  if (cert.includes('ISO'))  return 'cp-iso';
-  if (cert === '비건')        return 'cp-vegan';
-  if (cert === '할랄')        return 'cp-halal';
-  if (cert.includes('OTC'))  return 'cp-otc';
-  return 'cp-na';
+  if (cert.includes('CGMP')) return 'cert-cgmp';
+  if (cert.includes('ISO'))  return 'cert-iso';
+  if (cert === '비건')        return 'cert-vegan';
+  if (cert === '할랄')        return 'cert-halal';
+  if (cert.includes('OTC'))  return 'cert-otc';
+  return 'cert-iso';
 }
 
 function rbClass(r) {
@@ -695,18 +696,18 @@ function donutSVG(v, m, col) {
 }
 
 function confBarHTML(conf) {
-  const col = conf >= 85 ? 'var(--grn)' : conf >= 70 ? 'var(--yel)' : 'var(--red)';
-  return `<span class="conf-bg"><span class="conf-fill" style="width:${conf}%;background:${col}"></span></span>`;
+  const col = conf >= 85 ? 'var(--green)' : conf >= 70 ? 'var(--amber)' : 'var(--red)';
+  return `<span class="conf-bar-bg"><span class="conf-bar-fill" style="width:${conf}%;background:${col}"></span></span>`;
 }
 
 function driverTypeColor(type) {
   const map = {
-    '규제':'var(--red)', '시장':'var(--cyn)', '글로벌':'var(--pur)',
-    '기술':'var(--grn)', '수출':'var(--acc)', '계절':'var(--yel)',
-    '검색':'var(--cyn)', '라이프스타일':'var(--grn)', '생산':'var(--txt2)',
-    '채널':'var(--cyn)', '비용':'var(--grn)',
+    '규제':'var(--red)', '시장':'var(--blue)', '글로벌':'var(--blue)',
+    '기술':'var(--green)', '수출':'var(--amber)', '계절':'var(--amber)',
+    '검색':'var(--blue)', '라이프스타일':'var(--green)', '생산':'var(--txt-2)',
+    '채널':'var(--blue)', '비용':'var(--green)',
   };
-  return map[type] || 'var(--txt3)';
+  return map[type] || 'var(--txt-3)';
 }
 
 function esc(str) {
@@ -746,10 +747,10 @@ function renderBrief() {
   };
 
   const pills = [
-    `<span class="bpill hot">PDRN 앰플 +${g}%</span>`,
-    `<span class="bpill oem">Hidden OEM #1 · 95점</span>`,
-    `<span class="bpill warn">레티놀 규제 2026.07</span>`,
-    `<span class="bpill info">${cfg.label}</span>`,
+    `<span class="bpill bpill-hot">PDRN 앰플 +${g}%</span>`,
+    `<span class="bpill bpill-green">Hidden OEM #1 · 95점</span>`,
+    `<span class="bpill bpill-warn">레티놀 규제 2026.07</span>`,
+    `<span class="bpill bpill-blue">${cfg.label}</span>`,
   ].join('');
 
   const srcChips = ['뷰티누리','네이버DataLab','화해','TikTok','식약처']
@@ -781,32 +782,37 @@ function renderTopRec() {
   const tops = getTopRecOems().slice(0, 4);
   const rankLabels = ['1순위','2순위','3순위','4순위'];
 
-  const html = tops.map((o, i) => {
+  const cardsHtml = tops.map((o, i) => {
     const keyCerts = (o.certs || [])
       .filter(c => ['CGMP','비건','할랄'].includes(c) || c.includes('ISO22716'))
       .slice(0, 3);
     const certsHtml = keyCerts.map(c =>
-      `<span class="cp ${certClass(c)}">${esc(c)}</span>`
+      `<span class="cert-badge ${certClass(c)}">${esc(c)}</span>`
     ).join('');
     const tradeCls = o.status === 'SHADOW' ? 'shadow' : 'confirmed';
     const tradeLbl = o.status === 'SHADOW' ? '미거래' : '거래중';
 
     return `<div class="top-rec-card" onclick="highlightOem(${o.id})">
-      <div class="trc-rank">${rankLabels[i]}</div>
+      <div class="trc-badge">${rankLabels[i]} 추천빈도 기반</div>
       <div class="trc-name">${esc(o.name)}</div>
       <div class="trc-row">
-        <span class="trc-freq-badge">추천빈도 ${o.recCount}회</span>
+        <span class="freq-badge">추천빈도 ${o.recCount}회</span>
         <span class="trade-badge ${tradeCls}">${tradeLbl}</span>
       </div>
       <div class="trc-certs">${certsHtml}</div>
     </div>`;
   }).join('');
 
-  const el = document.getElementById('topRecGrid');
-  if (el) el.innerHTML = html;
-
-  const lbl = document.getElementById('topRecLabel');
-  if (lbl) lbl.textContent = '추천 빈도 기반 — 전체 트렌드에서 가장 많이 추천된 OEM';
+  const el = document.getElementById('topRecBanner');
+  if (!el) return;
+  if (!tops.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="top-rec-section">
+    <div class="top-rec-hdr">
+      <span class="top-rec-title">트렌드 전반 최다 추천 OEM</span>
+      <span class="top-rec-basis">추천 빈도 기반 · 종합점수와 별도 기준</span>
+    </div>
+    <div class="top-rec-grid">${cardsHtml}</div>
+  </div>`;
 }
 
 /* ──────────────────────────────────────────
@@ -862,7 +868,7 @@ function renderTrends() {
     ];
     const s5Html = scoreItems.map(si => {
       const col = barColor(si.v, si.m);
-      return `<div class="s5-item"><div class="s5-name">${si.name}</div><div class="s5-donut">${donutSVG(si.v,si.m,col)}<div class="s5-num" style="color:${col}">${si.v}</div></div><div class="s5-max">/${si.m}</div></div>`;
+      return `<div class="score-cell"><div class="sc-name">${si.name}</div><div class="sc-val" style="color:${col}">${si.v}</div><div class="sc-max">/${si.m}</div></div>`;
     }).join('');
 
     // Detail: risk
@@ -930,7 +936,7 @@ function renderTrends() {
         </div>
         <div class="detail-block">
           <div class="detail-lbl">점수 구성 (합계 ${opp}/100)</div>
-          <div class="score-5row">${s5Html}</div>
+          <div class="score-grid">${s5Html}</div>
         </div>
         <div class="detail-block">
           <div class="detail-lbl">핵심 인사이트</div>
@@ -984,14 +990,14 @@ function renderOEMs() {
     const tradeLbl = c.status === 'SHADOW' ? '미거래' : '거래중';
 
     const certHtml = (c.certs || []).slice(0, 6).map(cert =>
-      `<span class="cp ${certClass(cert)}">${esc(cert)}</span>`
-    ).join('') || `<span class="cp cp-na">인증없음</span>`;
+      `<span class="cert-badge ${certClass(cert)}">${esc(cert)}</span>`
+    ).join('') || `<span class="cert-badge cert-iso">인증없음</span>`;
 
     const hiddenReason = buildHiddenReason(c);
     const stage        = getGrowthStage(c.total);
     const cats         = buildOemCats(c);
     const catsHtml     = cats.map(cat => `<span class="rec-cat">${esc(cat)}</span>`).join('')
-                         || '<span style="font-size:10px;color:var(--txt3)">분류 데이터 부족</span>';
+                         || '<span style="font-size:10px;color:var(--txt-3)">분류 데이터 부족</span>';
 
     // Score breakdown table (transparent scoring)
     const breakdown = buildScoreBreakdown(c, c.s);
@@ -1004,7 +1010,7 @@ function renderOEMs() {
       </div>`;
     }).join('');
 
-    // 5-score donut grid
+    // 5-score grid
     const sItems = [
       { name:'생산력',   v:c.s.prod,   m:20 },
       { name:'기술력',   v:c.s.tech,   m:20 },
@@ -1014,7 +1020,7 @@ function renderOEMs() {
     ];
     const s5Html = sItems.map(si => {
       const col = barColor(si.v, si.m);
-      return `<div class="s5-item"><div class="s5-name">${si.name}</div><div class="s5-donut">${donutSVG(si.v,si.m,col)}<div class="s5-num" style="color:${col}">${si.v}</div></div><div class="s5-max">/${si.m}</div></div>`;
+      return `<div class="score-cell"><div class="sc-name">${si.name}</div><div class="sc-val" style="color:${col}">${si.v}</div><div class="sc-max">/${si.m}</div></div>`;
     }).join('');
 
     const isExpanded   = state.expandedOem   === c.id;
@@ -1047,7 +1053,7 @@ function renderOEMs() {
       <div class="oc-detail ${isExpanded?'open':''}" id="od-${c.id}">
         <div class="detail-block">
           <div class="detail-lbl">점수 구성</div>
-          <div class="score-5row">${s5Html}</div>
+          <div class="score-grid">${s5Html}</div>
         </div>
         <div class="detail-block">
           <div class="detail-lbl">점수 산식 투명화</div>
@@ -1055,10 +1061,10 @@ function renderOEMs() {
         </div>
         <div class="detail-block">
           <div class="detail-lbl">성장 단계</div>
-          <div class="growth-stage-box">
+          <div class="growth-stage">
             <div class="gs-block"><div class="gs-label">현재</div><div class="gs-val">${esc(stage.now)}</div></div>
             <div class="gs-arrow">→</div>
-            <div class="gs-block"><div class="gs-label">예상 (${esc(stage.period)})</div><div class="gs-val gs-pred">${esc(stage.pred)}</div></div>
+            <div class="gs-block"><div class="gs-label">예상 (${esc(stage.period)})</div><div class="gs-val gs-val future">${esc(stage.pred)}</div></div>
           </div>
         </div>
         <div class="detail-block">
@@ -1172,8 +1178,8 @@ function setPeriod(p) {
   state.trendShown  = 10;
   state.oemShown    = 10;
 
-  document.querySelectorAll('.ptab').forEach(t => {
-    t.classList.toggle('on', t.dataset.period === p);
+  document.querySelectorAll('.period-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.period === p);
   });
 
   renderAll();
@@ -1311,7 +1317,7 @@ function initMobileTabs() {
    20. PERIOD TAB INIT
 ────────────────────────────────────────── */
 function initPeriodTabs() {
-  document.querySelectorAll('.ptab').forEach(tab => {
+  document.querySelectorAll('.period-tab').forEach(tab => {
     tab.addEventListener('click', () => setPeriod(tab.dataset.period));
   });
 }
@@ -1321,8 +1327,8 @@ function initPeriodTabs() {
 ────────────────────────────────────────── */
 function init() {
   // Sync initial period tab active state
-  document.querySelectorAll('.ptab').forEach(t => {
-    t.classList.toggle('on', t.dataset.period === state.period);
+  document.querySelectorAll('.period-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.period === state.period);
   });
 
   // Timestamp

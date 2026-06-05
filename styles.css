@@ -1447,3 +1447,108 @@ footer,
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════
+   MISSING / SUPPLEMENTAL CLASSES
+   =================================== */
+
+/* Top Rec 배너 (전체 너비, 2열 위) */
+.top-rec-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.top-rec-hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 9px 14px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.top-rec-title { font-size: 13px; font-weight: 700; color: var(--txt); }
+.top-rec-basis { font-size: 11px; color: var(--txt-4); }
+.top-rec-grid  { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px 14px; }
+@media (max-width: 900px) { .top-rec-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .top-rec-grid { grid-template-columns: 1fr; } }
+.trc-certs { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+
+/* 소스 칩 */
+.src-chip      { font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--blue-bg); color: var(--blue-txt); border: 1px solid var(--blue-bd); }
+.src-chip-bn   { font-size: 11px; padding: 1px 6px; border-radius: 3px; background: #faf5ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.src-chip-brief{ font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--bg-muted); color: var(--txt-3); border: 1px solid var(--border); }
+.src-lbl       { font-size: 11px; color: var(--txt-4); margin-right: 2px; }
+[data-theme="dark"] .src-chip-bn { background: #2e1065; color: #c4b5fd; border-color: #5b21b6; }
+
+/* 트렌드 상세 블록 */
+.detail-block { margin-bottom: 12px; }
+.detail-block:last-child { margin-bottom: 0; }
+
+/* 드라이버 */
+.driver-txt { font-size: 12px; color: var(--txt-2); }
+
+/* So-what 박스 */
+.so-what-box {
+  font-size: 13px; font-weight: 600; color: var(--txt);
+  padding: 8px 10px; background: var(--bg-card);
+  border: 1px solid var(--border); border-left: 3px solid var(--blue);
+  border-radius: var(--r-sm); line-height: 1.5;
+}
+
+/* 리스크 레벨 태그 */
+.risk-level-tag {
+  font-size: 10px; font-weight: 700; padding: 1px 5px;
+  border-radius: 3px; margin-left: 6px;
+}
+.risk-level-tag.risk-low  { background: var(--green-bg); color: var(--green-txt); border: 1px solid var(--green-bd); }
+.risk-level-tag.risk-med  { background: var(--amber-bg); color: var(--amber-txt); border: 1px solid var(--amber-bd); }
+.risk-level-tag.risk-high { background: var(--red-bg);   color: var(--red-txt);   border: 1px solid var(--red-bd); }
+
+/* 매칭 OEM 행 (드릴다운) */
+.matched-oems-list { display: flex; flex-direction: column; gap: 4px; }
+.matched-oem-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; transition: border-color .12s; }
+.matched-oem-row:hover { border-color: var(--blue); }
+.matched-oem-row.matched-primary { border-color: var(--blue); }
+.matched-oem-num   { font-size: 11px; color: var(--txt-4); width: 18px; flex-shrink: 0; }
+.matched-oem-name  { font-size: 12px; font-weight: 600; color: var(--txt); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matched-oem-score { font-size: 13px; font-weight: 800; flex-shrink: 0; }
+.primary-badge     { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--blue-bg); color: var(--blue-txt); border: 1px solid var(--blue-bd); }
+
+/* 트렌드 카드 더보기 링크 */
+.action-more { font-size: 11px; color: var(--blue-txt); cursor: pointer; margin-left: 4px; }
+.action-more:hover { text-decoration: underline; }
+
+/* 소스 바 */
+.tc-src-bar { padding: 2px 14px 7px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* 점수 산식 투명화 (OEM 상세) */
+.bkd-table { display: flex; flex-direction: column; gap: 3px; }
+.bkd-row   { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r-sm); }
+.bkd-total { border-color: var(--blue-bd); background: var(--blue-bg); }
+.bkd-item  { font-size: 12px; color: var(--txt-2); flex: 1; }
+.bkd-pts   { font-size: 12px; font-weight: 700; color: var(--green); min-width: 40px; text-align: right; }
+.bkd-total .bkd-pts { color: var(--blue-txt); font-size: 14px; }
+.bkd-note  { font-size: 10px; color: var(--txt-4); }
+
+/* 추천 생산 분야 */
+.rec-cat-list { display: flex; gap: 4px; flex-wrap: wrap; }
+.rec-cat      { font-size: 11px; padding: 2px 7px; border-radius: 3px; background: var(--blue-bg); color: var(--blue-txt); border: 1px solid var(--blue-bd); font-weight: 500; }
+
+/* gs-val future */
+.gs-val.future { color: var(--blue); }
+
+/* env chip warn */
+.env-chip-warn { border-color: var(--amber-bd); color: var(--amber-txt); background: var(--amber-bg); }
+
+/* 브리핑 재렌더 대응 */
+.brief-wrap  { padding: 0; }
+.brief-inner { padding: 14px 16px; }
+.brief-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--blue); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brief-dot   { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+.brief-env   { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.brief-pills { display: flex; gap: 5px; flex-wrap: wrap; margin: 8px 0; }
+.brief-src-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border); margin-top: 8px; }
