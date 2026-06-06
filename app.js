@@ -443,15 +443,15 @@ async function collectCulture() {
   setSdot('sd-datalab', 'warn');
   /* 뷰티 RSS 수집 보완 */
   const rssData = await collectBeautyRSS();
-  if (rssData.count > 0) {
-    setSdot('sd-datalab', 'ok');
-  }
+  if (rssData.count > 0) setSdot('sd-datalab', 'ok');
+  /* RSS 텍스트를 SIG_DATA에 보관 → TRACK B findNewManufacturers에서 활용 */
+  window._rssText = rssData.text || '';
   const totalNews = newsCount + rssData.count;
   const score = totalNews > 1000 ? 4.6 : totalNews > 100 ? 4.0 : 3.5;
   SIG_DATA.culture = {
     score,
-    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 — SNS 트렌드 주도, 특수 패키징 수요 상승`,
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...rssData.keywords.slice(0,2), 'DataLab 선세럼↑']
+    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 (뷰티미디어 RSS ${rssData.count}건 포함) — 특수 패키징 수요 상승`,
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...rssData.keywords.slice(0, 2), 'DataLab 선세럼↑']
   };
 }
 
@@ -516,21 +516,33 @@ function getRankChanges(predictions, period) {
 
 async function collectBeautyRSS() {
   const feeds = [
-    'https://www.cosmorning.com/rss/allArticle.xml',
-    'http://www.cosinkorea.com/rss/allArticle.xml',
-    'http://www.beautynury.com/rss/allArticle.xml',
+    'https://rss.cosmeticsnews.co.kr',          /* 화장품신문 */
+    'https://www.cosinkorea.com/rss',            /* 코스인코리아 */
+    'https://www.beautynury.com/rss',            /* 뷰티누리 */
+    'https://www.daized.com/rss',                /* 데이즈드 */
   ];
   let count = 0;
   const keywords = [];
   const kwMap = {};
+  const companyMentions = [];   /* TRACK B 연동용 업체명 언급 텍스트 */
   for (const url of feeds) {
     try {
       const t = await fetchProxy(url, 7000);
       if (!t) continue;
-      const titles = [...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]);
+      /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
+      const titles = [
+        ...[...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]),
+        ...[...t.matchAll(/<title>([^<]{2,})<\/title>/g)].map(m => m[1]).filter(s => !s.includes('<?xml'))
+      ];
+      const descs = [
+        ...[...t.matchAll(/<description><!\[CDATA\[([^\]]{5,500})\]\]><\/description>/g)].map(m => m[1]),
+        ...[...t.matchAll(/<description>([^<]{5,500})<\/description>/g)].map(m => m[1])
+      ];
       count += titles.length;
+      const allText = [...titles, ...descs].join(' ');
+      companyMentions.push(allText.slice(0, 2000));
       titles.forEach(tt => {
-        ['에어리스','비건','선세럼','앰플','마이크로바이옴','클렌징','리필','스틱','패드'].forEach(kw => {
+        ['에어리스','비건','선세럼','앰플','마이크로바이옴','클렌징','리필','스틱','패드','선케어','수분크림','쿨링'].forEach(kw => {
           if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
         });
       });
@@ -538,7 +550,7 @@ async function collectBeautyRSS() {
   }
   const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
   sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
-  return { count, keywords };
+  return { count, keywords, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
 async function collectMFDSFunc() {
@@ -810,11 +822,15 @@ async function findNewManufacturers(productType, tech) {
       } catch {}
     }
   }
-  if (gkey && (newsTexts || mfdsTexts)) {
+  /* RSS 텍스트 합산 (collectCulture에서 저장) */
+  const rssText = window._rssText || '';
+  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText).slice(0, 4000);
+
+  if (gkey && allText.trim()) {
     const prompt = `아래 텍스트에서 "${productType}" 제품을 실제로 생산하는 국내 화장품 OEM/ODM 제조업체를 찾아주세요.
 
-[검색 텍스트]
-${(newsTexts + ' ' + mfdsTexts).slice(0, 3000)}
+[검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS 통합]
+${allText}
 
 [규칙]
 - 한국콜마·코스맥스·코스메카코리아 절대 제외
