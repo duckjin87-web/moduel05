@@ -1,89 +1,143 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 전략 분석 — CosmeDB</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>TAB05 · 트렌드 예측 &amp; 소싱 검증 — CosmeDB</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="page">
 
-<!-- ══ 헤더 ══ -->
-<header id="site-header">
-  <div class="hdr-left">
-    <span class="site-name">CosmeDB</span>
-    <span class="hdr-div">|</span>
-    <span class="page-title">AI 전략 분석</span>
+<!-- ── 헤더 ── -->
+<div class="hd">
+  <div class="hd-left">
+    <span class="hd-tag">TAB 05</span>
+    <span class="hd-title">트렌드 예측 &amp; 소싱 검증</span>
+    <span class="hd-period" id="hdPeriod">기준: 로딩 중...</span>
   </div>
-  <div class="hdr-center">
-    <div class="period-tabs" role="tablist" id="periodTabs">
-      <button class="period-tab" role="tab" data-period="1m">1개월</button>
-      <button class="period-tab active" role="tab" data-period="6m">6개월</button>
-      <button class="period-tab" role="tab" data-period="1y">1년</button>
+  <div class="hd-right">
+    <div class="api-wrap">
+      <button class="btn-hd btn-api-set" id="btnApiSet">⚙ API 설정</button>
+      <div class="api-panel" id="apiPanel">
+        <div class="ap-hd">⚙ API 키 통합 설정</div>
+        <div class="ap-sec">
+          <div class="ap-label">🤖 Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
+          <div class="ap-row">
+            <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy...">
+            <button class="ap-btn ap-save" id="btnSaveGemini">저장</button>
+            <button class="ap-btn ap-test" id="btnTestGemini">테스트</button>
+          </div>
+          <select class="ap-select" id="gemini-model">
+            <option value="gemini-2.0-flash">gemini-2.0-flash (권장)</option>
+            <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
+          </select>
+          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 무료 15req/분</div>
+          <div id="r-gemini" class="ap-result"></div>
+        </div>
+        <div class="ap-sec">
+          <div class="ap-label">🏛 공공데이터 (data.go.kr) <span class="ap-status" id="st-public">미설정</span></div>
+          <div class="ap-row">
+            <input type="text" class="ap-in" id="k-public" placeholder="serviceKey">
+            <button class="ap-btn ap-save" id="btnSavePublic">저장</button>
+          </div>
+          <div class="ap-hint">기상청·에어코리아·식약처 공통 키 · <a href="https://www.data.go.kr" target="_blank">data.go.kr</a></div>
+        </div>
+        <div class="ap-sec">
+          <div class="ap-label">📰 네이버 API <span class="ap-status" id="st-naver">미설정</span></div>
+          <div class="ap-row">
+            <input type="text" class="ap-in" id="k-naver-id" placeholder="Client ID" style="flex:.8">
+            <input type="password" class="ap-in" id="k-naver-sec" placeholder="Secret" style="flex:1">
+            <button class="ap-btn ap-save" id="btnSaveNaver">저장</button>
+          </div>
+          <div class="ap-hint">DataLab(트렌드) + 뉴스 검색 · <a href="https://developers.naver.com/apps/" target="_blank">developers.naver.com</a></div>
+        </div>
+        <div class="ap-sec">
+          <div class="ap-label">📊 ECOS (한국은행) <span class="ap-status" id="st-ecos">미설정</span></div>
+          <div class="ap-row">
+            <input type="text" class="ap-in" id="k-ecos" placeholder="ECOS API Key">
+            <button class="ap-btn ap-save" id="btnSaveEcos">저장</button>
+          </div>
+          <div class="ap-hint">CPI·원자재가격 · <a href="https://ecos.bok.or.kr" target="_blank">ecos.bok.or.kr</a></div>
+        </div>
+        <div class="ap-sec">
+          <div class="ap-label">🔬 KIPRIS (특허청) <span class="ap-status" style="color:var(--ink3)">준비중</span></div>
+          <div class="ap-hint">특허기반 업체 탐색 · <a href="https://plus.kipris.or.kr" target="_blank">plus.kipris.or.kr</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="rep-wrap">
+      <button class="btn-hd btn-report" id="btnRepPanel">📋 BM 보고서</button>
+      <div class="rep-panel" id="repPanel">
+        <div class="rp-hd">
+          <span class="rp-title">📋 BM 보고서</span>
+          <button class="rp-close" id="btnRepClose">✕</button>
+        </div>
+        <div class="rp-body">
+          <button class="btn-regen" id="btnGenReport" style="margin-bottom:8px;width:100%">보고서 생성</button>
+          <textarea class="rp-ta" id="repText" readonly placeholder="[보고서 생성] 클릭 시 현재 분석 결과가 텍스트로 정리됩니다."></textarea>
+          <div class="rp-actions">
+            <button class="btn-copy" id="btnCopyReport">📋 복사</button>
+            <button class="btn-regen" id="btnClearReport">초기화</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-hd btn-collect" id="btnCollect">🔄 전체 수집 실행</button>
+  </div>
+</div>
+
+<!-- ── 수집 상태 바 ── -->
+<div class="status-bar" id="statusBar">
+  <span class="sitem"><span class="sdot off" id="sd-climate"></span>기상청</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-air"></span>에어코리아</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-ecos"></span>ECOS 원자재</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-datalab"></span>네이버 DataLab</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-news"></span>네이버 뉴스</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-kosis"></span>KOSIS CPI</span><span class="ssep"></span>
+  <span class="sitem"><span class="sdot off" id="sd-kipris"></span><span style="color:var(--ink3)">KIPRIS(키 대기)</span></span>
+  <span class="status-summary" id="statusSummary">수집 전</span>
+</div>
+
+<!-- ── ZONE 0: 4대 신호 ── -->
+<div class="z0" id="z0"></div>
+
+<!-- ── ZONE 1: 예측 TOP5 ── -->
+<div class="z1">
+  <div class="zone-hd">
+    <div class="zone-title">🔮 예측 화장품 유형 TOP5 <span class="ztag">6~12개월 후 · 대형3사 제외</span></div>
+    <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
+  </div>
+  <div id="z1body">
+    <div class="z1-placeholder">
+      [전체 수집 실행] 버튼을 클릭하면 4대 신호 수집 후 Gemini가 예측 TOP5를 자동 도출합니다.
     </div>
   </div>
-  <div class="hdr-right">
-    <span class="meta-text" id="updateLbl"></span>
-    <button class="btn-rerun" id="btnRerun">↺ 재분석</button>
-    <button class="btn-icon" id="btnTheme" aria-label="다크/라이트 전환">◑</button>
+</div>
+
+<!-- ── ZONE 2: 제조사 매칭 ── -->
+<div class="z2">
+  <div class="zone-hd">
+    <div class="zone-title">🏭 제조사 매칭 <span class="ztag" id="z2subtitle">— 위에서 예측 항목을 클릭하세요</span></div>
+    <span class="zmodel">KIPRIS + 네이버뉴스 + 식약처 + Gemini</span>
   </div>
-</header>
-
-<div class="wrap">
-
-  <!-- ══ AI 전략 브리핑 ══ -->
-  <section class="brief-section" id="briefSection">
-    <div class="brief-head">
-      <span class="brief-badge">AI 전략 브리핑</span>
-      <div class="env-chips" id="envChips"></div>
+  <div class="z2-grid" id="z2body">
+    <div class="z2-placeholder">
+      ✅ TRACK A — 기등록 업체<br>
+      <span style="font-size:10px">예측 항목 선택 시 내부 DB에서 즉시 조회</span>
     </div>
-    <p class="brief-text" id="briefText"></p>
-    <div class="brief-pills" id="briefPills"></div>
-    <div class="brief-sources" id="briefSources"></div>
-  </section>
-
-  <!-- ══ 모바일 탭 ══ -->
-  <div class="mobile-tabs" role="tablist" id="mobileTabs">
-    <button class="mobile-tab active" role="tab" data-col="trend">AI 트렌드 예측</button>
-    <button class="mobile-tab" role="tab" data-col="oem">Hidden OEM 발굴</button>
+    <div class="z2-placeholder-r">
+      🔍 TRACK B — 신규처 후보<br>
+      <span style="font-size:10px">KIPRIS·뉴스·식약처 자동 탐색 후 표시</span>
+    </div>
   </div>
+</div>
 
-  <!-- ══ 최다 추천 OEM 배너 (2열 위 전체 너비) ══ -->
-  <div id="topRecBanner"></div>
+<!-- ── ZONE 3: 법령·규제 ── -->
+<div class="z3" id="z3"></div>
 
-  <!-- ══ 2열 메인 ══ -->
-  <div class="main-grid">
-
-    <!-- 왼쪽: AI 트렌드 예측 -->
-    <section class="col-section" id="trendSection" data-col="trend">
-      <div class="col-hdr">
-        <h2 class="col-title">AI 화장품 트렌드 예측</h2>
-        <span class="col-meta" id="trendMeta"></span>
-      </div>
-      <div id="trendList" role="list"></div>
-      <div class="more-wrap" id="trendMoreWrap">
-        <button class="btn-more" id="btnMoreTrend">+ 10개 더 보기</button>
-      </div>
-    </section>
-
-    <!-- 오른쪽: AI Hidden OEM 발굴 -->
-    <section class="col-section" id="oemSection" data-col="oem">
-      <div class="col-hdr">
-        <h2 class="col-title">AI Hidden OEM 발굴</h2>
-        <span class="col-meta" id="oemMeta"></span>
-      </div>
-      <div id="oemList" role="list"></div>
-      <div class="more-wrap" id="oemMoreWrap">
-        <button class="btn-more" id="btnMoreOem">+ 10개 더 보기</button>
-      </div>
-    </section>
-
-  </div><!-- /main-grid -->
-</div><!-- /wrap -->
-
-<footer class="site-footer">
-  <span id="footerText"></span>
-</footer>
+</div><!-- /page -->
+<div id="toast"></div>
 
 <script src="app.js"></script>
 </body>
