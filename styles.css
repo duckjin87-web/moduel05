@@ -613,3 +613,21 @@ button { font-family: inherit; cursor: pointer; }
 }
 .period-6m { background: #dbeafe; color: #2a4a9f; }
 .period-1y { background: #ede9fe; color: #5b21b6; }
+
+/* 신호 재수집 버튼 */
+.btn-refresh-sig { font-size:9px; padding:1px 5px; background:var(--bg3); border:.5px solid var(--bg3); border-radius:3px; cursor:pointer; color:var(--ink3); transition:.15s; }
+.btn-refresh-sig:hover { background:var(--navy2); color:var(--acc); }
+
+/* 법령 시행완료 */
+.rl-imm { background:#fde68a; color:#92400e; padding:1px 5px; border-radius:3px; font-size:9px; font-weight:700; }
+.rl-pass { background:var(--bg3); color:var(--ink3); padding:1px 5px; border-radius:3px; font-size:9px; }
+.reg-passed { opacity:.5; }
+.reg-passed .reg-name { text-decoration:line-through; }
+
+/* 순위 변동 배지 */
+.rank-new { font-size:7px; background:#dbeafe; color:#1e40af; border-radius:3px; padding:1px 3px; font-weight:700; display:block; margin-top:1px; }
+.rank-up { font-size:7px; color:var(--grn); font-weight:700; display:block; }
+.rank-dn { font-size:7px; color:var(--red); font-weight:700; display:block; }
+
+/* 상태 도트 에러 */
+.sdot.err { background:var(--red); box-shadow:0 0 0 2px rgba(184,80,80,.2); }

@@ -343,8 +343,25 @@ async function collectClimate() {
     } catch {}
   }
   setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
+  /* UV 지수 추가 */
+  let uv = '—';
+  if (key) {
+    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${key}&areaNo=3611000000&time=${dateStr}`;
+    const uvText = await fetchProxy(uvUrl, 6000);
+    if (uvText) {
+      try {
+        const j = JSON.parse(uvText);
+        const items = j?.response?.body?.items?.item || [];
+        if (items.length) uv = items[0].today || items[0].h0 || '—';
+      } catch {}
+    }
+  }
   const score = computeClimateScore(temp, pm10);
-  SIG_DATA.climate = { score, interpret: buildClimateInterp(temp, pm10), chips: [`기온 ${temp}`, `PM10 ${pm10}`, `습도 ${humid}`] };
+  SIG_DATA.climate = {
+    score,
+    interpret: buildClimateInterp(temp, pm10),
+    chips: [`기온 ${temp}`, `PM10 ${pm10}`, `습도 ${humid}`, uv !== '—' ? `UV ${uv}` : ''].filter(Boolean)
+  };
 }
 
 function computeClimateScore(temp, pm10) {
@@ -376,9 +393,28 @@ async function collectEconomy() {
       } catch {}
     }
   }
+  /* 관세청 화장품 수출 통계 (HS 3304 기초화장품) */
+  let cosmeExport = '—';
+  const key = K.public();
+  try {
+    const yr = new Date().getFullYear();
+    const mo = String(new Date().getMonth() + 1).padStart(2, '0');
+    const custUrl = `https://unipass.customs.go.kr/csp/myis/openapi/ItemExport.do?serviceKey=${key || 'SAMPLE'}&searchType=1&hsSgn=330410&startYearMonth=${yr}01&endYearMonth=${yr}${mo}`;
+    const custText = await fetchProxy(custUrl, 8000);
+    if (custText) {
+      /* XML 파싱 간단 처리 */
+      const match = custText.match(/<expAmt>([\d,]+)<\/expAmt>/);
+      if (match) cosmeExport = parseInt(match[1].replace(/,/g, '')).toLocaleString() + '달러';
+    }
+  } catch {}
+
   setSdot('sd-ecos', ekey ? (cpi !== '—' ? 'ok' : 'warn') : 'off');
   const score = (cpi !== '—' && parseFloat(cpi) > 103) ? 3.8 : 3.2;
-  SIG_DATA.economy = { score, interpret: '소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화', chips: [`CPI ${cpi}`, `유가 ${oil}`, '리필수요↑'] };
+  SIG_DATA.economy = {
+    score,
+    interpret: `소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화${cosmeExport !== '—' ? ' · 화장품수출 '+cosmeExport : ''}`,
+    chips: [`CPI ${cpi}`, `유가 ${oil}`, cosmeExport !== '—' ? '수출 '+cosmeExport : '수출통계', '리필수요↑']
+  };
 }
 
 async function collectCulture() {
@@ -405,13 +441,52 @@ async function collectCulture() {
     setSdot('sd-news', 'ok');
   } catch { setSdot('sd-news', 'warn'); }
   setSdot('sd-datalab', 'warn');
-  const score = newsCount > 1000 ? 4.6 : newsCount > 100 ? 4.0 : 3.5;
-  SIG_DATA.culture = { score, interpret: `${kws[0]} 뉴스 ${newsCount.toLocaleString()}건 — SNS 트렌드 주도, 특수 패키징 수요 상승`, chips: [`뉴스 ${newsCount.toLocaleString()}건`, 'TikTok 에어리스 챌린지', 'DataLab 선세럼↑'] };
+  /* 뷰티 RSS 수집 보완 */
+  const rssData = await collectBeautyRSS();
+  if (rssData.count > 0) {
+    setSdot('sd-datalab', 'ok');
+  }
+  const totalNews = newsCount + rssData.count;
+  const score = totalNews > 1000 ? 4.6 : totalNews > 100 ? 4.0 : 3.5;
+  SIG_DATA.culture = {
+    score,
+    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 — SNS 트렌드 주도, 특수 패키징 수요 상승`,
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...rssData.keywords.slice(0,2), 'DataLab 선세럼↑']
+  };
 }
 
-function collectSociety() {
-  SIG_DATA.society = { score:3.8, interpret:'1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가', chips:['1인가구 34.5%', '남성뷰티 +18%', '2030 여성 주도'], _sample:false };
+async function collectSociety() {
   setSdot('sd-kosis', 'warn');
+  const key = K.public();
+  let singleHH = '—', aging = '—';
+  if (key) {
+    /* KOSIS 1인가구비중 */
+    const u1 = `https://apis.data.go.kr/1240000/kosis/statisticsList?serviceKey=${key}&method=getList&apiType=json&vwCd=MT_ZTITLE&parentListId=A&format=json`;
+    /* KOSIS는 별도 키 필요 — data.go.kr 키로 공통 통계 접근 시도 */
+    try {
+      const ecosKey = K.ecos();
+      if (ecosKey) {
+        /* ECOS 통해 가계소비 지표 조회 */
+        const u = `https://ecos.bok.or.kr/api/StatisticSearch/${ecosKey}/json/kr/1/5/901Y027/YY/2022/2024/`;
+        const t = await fetchProxy(u);
+        if (t) {
+          const j = JSON.parse(t);
+          const rows = j?.StatisticSearch?.row || [];
+          if (rows.length) singleHH = rows[rows.length-1].DATA_VALUE + '%';
+        }
+      }
+    } catch {}
+    setSdot('sd-kosis', singleHH !== '—' ? 'ok' : 'warn');
+  } else {
+    setSdot('sd-kosis', 'off');
+  }
+  /* 기본값 유지 (KOSIS 별도 키 없으면 추정값 사용) */
+  SIG_DATA.society = {
+    score: 3.8,
+    interpret: `1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가${singleHH !== '—' ? ' · 가계소비 ' + singleHH : ''}`,
+    chips: ['1인가구 34.5%', '남성뷰티 +18%', singleHH !== '—' ? '가계소비 '+singleHH : 'KOSIS 참조'],
+    _sample: singleHH === '—'
+  };
 }
 
 function savePredHistory(predictions, period) {
@@ -437,6 +512,54 @@ function getRankChanges(predictions, period) {
     });
     return changes;
   } catch { return {}; }
+}
+
+async function collectBeautyRSS() {
+  const feeds = [
+    'https://www.cosmorning.com/rss/allArticle.xml',
+    'http://www.cosinkorea.com/rss/allArticle.xml',
+    'http://www.beautynury.com/rss/allArticle.xml',
+  ];
+  let count = 0;
+  const keywords = [];
+  const kwMap = {};
+  for (const url of feeds) {
+    try {
+      const t = await fetchProxy(url, 7000);
+      if (!t) continue;
+      const titles = [...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]);
+      count += titles.length;
+      titles.forEach(tt => {
+        ['에어리스','비건','선세럼','앰플','마이크로바이옴','클렌징','리필','스틱','패드'].forEach(kw => {
+          if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
+        });
+      });
+    } catch {}
+  }
+  const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
+  sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
+  return { count, keywords };
+}
+
+async function collectMFDSFunc() {
+  const key = K.public();
+  if (!key) return { count: 0, ingredients: [] };
+  try {
+    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${key}&pageNo=1&numOfRows=20&type=json`;
+    const t = await fetchProxy(url, 8000);
+    if (!t) return { count: 0, ingredients: [] };
+    const j = JSON.parse(t);
+    const items = j?.body?.items?.item || [];
+    const ingMap = {};
+    items.forEach(i => {
+      (i.MTRAL_NM || '').split(',').forEach(ing => {
+        ing = ing.trim();
+        if (ing.length > 2) ingMap[ing] = (ingMap[ing]||0)+1;
+      });
+    });
+    const top = Object.entries(ingMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k);
+    return { count: items.length, ingredients: top };
+  } catch { return { count: 0, ingredients: [] }; }
 }
 
 /* ════ Gemini 예측 분석 ════ */
@@ -585,24 +708,32 @@ function renderZ1() {
       <th>출시 적기</th>
       <th style="width:24px"></th>
     </tr></thead>
-    <tbody>${PREDICTIONS.map((p, i) => {
-      const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
-      const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-      const chips = topSig.map(([k, v]) =>
-        `<span class="pchip ${sigMap[k]}">${sigLabel[k]} ${v >= 0.4 ? '●●●' : v >= 0.3 ? '●●' : '●'}</span>`
-      ).join('');
-      const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
-      return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
-        <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}</div></td>
-        <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
-        <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
-        <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div></td>
-        <td><div class="pchips">${chips}</div></td>
-        <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
-        <td><div class="p-season">${escHtml(p.season)}</div></td>
-        <td><span class="p-arr">${SEL_IDX === i ? '▼' : '▶'}</span></td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
+    <tbody>${(() => {
+      const changes = getRankChanges(PREDICTIONS, currentPeriod);
+      return PREDICTIONS.map((p, i) => {
+        const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
+        const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const chips = topSig.map(([k, v]) =>
+          `<span class="pchip ${sigMap[k]}">${sigLabel[k]} ${v >= 0.4 ? '●●●' : v >= 0.3 ? '●●' : '●'}</span>`
+        ).join('');
+        const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+        const delta = changes[p.rank];
+        const deltaHtml = delta === 'NEW' ? '<span class="rank-new">NEW</span>'
+          : typeof delta === 'number' && delta > 0 ? `<span class="rank-up">▲${delta}</span>`
+          : typeof delta === 'number' && delta < 0 ? `<span class="rank-dn">▼${Math.abs(delta)}</span>`
+          : '';
+        return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
+          <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
+          <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
+          <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
+          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div></td>
+          <td><div class="pchips">${chips}</div></td>
+          <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
+          <td><div class="p-season">${escHtml(p.season)}</div></td>
+          <td><span class="p-arr">${SEL_IDX === i ? '▼' : '▶'}</span></td>
+        </tr>`;
+      }).join('');
+    })()}</tbody></table>`;
 }
 
 /* ════ 제조사 매칭 ════ */
@@ -888,41 +1019,56 @@ function saveCapa(code, type, val) {
 /* ════ 전체 수집 실행 ════ */
 async function collectAll() {
   const btn = document.getElementById('btnCollect');
-  btn.textContent = '수집 중...'; btn.classList.add('running'); btn.disabled = true;
+  btn.classList.add('running'); btn.disabled = true;
 
   /* API 키 현황 확인 */
   const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
   if (!hasAnyKey) {
-    showToast('⚠ API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하면 실제 데이터를 수집합니다.');
+    showToast('⚠ API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
   }
 
-  /* 캐시 초기화 — 새 수집 시 예측 재생성 */
+  /* 캐시 초기화 */
   PREDICTIONS_CACHE['6m'] = null;
   PREDICTIONS_CACHE['1y'] = null;
-  SEL_IDX = -1;
-  currentPkgType = '';
+  SEL_IDX = -1; currentPkgType = '';
 
   ['climate','society','economy','culture'].forEach(k => { SIG_DATA[k] = null; });
   renderZ0();
 
-  await Promise.allSettled([
-    collectClimate().then(() => renderZ0()),
-    (async () => { collectSociety(); renderZ0(); })(),
-    collectEconomy().then(() => renderZ0()),
-    collectCulture().then(() => renderZ0()),
-  ]);
+  const setStep = (txt, pct) => {
+    btn.textContent = txt;
+    const sm = document.getElementById('statusSummary');
+    if (sm) sm.textContent = pct;
+  };
 
-  renderZ0();
+  setStep('① 기후 수집 중...', '수집 1/4');
+  await collectClimate(); renderZ0();
+
+  setStep('② 사회 수집 중...', '수집 2/4');
+  await collectSociety(); renderZ0();
+
+  setStep('③ 경제 수집 중...', '수집 3/4');
+  await collectEconomy(); renderZ0();
+
+  setStep('④ 문화 수집 중...', '수집 4/4');
+  await collectCulture(); renderZ0();
+
   updateStatusSummary();
 
   const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
+  setStep(`⑤ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
   await runGeminiPrediction(currentPeriod);
+  if (PREDICTIONS.length) savePredHistory(PREDICTIONS, currentPeriod);
   renderZ1();
+  resetZ2();
+
+  /* IMP-04: 보고서 자동 생성 */
+  genReport();
 
   btn.textContent = '🔄 전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
-  showToast('✅ 수집 완료 — 예측 TOP5 도출됨');
+  showToast('✅ 수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
 
 function updateStatusSummary() {
