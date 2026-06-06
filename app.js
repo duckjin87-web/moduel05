@@ -206,10 +206,23 @@ function toggleRepPanel() {
 /* ════ ZONE 3 법령 렌더 ════ */
 function renderZ3() {
   const el = document.getElementById('z3');
-  el.innerHTML = REGS.map(r => `
-    <div class="reg-card">
+  const now = new Date();
+  const levelOf = r => {
+    const parts = r.date.replace(/\./g, '-').split('-');
+    const d = new Date(parts[0], (parts[1]||1)-1, parts[2]||1);
+    if (isNaN(d)) return r.level;
+    const daysLeft = Math.ceil((d - now) / 86400000);
+    if (daysLeft < 0) return 'passed';
+    if (daysLeft <= 30) return 'imminent';
+    return r.level;
+  };
+  const clsMap = { critical:'rl-crit', imminent:'rl-imm', upcoming:'rl-upco', passed:'rl-pass' };
+  const labelMap = { critical:'즉시대응', imminent:'⚡ 30일이내', upcoming:'예정', passed:'시행완료' };
+  el.innerHTML = REGS.map(r => {
+    const lv = levelOf(r);
+    return `<div class="reg-card${lv === 'passed' ? ' reg-passed' : ''}">
       <div class="reg-hd">
-        <span class="${r.level === 'critical' ? 'rl-crit' : 'rl-upco'}">${escHtml(r.tag)}</span>
+        <span class="${clsMap[lv] || 'rl-upco'}">${labelMap[lv] || escHtml(r.tag)}</span>
         <div class="reg-name">${escHtml(r.title)}</div>
       </div>
       <div class="reg-body">
@@ -217,28 +230,29 @@ function renderZ3() {
         <div class="reg-detail">${escHtml(r.detail)}</div>
         <div class="reg-action">📌 ${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">↗</a>` : ''}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* ════ ZONE 0 신호 렌더 ════ */
 function renderZ0() {
   const z = document.getElementById('z0');
   const defs = [
-    {key:'climate', cls:'sig-cl', icon:'🌡', name:'기후·환경',  auto:true,  src:'기상청+에어코리아'},
-    {key:'society', cls:'sig-so', icon:'👥', name:'사회·인구',  auto:false, src:'KOSIS(연간)'},
-    {key:'economy', cls:'sig-ec', icon:'💰', name:'경제·리테일', auto:true,  src:'ECOS+KOSIS'},
-    {key:'culture', cls:'sig-cu', icon:'📱', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스'},
+    {key:'climate', cls:'sig-cl', icon:'🌡', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
+    {key:'society', cls:'sig-so', icon:'👥', name:'사회·인구',  auto:true,  src:'KOSIS(1인가구·고령화)'},
+    {key:'economy', cls:'sig-ec', icon:'💰', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
+    {key:'culture', cls:'sig-cu', icon:'📱', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
   ];
   z.innerHTML = defs.map(d => {
     const data = SIG_DATA[d.key];
-    const score = data?.score || 0;
+    const score = data?.score ?? 0;
     const colKey = d.cls.split('-')[1];
     const dots = Array.from({length:5}, (_, i) =>
       `<div class="dot5 ${i < Math.round(score) ? 'on ' + colKey : 'off'}"></div>`
     ).join('');
-    const autoTag = d.auto
-      ? (data ? '<span class="sig-auto auto-ok">✅ 자동</span>' : '<span class="sig-auto auto-warn">⏳ 수집 대기</span>')
-      : '<span class="sig-auto auto-warn">⚠ 연간</span>';
+    const autoTag = data
+      ? '<span class="sig-auto auto-ok">✅ 자동</span>'
+      : '<span class="sig-auto auto-warn">⏳ 수집 대기</span>';
     const content = data
       ? `<div class="sig-dots">${dots}</div>
          <div class="sig-interp">${escHtml(data.interpret)}</div>
@@ -248,13 +262,30 @@ function renderZ0() {
       <div class="sig-top">
         <div>
           <div class="sig-name">${d.icon} ${d.name}</div>
-          <div class="sig-score">${data ? data.score.toFixed(1) : '—'}<span class="sig-max">/5</span></div>
-        </div>${autoTag}
+          <div class="sig-score">${data ? (data.score ?? 0).toFixed(1) : '—'}<span class="sig-max">/5</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${autoTag}
+          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}')" title="이 신호만 재수집">🔄</button>
+        </div>
       </div>
       ${content}
       <div class="sig-src">${escHtml(d.src)}</div>
     </div>`;
   }).join('');
+}
+
+async function refreshSignal(key) {
+  const btn = event.target;
+  btn.disabled = true; btn.style.opacity = '0.5';
+  SIG_DATA[key] = null;
+  renderZ0();
+  const fnMap = { climate: collectClimate, society: collectSociety, economy: collectEconomy, culture: collectCulture };
+  if (fnMap[key]) await fnMap[key]();
+  renderZ0();
+  updateStatusSummary();
+  btn.disabled = false; btn.style.opacity = '1';
+  showToast(`✅ ${key} 신호 재수집 완료`);
 }
 
 /* ════ 수집 함수들 ════ */
@@ -281,6 +312,8 @@ async function collectClimate() {
   setSdot('sd-air', 'warn');
   if (!key) {
     SIG_DATA.climate = { score:4.0, interpret:'기상 데이터 수집 불가 (API 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
+    setSdot('sd-climate', 'warn');
+    setSdot('sd-air', 'off');
     return;
   }
   const today = new Date();
@@ -343,7 +376,7 @@ async function collectEconomy() {
       } catch {}
     }
   }
-  setSdot('sd-ecos', cpi !== '—' ? 'ok' : 'warn');
+  setSdot('sd-ecos', ekey ? (cpi !== '—' ? 'ok' : 'warn') : 'off');
   const score = (cpi !== '—' && parseFloat(cpi) > 103) ? 3.8 : 3.2;
   SIG_DATA.economy = { score, interpret: '소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화', chips: [`CPI ${cpi}`, `유가 ${oil}`, '리필수요↑'] };
 }
@@ -379,6 +412,31 @@ async function collectCulture() {
 function collectSociety() {
   SIG_DATA.society = { score:3.8, interpret:'1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가', chips:['1인가구 34.5%', '남성뷰티 +18%', '2030 여성 주도'], _sample:false };
   setSdot('sd-kosis', 'warn');
+}
+
+function savePredHistory(predictions, period) {
+  try {
+    const hist = JSON.parse(ls('m5_history') || '[]');
+    const entry = { ts: Date.now(), period, predictions: predictions.map(p => ({rank:p.rank, type:p.type})) };
+    hist.unshift(entry);
+    /* 최근 12개 항목만 유지 */
+    ls('m5_history', JSON.stringify(hist.slice(0, 12)));
+  } catch {}
+}
+
+function getRankChanges(predictions, period) {
+  try {
+    const hist = JSON.parse(ls('m5_history') || '[]');
+    const prev = hist.find(h => h.period === period && h.ts < Date.now() - 60000); // 1분 이전 항목
+    if (!prev) return {};
+    const changes = {};
+    predictions.forEach(p => {
+      const old = prev.predictions.find(o => o.type === p.type);
+      if (!old) { changes[p.rank] = 'NEW'; }
+      else if (old.rank !== p.rank) { changes[p.rank] = old.rank - p.rank; } // 양수 = 상승
+    });
+    return changes;
+  } catch { return {}; }
 }
 
 /* ════ Gemini 예측 분석 ════ */
@@ -550,9 +608,10 @@ function renderZ1() {
 /* ════ 제조사 매칭 ════ */
 async function selectPred(idx) {
   if (SEL_IDX === idx) return;
+  const p = PREDICTIONS[idx];
+  if (!p) return;
   SEL_IDX = idx;
   renderZ1();
-  const p = PREDICTIONS[idx];
   currentPkgType = p.packaging || '';
   const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
   document.getElementById('z2subtitle').textContent =
@@ -830,6 +889,12 @@ function saveCapa(code, type, val) {
 async function collectAll() {
   const btn = document.getElementById('btnCollect');
   btn.textContent = '수집 중...'; btn.classList.add('running'); btn.disabled = true;
+
+  /* API 키 현황 확인 */
+  const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
+  if (!hasAnyKey) {
+    showToast('⚠ API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하면 실제 데이터를 수집합니다.');
+  }
 
   /* 캐시 초기화 — 새 수집 시 예측 재생성 */
   PREDICTIONS_CACHE['6m'] = null;
