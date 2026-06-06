@@ -963,7 +963,7 @@ function renderTrends() {
       wrapEl.style.display = 'none';
     } else {
       wrapEl.style.display = '';
-      const btn = wrapEl.querySelector('.more-btn');
+      const btn = wrapEl.querySelector('.btn-more');
       if (btn) {
         btn.disabled = false;
         const next = Math.min(10, TRENDS.length - state.trendShown);
@@ -1084,7 +1084,7 @@ function renderOEMs() {
       wrapEl.style.display = 'none';
     } else {
       wrapEl.style.display = '';
-      const btn = wrapEl.querySelector('.more-btn');
+      const btn = wrapEl.querySelector('.btn-more');
       if (btn) {
         btn.disabled = false;
         const next = Math.min(10, scored.length - state.oemShown);
@@ -1157,12 +1157,11 @@ function highlightOem(id) {
   if (window.innerWidth < 900) {
     const trendSec = document.getElementById('trendSection');
     const oemSec   = document.getElementById('oemSection');
-    const tTab     = document.getElementById('mobileTabTrend');
-    const oTab     = document.getElementById('mobileTabOem');
     if (trendSec) trendSec.style.display = 'none';
     if (oemSec)   oemSec.style.display   = '';
-    if (tTab)     tTab.classList.remove('on');
-    if (oTab)     oTab.classList.add('on');
+    document.querySelectorAll('#mobileTabs .mobile-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.col === 'oem');
+    });
   }
 
   if (card) {
@@ -1187,7 +1186,7 @@ function setPeriod(p) {
 
 /** Show 10 more trend items */
 function showMoreTrend() {
-  const btn = document.querySelector('#trendMoreWrap .more-btn');
+  const btn = document.querySelector('#trendMoreWrap .btn-more');
   if (btn) { btn.textContent = '로딩 중…'; btn.disabled = true; }
   state.trendShown = Math.min(state.trendShown + 10, TRENDS.length);
   setTimeout(renderTrends, 100);
@@ -1195,7 +1194,7 @@ function showMoreTrend() {
 
 /** Show 10 more OEM items */
 function showMoreOem() {
-  const btn = document.querySelector('#oemMoreWrap .more-btn');
+  const btn = document.querySelector('#oemMoreWrap .btn-more');
   if (btn) { btn.textContent = '로딩 중…'; btn.disabled = true; }
   const scored = getOemScores();
   state.oemShown = Math.min(state.oemShown + 10, Math.min(scored.length, 20));
@@ -1283,21 +1282,20 @@ function renderSkeleton() {
    19. MOBILE TAB SWITCHING
 ────────────────────────────────────────── */
 function initMobileTabs() {
-  const trendTab = document.getElementById('mobileTabTrend');
-  const oemTab   = document.getElementById('mobileTabOem');
+  const tabs     = document.querySelectorAll('#mobileTabs .mobile-tab');
   const trendSec = document.getElementById('trendSection');
   const oemSec   = document.getElementById('oemSection');
-  if (!trendTab || !oemTab) return;
+  if (!tabs.length) return;
 
   function switchTab(active) {
-    trendTab.classList.toggle('on', active === 'trend');
-    oemTab.classList.toggle('on',   active === 'oem');
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.col === active));
     if (trendSec) trendSec.style.display = active === 'trend' ? '' : 'none';
     if (oemSec)   oemSec.style.display   = active === 'oem'   ? '' : 'none';
   }
 
-  trendTab.addEventListener('click', () => switchTab('trend'));
-  oemTab.addEventListener('click',   () => switchTab('oem'));
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.col));
+  });
 
   // On narrow viewport start showing only trend
   if (window.innerWidth < 900) switchTab('trend');
@@ -1306,9 +1304,10 @@ function initMobileTabs() {
     if (window.innerWidth >= 900) {
       if (trendSec) trendSec.style.display = '';
       if (oemSec)   oemSec.style.display   = '';
+      tabs.forEach(t => t.classList.remove('active'));
     } else {
-      const active = trendTab.classList.contains('on') ? 'trend' : 'oem';
-      switchTab(active);
+      const activeTab = [...tabs].find(t => t.classList.contains('active'));
+      switchTab(activeTab ? activeTab.dataset.col : 'trend');
     }
   });
 }
@@ -1337,6 +1336,17 @@ function init() {
 
   initPeriodTabs();
   initMobileTabs();
+
+  const btnMoreTrend = document.getElementById('btnMoreTrend');
+  if (btnMoreTrend) btnMoreTrend.addEventListener('click', showMoreTrend);
+  const btnMoreOem = document.getElementById('btnMoreOem');
+  if (btnMoreOem) btnMoreOem.addEventListener('click', showMoreOem);
+
+  const btnRerun = document.getElementById('btnRerun');
+  if (btnRerun) btnRerun.addEventListener('click', rerunAnalysis);
+  const btnTheme = document.getElementById('btnTheme');
+  if (btnTheme) btnTheme.addEventListener('click', toggleTheme);
+
   renderAll();
 }
 
