@@ -615,6 +615,17 @@ ${sigSummary}
     );
     clearTimeout(tid);
     const data = await r.json();
+    if (!r.ok) {
+      const errMsg = data?.error?.message || `HTTP ${r.status}`;
+      if (r.status === 429 && (errMsg.includes('limit: 0') || errMsg.includes('free_tier'))) {
+        showToast('⚠ Gemini 쿼터 0 오류 — aistudio.google.com에서 새 키 발급 또는 모델을 gemini-1.5-flash-latest로 변경하세요');
+      } else if (r.status === 429) {
+        showToast(`⚠ Gemini 요청 한도 초과 — 잠시 후 재시도하세요`);
+      } else {
+        showToast(`⚠ Gemini 오류 (${r.status}) — 샘플 예측 사용`);
+      }
+      throw new Error(errMsg);
+    }
     const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(txt);
     PREDICTIONS_CACHE[period] = parsed.predictions || [];
@@ -1165,8 +1176,22 @@ async function testGemini() {
     try { data = await r.json(); } catch { data = {}; }
     if (!r.ok) {
       const errMsg = data?.error?.message || `HTTP ${r.status}`;
-      el.textContent = `❌ 오류 (${r.status}): ${errMsg}`;
-      el.style.color = 'var(--red)';
+      if (r.status === 429) {
+        const isZeroQuota = errMsg.includes('limit: 0') || errMsg.includes('free_tier');
+        el.innerHTML = isZeroQuota
+          ? `❌ 쿼터 0 오류 (429)\n\n프로젝트에 할당된 무료 쿼터가 0입니다.\n\n해결:\n① aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n② 또는 모델을 gemini-1.5-flash-latest 로 변경\n③ 또는 Google Cloud Console에서 결제 계정 연결`
+          : `❌ 요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
+        el.style.color = 'var(--red)';
+      } else if (r.status === 400) {
+        el.textContent = `❌ 잘못된 요청 (400): API 키 형식 오류이거나 모델명이 잘못됐습니다.\n${errMsg}`;
+        el.style.color = 'var(--red)';
+      } else if (r.status === 403) {
+        el.textContent = `❌ 접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
+        el.style.color = 'var(--red)';
+      } else {
+        el.textContent = `❌ 오류 (${r.status}): ${errMsg}`;
+        el.style.color = 'var(--red)';
+      }
       return;
     }
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
