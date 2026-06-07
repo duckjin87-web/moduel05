@@ -482,7 +482,7 @@ button { font-family: inherit; cursor: pointer; }
 .ap-test:hover { background: var(--bg3); opacity: .8; }
 .ap-hint { font-size: 9px; color: var(--ink3); line-height: 1.6; }
 .ap-hint a { color: var(--blue2); }
-.ap-result { font-size: 10px; margin-top: 4px; }
+.ap-result { font-size: 10px; margin-top: 4px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
 .ap-select {
   font-size: 11px; padding: 3px 6px; width: 100%;
   border: .5px solid var(--bg3); border-radius: var(--r);
@@ -542,3 +542,92 @@ button { font-family: inherit; cursor: pointer; }
   pointer-events: none;
   box-shadow: var(--s2);
 }
+
+/* ═══════════════════════════════════════
+   예측 기간 탭
+═══════════════════════════════════════ */
+.pred-period-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 2px;
+  border: .5px solid var(--bg3);
+}
+.pred-period-tab {
+  font-size: 10px;
+  padding: 3px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink3);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.pred-period-tab.active {
+  background: var(--w);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.pred-period-tab:hover:not(.active) { color: var(--ink2); }
+.pred-period-tab.loading {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════
+   패키징 적합도 배지
+═══════════════════════════════════════ */
+.pkg-badge {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 4px;
+}
+.pkg-hi  { background: #d4f0e0; color: #2a7a50; }
+.pkg-mid { background: #fef3c7; color: #92500e; }
+.pkg-lo  { background: var(--bg2); color: var(--ink3); border: .5px solid var(--bg3); }
+
+/* 패키징 컬럼 텍스트 */
+.p-pkg {
+  font-size: 10px;
+  color: var(--acc);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* 기간 라벨 배지 */
+.period-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.period-6m { background: #dbeafe; color: #2a4a9f; }
+.period-1y { background: #ede9fe; color: #5b21b6; }
+
+/* 신호 재수집 버튼 */
+.btn-refresh-sig { font-size:9px; padding:1px 5px; background:var(--bg3); border:.5px solid var(--bg3); border-radius:3px; cursor:pointer; color:var(--ink3); transition:.15s; }
+.btn-refresh-sig:hover { background:var(--navy2); color:var(--acc); }
+
+/* 법령 시행완료 */
+.rl-imm { background:#fde68a; color:#92400e; padding:1px 5px; border-radius:3px; font-size:9px; font-weight:700; }
+.rl-pass { background:var(--bg3); color:var(--ink3); padding:1px 5px; border-radius:3px; font-size:9px; }
+.reg-passed { opacity:.5; }
+.reg-passed .reg-name { text-decoration:line-through; }
+
+/* 순위 변동 배지 */
+.rank-new { font-size:7px; background:#dbeafe; color:#1e40af; border-radius:3px; padding:1px 3px; font-weight:700; display:block; margin-top:1px; }
+.rank-up { font-size:7px; color:var(--grn); font-weight:700; display:block; }
+.rank-dn { font-size:7px; color:var(--red); font-weight:700; display:block; }
+
+/* 상태 도트 에러 */
+.sdot.err { background:var(--red); box-shadow:0 0 0 2px rgba(184,80,80,.2); }

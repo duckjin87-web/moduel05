@@ -24,24 +24,27 @@
         <div class="ap-sec">
           <div class="ap-label">🤖 Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
           <div class="ap-row">
-            <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy...">
+            <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy... 또는 AQ...">
             <button class="ap-btn ap-save" id="btnSaveGemini">저장</button>
             <button class="ap-btn ap-test" id="btnTestGemini">테스트</button>
           </div>
           <select class="ap-select" id="gemini-model">
             <option value="gemini-2.0-flash">gemini-2.0-flash (권장)</option>
+            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
             <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
           </select>
-          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 무료 15req/분</div>
+          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 무료 15req/분 · AQ 시작 신규 키 지원</div>
           <div id="r-gemini" class="ap-result"></div>
         </div>
         <div class="ap-sec">
           <div class="ap-label">🏛 공공데이터 (data.go.kr) <span class="ap-status" id="st-public">미설정</span></div>
           <div class="ap-row">
-            <input type="text" class="ap-in" id="k-public" placeholder="serviceKey">
+            <input type="text" class="ap-in" id="k-public" placeholder="serviceKey (인코딩된 키)">
             <button class="ap-btn ap-save" id="btnSavePublic">저장</button>
+            <button class="ap-btn ap-test" id="btnTestPublic">테스트</button>
           </div>
           <div class="ap-hint">기상청·에어코리아·식약처 공통 키 · <a href="https://www.data.go.kr" target="_blank">data.go.kr</a></div>
+          <div id="r-public" class="ap-result"></div>
         </div>
         <div class="ap-sec">
           <div class="ap-label">📰 네이버 API <span class="ap-status" id="st-naver">미설정</span></div>
@@ -49,20 +52,29 @@
             <input type="text" class="ap-in" id="k-naver-id" placeholder="Client ID" style="flex:.8">
             <input type="password" class="ap-in" id="k-naver-sec" placeholder="Secret" style="flex:1">
             <button class="ap-btn ap-save" id="btnSaveNaver">저장</button>
+            <button class="ap-btn ap-test" id="btnTestNaver">테스트</button>
           </div>
           <div class="ap-hint">DataLab(트렌드) + 뉴스 검색 · <a href="https://developers.naver.com/apps/" target="_blank">developers.naver.com</a></div>
+          <div id="r-naver" class="ap-result"></div>
         </div>
         <div class="ap-sec">
           <div class="ap-label">📊 ECOS (한국은행) <span class="ap-status" id="st-ecos">미설정</span></div>
           <div class="ap-row">
             <input type="text" class="ap-in" id="k-ecos" placeholder="ECOS API Key">
             <button class="ap-btn ap-save" id="btnSaveEcos">저장</button>
+            <button class="ap-btn ap-test" id="btnTestEcos">테스트</button>
           </div>
           <div class="ap-hint">CPI·원자재가격 · <a href="https://ecos.bok.or.kr" target="_blank">ecos.bok.or.kr</a></div>
+          <div id="r-ecos" class="ap-result"></div>
         </div>
         <div class="ap-sec">
           <div class="ap-label">🔬 KIPRIS (특허청) <span class="ap-status" style="color:var(--ink3)">준비중</span></div>
           <div class="ap-hint">특허기반 업체 탐색 · <a href="https://plus.kipris.or.kr" target="_blank">plus.kipris.or.kr</a></div>
+        </div>
+        <div class="ap-sec" style="border-top:.5px solid var(--bg3);padding-top:8px;margin-top:4px">
+          <div class="ap-label" style="margin-bottom:6px">📡 마지막 수집 결과 확인</div>
+          <button class="ap-btn ap-test" id="btnShowCollected" style="width:100%;margin-bottom:6px">수집된 데이터 보기</button>
+          <div id="r-collected" class="ap-result" style="white-space:pre-wrap;font-size:9px;max-height:160px;overflow-y:auto"></div>
         </div>
       </div>
     </div>
@@ -105,7 +117,11 @@
 <!-- ── ZONE 1: 예측 TOP5 ── -->
 <div class="z1">
   <div class="zone-hd">
-    <div class="zone-title">🔮 예측 화장품 유형 TOP5 <span class="ztag">6~12개월 후 · 대형3사 제외</span></div>
+    <div class="zone-title">🔮 예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
+    <div class="pred-period-tabs" id="predPeriodTabs">
+      <button class="pred-period-tab active" data-period="6m">6개월 예측</button>
+      <button class="pred-period-tab" data-period="1y">1년 예측</button>
+    </div>
     <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
   </div>
   <div id="z1body">

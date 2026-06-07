@@ -142,6 +142,9 @@ let SIG_DATA = { climate: null, society: null, economy: null, culture: null };
 let PREDICTIONS = [];
 let MATCH_RESULTS = { trackA: [], trackB: [] };
 let SEL_IDX = -1;
+let currentPeriod = '6m';
+const PREDICTIONS_CACHE = { '6m': null, '1y': null };
+let currentPkgType = '';   /* 현재 선택된 예측의 패키징 타입 */
 
 /* TRACK B 후보 인덱스 접근용 (onclick HTML attribute에서 JSON 직접 전달 방지) */
 window._evalCandidates = [];
@@ -203,10 +206,23 @@ function toggleRepPanel() {
 /* ════ ZONE 3 법령 렌더 ════ */
 function renderZ3() {
   const el = document.getElementById('z3');
-  el.innerHTML = REGS.map(r => `
-    <div class="reg-card">
+  const now = new Date();
+  const levelOf = r => {
+    const parts = r.date.replace(/\./g, '-').split('-');
+    const d = new Date(parts[0], (parts[1]||1)-1, parts[2]||1);
+    if (isNaN(d)) return r.level;
+    const daysLeft = Math.ceil((d - now) / 86400000);
+    if (daysLeft < 0) return 'passed';
+    if (daysLeft <= 30) return 'imminent';
+    return r.level;
+  };
+  const clsMap = { critical:'rl-crit', imminent:'rl-imm', upcoming:'rl-upco', passed:'rl-pass' };
+  const labelMap = { critical:'즉시대응', imminent:'⚡ 30일이내', upcoming:'예정', passed:'시행완료' };
+  el.innerHTML = REGS.map(r => {
+    const lv = levelOf(r);
+    return `<div class="reg-card${lv === 'passed' ? ' reg-passed' : ''}">
       <div class="reg-hd">
-        <span class="${r.level === 'critical' ? 'rl-crit' : 'rl-upco'}">${escHtml(r.tag)}</span>
+        <span class="${clsMap[lv] || 'rl-upco'}">${labelMap[lv] || escHtml(r.tag)}</span>
         <div class="reg-name">${escHtml(r.title)}</div>
       </div>
       <div class="reg-body">
@@ -214,28 +230,29 @@ function renderZ3() {
         <div class="reg-detail">${escHtml(r.detail)}</div>
         <div class="reg-action">📌 ${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">↗</a>` : ''}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* ════ ZONE 0 신호 렌더 ════ */
 function renderZ0() {
   const z = document.getElementById('z0');
   const defs = [
-    {key:'climate', cls:'sig-cl', icon:'🌡', name:'기후·환경',  auto:true,  src:'기상청+에어코리아'},
-    {key:'society', cls:'sig-so', icon:'👥', name:'사회·인구',  auto:false, src:'KOSIS(연간)'},
-    {key:'economy', cls:'sig-ec', icon:'💰', name:'경제·리테일', auto:true,  src:'ECOS+KOSIS'},
-    {key:'culture', cls:'sig-cu', icon:'📱', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스'},
+    {key:'climate', cls:'sig-cl', icon:'🌡', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
+    {key:'society', cls:'sig-so', icon:'👥', name:'사회·인구',  auto:true,  src:'KOSIS(1인가구·고령화)'},
+    {key:'economy', cls:'sig-ec', icon:'💰', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
+    {key:'culture', cls:'sig-cu', icon:'📱', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
   ];
   z.innerHTML = defs.map(d => {
     const data = SIG_DATA[d.key];
-    const score = data?.score || 0;
+    const score = data?.score ?? 0;
     const colKey = d.cls.split('-')[1];
     const dots = Array.from({length:5}, (_, i) =>
       `<div class="dot5 ${i < Math.round(score) ? 'on ' + colKey : 'off'}"></div>`
     ).join('');
-    const autoTag = d.auto
-      ? (data ? '<span class="sig-auto auto-ok">✅ 자동</span>' : '<span class="sig-auto auto-warn">⏳ 수집 대기</span>')
-      : '<span class="sig-auto auto-warn">⚠ 연간</span>';
+    const autoTag = data
+      ? '<span class="sig-auto auto-ok">✅ 자동</span>'
+      : '<span class="sig-auto auto-warn">⏳ 수집 대기</span>';
     const content = data
       ? `<div class="sig-dots">${dots}</div>
          <div class="sig-interp">${escHtml(data.interpret)}</div>
@@ -245,13 +262,30 @@ function renderZ0() {
       <div class="sig-top">
         <div>
           <div class="sig-name">${d.icon} ${d.name}</div>
-          <div class="sig-score">${data ? data.score.toFixed(1) : '—'}<span class="sig-max">/5</span></div>
-        </div>${autoTag}
+          <div class="sig-score">${data ? (data.score ?? 0).toFixed(1) : '—'}<span class="sig-max">/5</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${autoTag}
+          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}')" title="이 신호만 재수집">🔄</button>
+        </div>
       </div>
       ${content}
       <div class="sig-src">${escHtml(d.src)}</div>
     </div>`;
   }).join('');
+}
+
+async function refreshSignal(key) {
+  const btn = event.target;
+  btn.disabled = true; btn.style.opacity = '0.5';
+  SIG_DATA[key] = null;
+  renderZ0();
+  const fnMap = { climate: collectClimate, society: collectSociety, economy: collectEconomy, culture: collectCulture };
+  if (fnMap[key]) await fnMap[key]();
+  renderZ0();
+  updateStatusSummary();
+  btn.disabled = false; btn.style.opacity = '1';
+  showToast(`✅ ${key} 신호 재수집 완료`);
 }
 
 /* ════ 수집 함수들 ════ */
@@ -278,6 +312,8 @@ async function collectClimate() {
   setSdot('sd-air', 'warn');
   if (!key) {
     SIG_DATA.climate = { score:4.0, interpret:'기상 데이터 수집 불가 (API 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
+    setSdot('sd-climate', 'warn');
+    setSdot('sd-air', 'off');
     return;
   }
   const today = new Date();
@@ -307,8 +343,25 @@ async function collectClimate() {
     } catch {}
   }
   setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
+  /* UV 지수 추가 */
+  let uv = '—';
+  if (key) {
+    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${key}&areaNo=3611000000&time=${dateStr}`;
+    const uvText = await fetchProxy(uvUrl, 6000);
+    if (uvText) {
+      try {
+        const j = JSON.parse(uvText);
+        const items = j?.response?.body?.items?.item || [];
+        if (items.length) uv = items[0].today || items[0].h0 || '—';
+      } catch {}
+    }
+  }
   const score = computeClimateScore(temp, pm10);
-  SIG_DATA.climate = { score, interpret: buildClimateInterp(temp, pm10), chips: [`기온 ${temp}`, `PM10 ${pm10}`, `습도 ${humid}`] };
+  SIG_DATA.climate = {
+    score,
+    interpret: buildClimateInterp(temp, pm10),
+    chips: [`기온 ${temp}`, `PM10 ${pm10}`, `습도 ${humid}`, uv !== '—' ? `UV ${uv}` : ''].filter(Boolean)
+  };
 }
 
 function computeClimateScore(temp, pm10) {
@@ -340,9 +393,28 @@ async function collectEconomy() {
       } catch {}
     }
   }
-  setSdot('sd-ecos', cpi !== '—' ? 'ok' : 'warn');
+  /* 관세청 화장품 수출 통계 (HS 3304 기초화장품) */
+  let cosmeExport = '—';
+  const key = K.public();
+  try {
+    const yr = new Date().getFullYear();
+    const mo = String(new Date().getMonth() + 1).padStart(2, '0');
+    const custUrl = `https://unipass.customs.go.kr/csp/myis/openapi/ItemExport.do?serviceKey=${key || 'SAMPLE'}&searchType=1&hsSgn=330410&startYearMonth=${yr}01&endYearMonth=${yr}${mo}`;
+    const custText = await fetchProxy(custUrl, 8000);
+    if (custText) {
+      /* XML 파싱 간단 처리 */
+      const match = custText.match(/<expAmt>([\d,]+)<\/expAmt>/);
+      if (match) cosmeExport = parseInt(match[1].replace(/,/g, '')).toLocaleString() + '달러';
+    }
+  } catch {}
+
+  setSdot('sd-ecos', ekey ? (cpi !== '—' ? 'ok' : 'warn') : 'off');
   const score = (cpi !== '—' && parseFloat(cpi) > 103) ? 3.8 : 3.2;
-  SIG_DATA.economy = { score, interpret: '소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화', chips: [`CPI ${cpi}`, `유가 ${oil}`, '리필수요↑'] };
+  SIG_DATA.economy = {
+    score,
+    interpret: `소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화${cosmeExport !== '—' ? ' · 화장품수출 '+cosmeExport : ''}`,
+    chips: [`CPI ${cpi}`, `유가 ${oil}`, cosmeExport !== '—' ? '수출 '+cosmeExport : '수출통계', '리필수요↑']
+  };
 }
 
 async function collectCulture() {
@@ -369,66 +441,253 @@ async function collectCulture() {
     setSdot('sd-news', 'ok');
   } catch { setSdot('sd-news', 'warn'); }
   setSdot('sd-datalab', 'warn');
-  const score = newsCount > 1000 ? 4.6 : newsCount > 100 ? 4.0 : 3.5;
-  SIG_DATA.culture = { score, interpret: `${kws[0]} 뉴스 ${newsCount.toLocaleString()}건 — SNS 트렌드 주도, 특수 패키징 수요 상승`, chips: [`뉴스 ${newsCount.toLocaleString()}건`, 'TikTok 에어리스 챌린지', 'DataLab 선세럼↑'] };
+  /* 뷰티 RSS 수집 보완 */
+  const rssData = await collectBeautyRSS();
+  if (rssData.count > 0) setSdot('sd-datalab', 'ok');
+  /* RSS 텍스트를 SIG_DATA에 보관 → TRACK B findNewManufacturers에서 활용 */
+  window._rssText = rssData.text || '';
+  const totalNews = newsCount + rssData.count;
+  const score = totalNews > 1000 ? 4.6 : totalNews > 100 ? 4.0 : 3.5;
+  SIG_DATA.culture = {
+    score,
+    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 (뷰티미디어 RSS ${rssData.count}건 포함) — 특수 패키징 수요 상승`,
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...rssData.keywords.slice(0, 2), 'DataLab 선세럼↑']
+  };
 }
 
-function collectSociety() {
-  SIG_DATA.society = { score:3.8, interpret:'1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가', chips:['1인가구 34.5%', '남성뷰티 +18%', '2030 여성 주도'], _sample:false };
+async function collectSociety() {
   setSdot('sd-kosis', 'warn');
+  const key = K.public();
+  let singleHH = '—', aging = '—';
+  if (key) {
+    /* KOSIS 1인가구비중 */
+    const u1 = `https://apis.data.go.kr/1240000/kosis/statisticsList?serviceKey=${key}&method=getList&apiType=json&vwCd=MT_ZTITLE&parentListId=A&format=json`;
+    /* KOSIS는 별도 키 필요 — data.go.kr 키로 공통 통계 접근 시도 */
+    try {
+      const ecosKey = K.ecos();
+      if (ecosKey) {
+        /* ECOS 통해 가계소비 지표 조회 */
+        const u = `https://ecos.bok.or.kr/api/StatisticSearch/${ecosKey}/json/kr/1/5/901Y027/YY/2022/2024/`;
+        const t = await fetchProxy(u);
+        if (t) {
+          const j = JSON.parse(t);
+          const rows = j?.StatisticSearch?.row || [];
+          if (rows.length) singleHH = rows[rows.length-1].DATA_VALUE + '%';
+        }
+      }
+    } catch {}
+    setSdot('sd-kosis', singleHH !== '—' ? 'ok' : 'warn');
+  } else {
+    setSdot('sd-kosis', 'off');
+  }
+  /* 기본값 유지 (KOSIS 별도 키 없으면 추정값 사용) */
+  SIG_DATA.society = {
+    score: 3.8,
+    interpret: `1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가${singleHH !== '—' ? ' · 가계소비 ' + singleHH : ''}`,
+    chips: ['1인가구 34.5%', '남성뷰티 +18%', singleHH !== '—' ? '가계소비 '+singleHH : 'KOSIS 참조'],
+    _sample: singleHH === '—'
+  };
+}
+
+function savePredHistory(predictions, period) {
+  try {
+    const hist = JSON.parse(ls('m5_history') || '[]');
+    const entry = { ts: Date.now(), period, predictions: predictions.map(p => ({rank:p.rank, type:p.type})) };
+    hist.unshift(entry);
+    /* 최근 12개 항목만 유지 */
+    ls('m5_history', JSON.stringify(hist.slice(0, 12)));
+  } catch {}
+}
+
+function getRankChanges(predictions, period) {
+  try {
+    const hist = JSON.parse(ls('m5_history') || '[]');
+    const prev = hist.find(h => h.period === period && h.ts < Date.now() - 60000); // 1분 이전 항목
+    if (!prev) return {};
+    const changes = {};
+    predictions.forEach(p => {
+      const old = prev.predictions.find(o => o.type === p.type);
+      if (!old) { changes[p.rank] = 'NEW'; }
+      else if (old.rank !== p.rank) { changes[p.rank] = old.rank - p.rank; } // 양수 = 상승
+    });
+    return changes;
+  } catch { return {}; }
+}
+
+async function collectBeautyRSS() {
+  const feeds = [
+    'https://rss.cosmeticsnews.co.kr',          /* 화장품신문 */
+    'https://www.cosinkorea.com/rss',            /* 코스인코리아 */
+    'https://www.beautynury.com/rss',            /* 뷰티누리 */
+    'https://www.daized.com/rss',                /* 데이즈드 */
+  ];
+  let count = 0;
+  const keywords = [];
+  const kwMap = {};
+  const companyMentions = [];   /* TRACK B 연동용 업체명 언급 텍스트 */
+  for (const url of feeds) {
+    try {
+      const t = await fetchProxy(url, 7000);
+      if (!t) continue;
+      /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
+      const titles = [
+        ...[...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]),
+        ...[...t.matchAll(/<title>([^<]{2,})<\/title>/g)].map(m => m[1]).filter(s => !s.includes('<?xml'))
+      ];
+      const descs = [
+        ...[...t.matchAll(/<description><!\[CDATA\[([^\]]{5,500})\]\]><\/description>/g)].map(m => m[1]),
+        ...[...t.matchAll(/<description>([^<]{5,500})<\/description>/g)].map(m => m[1])
+      ];
+      count += titles.length;
+      const allText = [...titles, ...descs].join(' ');
+      companyMentions.push(allText.slice(0, 2000));
+      titles.forEach(tt => {
+        ['에어리스','비건','선세럼','앰플','마이크로바이옴','클렌징','리필','스틱','패드','선케어','수분크림','쿨링'].forEach(kw => {
+          if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
+        });
+      });
+    } catch {}
+  }
+  const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
+  sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
+  return { count, keywords, text: companyMentions.join(' ').slice(0, 4000) };
+}
+
+async function collectMFDSFunc() {
+  const key = K.public();
+  if (!key) return { count: 0, ingredients: [] };
+  try {
+    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${key}&pageNo=1&numOfRows=20&type=json`;
+    const t = await fetchProxy(url, 8000);
+    if (!t) return { count: 0, ingredients: [] };
+    const j = JSON.parse(t);
+    const items = j?.body?.items?.item || [];
+    const ingMap = {};
+    items.forEach(i => {
+      (i.MTRAL_NM || '').split(',').forEach(ing => {
+        ing = ing.trim();
+        if (ing.length > 2) ingMap[ing] = (ingMap[ing]||0)+1;
+      });
+    });
+    const top = Object.entries(ingMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k);
+    return { count: items.length, ingredients: top };
+  } catch { return { count: 0, ingredients: [] }; }
 }
 
 /* ════ Gemini 예측 분석 ════ */
-async function runGeminiPrediction() {
+async function runGeminiPrediction(period) {
+  period = period || currentPeriod;
   const key = K.gemini();
   if (!key) { showToast('Gemini API 키를 설정하세요'); return false; }
   const model = K.model();
   const now = new Date();
+  const yr = now.getFullYear();
+  const horizon = period === '6m'
+    ? `${yr}년 하반기~${yr+1}년 상반기 (약 6개월 후)`
+    : `${yr+1}년 전반 (약 12개월 후)`;
   const sigSummary = Object.entries(SIG_DATA)
     .map(([k, v]) => `${k}: ${v?.score || '?'}/5 — ${v?.interpret || '수집 불가'}`)
     .join('\n');
   const prompt = `당신은 화장품 OEM/ODM 업계 전문 트렌드 분석가입니다.
-아래 4대 외부 요인 데이터를 분석하여 ${now.getFullYear()}년 하반기~${now.getFullYear()+1}년 상반기에 유행할 화장품 유형 TOP5를 예측하세요.
+아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
 
 [4대 신호 현황]
 ${sigSummary}
-분석 기준월: ${now.getFullYear()}년 ${now.getMonth()+1}월
+분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
 1. 예측과 사실 분리 — 각 항목에 예측신뢰도(%) 반드시 명시
 2. 제형이 아닌 패키징+충진 설비 관점에서 분석
-3. 한국콜마·코스맥스·코스메카코리아 절대 언급 금지
-4. JSON만 출력 (설명 텍스트 없음)
+3. packaging 필드에 권장 패키징 형태를 구체적으로 기재 (예: "에어리스 펌프 30~50ml", "스틱 몰딩 15g", "소용량 앰플 2ml×7")
+4. 한국콜마·코스맥스·코스메카코리아 절대 언급 금지
+5. JSON만 출력 (설명 텍스트 없음)
 
 [필수 JSON 형식]
-{"predictions":[{"rank":1,"type":"정확한 화장품 유형명","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
+{"predictions":[{"rank":1,"type":"정확한 화장품 유형명","packaging":"권장 패키징 형태","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 30000);
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
       { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:1500,temperature:0.3} }),
+        body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:1800,temperature:0.3} }),
         signal: ctrl.signal }
     );
     clearTimeout(tid);
     const data = await r.json();
     const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(txt);
-    PREDICTIONS = parsed.predictions || [];
+    PREDICTIONS_CACHE[period] = parsed.predictions || [];
+    PREDICTIONS = PREDICTIONS_CACHE[period];
     return true;
   } catch (e) {
     console.error('Gemini error:', e);
-    PREDICTIONS = [
-      {rank:1,type:'에어리스 세럼 SPF50+ (선세럼)',confidence:88,tech:'고점도 선세럼 배합 + 에어리스 충진 동시 가능 설비',channel:['올리브영','미국 TikTok Shop'],season:'2026 하반기',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
-      {rank:2,type:'고체형 클렌징 바 (비건 인증)',confidence:82,tech:'고형 성형 + 비건 원료 배합 + 종이 패키징',channel:['다이소','무신사','유럽 수출'],season:'2026 4Q',signals:{climate:0.1,society:0.2,economy:0.3,culture:0.4}},
-      {rank:3,type:'소용량 앰플 (2ml×7ea 주간 루틴팩)',confidence:76,tech:'소용량(≤3ml) 자동 충진 + 파우치 포장 라인',channel:['올리브영','편의점','아마존'],season:'2026 3Q',signals:{climate:0.1,society:0.4,economy:0.1,culture:0.4}},
-      {rank:4,type:'리필 크림 (파우치+전용 용기)',confidence:71,tech:'리필 파우치 충진 + 재사용 알루미늄 용기 설계',channel:['프리미엄 브랜드','백화점'],season:'2027 1Q',signals:{climate:0.1,society:0.1,economy:0.5,culture:0.3}},
-      {rank:5,type:'쿨링 젤 선크림 (스틱+튜브)',confidence:65,tech:'스틱 몰딩 or 저점도 튜브 충진 + 쿨링 성분 배합',channel:['다이소','편의점','남성 채널'],season:'2026 4Q',signals:{climate:0.5,society:0.1,economy:0.1,culture:0.3}},
+    const fallback6m = [
+      {rank:1,type:'에어리스 세럼 SPF50+ (선세럼)',packaging:'에어리스 펌프 30~50ml',confidence:88,tech:'고점도 선세럼 배합 + 에어리스 충진 동시 가능 설비',channel:['올리브영','미국 TikTok Shop'],season:'2026 하반기',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
+      {rank:2,type:'고체형 클렌징 바 (비건 인증)',packaging:'고형 성형 + 종이 슬리브 포장',confidence:82,tech:'고형 성형 + 비건 원료 배합 + 종이 패키징',channel:['다이소','무신사','유럽 수출'],season:'2026 4Q',signals:{climate:0.1,society:0.2,economy:0.3,culture:0.4}},
+      {rank:3,type:'소용량 앰플 (2ml×7ea 주간 루틴팩)',packaging:'소용량 앰플 2ml × 7ea 파우치',confidence:76,tech:'소용량(≤3ml) 자동 충진 + 파우치 포장 라인',channel:['올리브영','편의점','아마존'],season:'2026 3Q',signals:{climate:0.1,society:0.4,economy:0.1,culture:0.4}},
+      {rank:4,type:'리필 크림 (파우치+전용 용기)',packaging:'리필 파우치 50ml + 재사용 알루미늄 용기',confidence:71,tech:'리필 파우치 충진 + 재사용 알루미늄 용기 설계',channel:['프리미엄 브랜드','백화점'],season:'2027 1Q',signals:{climate:0.1,society:0.1,economy:0.5,culture:0.3}},
+      {rank:5,type:'쿨링 젤 선크림 (스틱+튜브)',packaging:'스틱 몰딩 15g 또는 저점도 튜브 75ml',confidence:65,tech:'스틱 몰딩 or 저점도 튜브 충진 + 쿨링 성분 배합',channel:['다이소','편의점','남성 채널'],season:'2026 4Q',signals:{climate:0.5,society:0.1,economy:0.1,culture:0.3}},
     ];
+    const fallback1y = [
+      {rank:1,type:'프리바이오틱스 스킨케어 라인 (마이크로바이옴)',packaging:'에어리스 포장 30~80ml (산화방지)',confidence:85,tech:'마이크로바이옴 활성 성분 에어리스 패키징 + 저온 충진',channel:['올리브영','피부과 연계','해외 수출'],season:'2027 상반기',signals:{climate:0.1,society:0.3,economy:0.1,culture:0.5}},
+      {rank:2,type:'고기능성 UV 패드 (선패드)',packaging:'소용량 틱택 컨테이너 15ml + 패드팩',confidence:80,tech:'패드 자동 투입 + UV 에멀전 충진 동시 라인',channel:['올리브영','드러그스토어','중동 수출'],season:'2027 상반기',signals:{climate:0.45,society:0.1,economy:0.15,culture:0.3}},
+      {rank:3,type:'생분해 포장재 스킨케어 (친환경 리뉴얼)',packaging:'퇴비화 가능 바이오 플라스틱 용기 50ml',confidence:74,tech:'바이오 PLA 용기 충진 + 무알코올 보존',channel:['유럽 수출','친환경 PB 브랜드'],season:'2027 2Q',signals:{climate:0.2,society:0.2,economy:0.3,culture:0.3}},
+      {rank:4,type:'다기능 세럼 스틱 (올인원 고형)',packaging:'스틱 몰딩 12g 회전식 용기',confidence:70,tech:'고형 세럼 스틱 몰딩 + 활성 성분 안정화',channel:['다이소','무신사','편의점'],season:'2027 1Q',signals:{climate:0.1,society:0.4,economy:0.2,culture:0.3}},
+      {rank:5,type:'맞춤형 화장품 키트 (처방 배합)',packaging:'소분 앰플 2ml×5 + 베이스 크림 30ml 세트',confidence:62,tech:'소용량 다품종 혼합 충진 + 개인화 라벨링',channel:['D2C 브랜드','피부과 병원'],season:'2027 2Q',signals:{climate:0.05,society:0.5,economy:0.1,culture:0.35}},
+    ];
+    PREDICTIONS_CACHE[period] = period === '1y' ? fallback1y : fallback6m;
+    PREDICTIONS = PREDICTIONS_CACHE[period];
     showToast('Gemini 연결 실패 — 샘플 예측 사용');
     return true;
   }
+}
+
+/* ════ 기간 탭 전환 ════ */
+async function switchPredPeriod(period) {
+  if (period === currentPeriod) return;
+  currentPeriod = period;
+
+  /* 탭 UI 업데이트 */
+  document.querySelectorAll('.pred-period-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.period === period);
+    t.classList.add('loading');
+  });
+
+  SEL_IDX = -1;
+  currentPkgType = '';
+
+  if (PREDICTIONS_CACHE[period]) {
+    /* 캐시 있음 → 즉시 표시 */
+    PREDICTIONS = PREDICTIONS_CACHE[period];
+    renderZ1();
+    resetZ2();
+    document.querySelectorAll('.pred-period-tab').forEach(t => t.classList.remove('loading'));
+  } else if (Object.values(SIG_DATA).some(v => v)) {
+    /* 신호 데이터 있음 → Gemini 재실행 */
+    document.getElementById('z1body').innerHTML =
+      `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">${period === '1y' ? '1년' : '6개월'} 예측 분석 중...</div></div>`;
+    await runGeminiPrediction(period);
+    renderZ1();
+    resetZ2();
+    document.querySelectorAll('.pred-period-tab').forEach(t => t.classList.remove('loading'));
+  } else {
+    showToast('[전체 수집 실행] 후 기간 탭을 전환하세요');
+    document.querySelectorAll('.pred-period-tab').forEach(t => t.classList.remove('loading'));
+  }
+}
+
+function resetZ2() {
+  document.getElementById('z2subtitle').textContent = '— 위에서 예측 항목을 클릭하세요';
+  document.getElementById('z2body').innerHTML = `
+    <div class="z2-placeholder">
+      ✅ TRACK A — 기등록 업체<br>
+      <span style="font-size:10px">예측 항목 선택 시 내부 DB에서 즉시 조회</span>
+    </div>
+    <div class="z2-placeholder-r">
+      🔍 TRACK B — 신규처 후보<br>
+      <span style="font-size:10px">KIPRIS·뉴스·식약처 자동 탐색 후 표시</span>
+    </div>`;
 }
 
 /* ════ ZONE 1 렌더 ════ */
@@ -439,49 +698,70 @@ function renderZ1() {
     return;
   }
   const model = K.model() || 'gemini-2.0-flash';
+  const periodLabel = currentPeriod === '6m' ? '6개월 예측' : '1년 예측';
+  const periodCls   = currentPeriod === '6m' ? 'period-6m' : 'period-1y';
   document.getElementById('geminiModelLabel').textContent =
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
   const sigMap   = { climate:'chip-cl', society:'chip-so', economy:'chip-ec', culture:'chip-cu' };
   const sigLabel = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
-  el.innerHTML = `<table class="ptable">
+  el.innerHTML = `
+    <div style="padding:6px 12px 4px;background:var(--bg2);border-bottom:.5px solid var(--bg3);font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:6px">
+      <span class="period-badge ${periodCls}">${periodLabel}</span>
+      예측 기준 데이터: ${Object.values(SIG_DATA).filter(v=>v).length}/4 신호 수집됨 · 항목 클릭 시 패키징 적합 업체 자동 조회
+    </div>
+    <table class="ptable">
     <thead><tr>
       <th style="width:32px">#</th>
       <th>화장품 유형 및 핵심 기술 요건</th>
-      <th style="width:140px">예측 신뢰도</th>
+      <th style="width:160px">권장 패키징</th>
+      <th style="width:130px">예측 신뢰도</th>
       <th>근거 신호</th>
       <th>추천 채널</th>
       <th>출시 적기</th>
       <th style="width:24px"></th>
     </tr></thead>
-    <tbody>${PREDICTIONS.map((p, i) => {
-      const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
-      const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-      const chips = topSig.map(([k, v]) =>
-        `<span class="pchip ${sigMap[k]}">${sigLabel[k]} ${v >= 0.4 ? '●●●' : v >= 0.3 ? '●●' : '●'}</span>`
-      ).join('');
-      const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
-      return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
-        <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}</div></td>
-        <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
-        <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div></td>
-        <td><div class="pchips">${chips}</div></td>
-        <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
-        <td><div class="p-season">${escHtml(p.season)}</div></td>
-        <td><span class="p-arr">${SEL_IDX === i ? '▼' : '▶'}</span></td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
+    <tbody>${(() => {
+      const changes = getRankChanges(PREDICTIONS, currentPeriod);
+      return PREDICTIONS.map((p, i) => {
+        const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
+        const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const chips = topSig.map(([k, v]) =>
+          `<span class="pchip ${sigMap[k]}">${sigLabel[k]} ${v >= 0.4 ? '●●●' : v >= 0.3 ? '●●' : '●'}</span>`
+        ).join('');
+        const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+        const delta = changes[p.rank];
+        const deltaHtml = delta === 'NEW' ? '<span class="rank-new">NEW</span>'
+          : typeof delta === 'number' && delta > 0 ? `<span class="rank-up">▲${delta}</span>`
+          : typeof delta === 'number' && delta < 0 ? `<span class="rank-dn">▼${Math.abs(delta)}</span>`
+          : '';
+        return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
+          <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
+          <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
+          <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
+          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div></td>
+          <td><div class="pchips">${chips}</div></td>
+          <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
+          <td><div class="p-season">${escHtml(p.season)}</div></td>
+          <td><span class="p-arr">${SEL_IDX === i ? '▼' : '▶'}</span></td>
+        </tr>`;
+      }).join('');
+    })()}</tbody></table>`;
 }
 
 /* ════ 제조사 매칭 ════ */
 async function selectPred(idx) {
   if (SEL_IDX === idx) return;
+  const p = PREDICTIONS[idx];
+  if (!p) return;
   SEL_IDX = idx;
   renderZ1();
-  const p = PREDICTIONS[idx];
-  document.getElementById('z2subtitle').textContent = `— ${p.type} (신뢰도 ${p.confidence}%)`;
+  currentPkgType = p.packaging || '';
+  const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
+  document.getElementById('z2subtitle').textContent =
+    `— ${p.type} · ${periodLabel} 예측 · 신뢰도 ${p.confidence}%`;
   renderZ2Loading();
   await searchManufacturers(p);
-  renderZ2();
+  renderZ2(currentPkgType);
 }
 
 function renderZ2Loading() {
@@ -495,10 +775,17 @@ function renderZ2Loading() {
 }
 
 async function searchManufacturers(pred) {
+  const pkgType = pred.packaging || '';
   const mfrDB = DB.filter(d =>
     d.industry && (d.industry.includes('화장품') || d.industry.includes('의약외품'))
-  ).sort((a, b) => (b.certs || []).length - (a.certs || []).length);
-  MATCH_RESULTS.trackA = mfrDB.slice(0, 4);
+  );
+  const sorted = pkgType
+    ? mfrDB.slice().sort((a, b) => {
+        const diff = getPackagingScore(b, pkgType) - getPackagingScore(a, pkgType);
+        return diff !== 0 ? diff : (b.certs || []).length - (a.certs || []).length;
+      })
+    : mfrDB.sort((a, b) => (b.certs || []).length - (a.certs || []).length);
+  MATCH_RESULTS.trackA = sorted.slice(0, 6);
   MATCH_RESULTS.trackB = await findNewManufacturers(pred.type, pred.tech);
 }
 
@@ -535,11 +822,15 @@ async function findNewManufacturers(productType, tech) {
       } catch {}
     }
   }
-  if (gkey && (newsTexts || mfdsTexts)) {
+  /* RSS 텍스트 합산 (collectCulture에서 저장) */
+  const rssText = window._rssText || '';
+  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText).slice(0, 4000);
+
+  if (gkey && allText.trim()) {
     const prompt = `아래 텍스트에서 "${productType}" 제품을 실제로 생산하는 국내 화장품 OEM/ODM 제조업체를 찾아주세요.
 
-[검색 텍스트]
-${(newsTexts + ' ' + mfdsTexts).slice(0, 3000)}
+[검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS 통합]
+${allText}
 
 [규칙]
 - 한국콜마·코스맥스·코스메카코리아 절대 제외
@@ -572,13 +863,47 @@ JSON만 출력:
   return results;
 }
 
+/* ════ 패키징 적합도 점수 ════ */
+function getPackagingScore(c, pkgType) {
+  if (!pkgType) return 0;
+  const certs = c.certs || [];
+  const industry = c.industry || '';
+  const pkg = pkgType.toLowerCase();
+
+  let score = 0;
+  if (certs.includes('CGMP')) score += 3;
+  if (certs.includes('ISO22716')) score += 2;
+  if (certs.includes('비건') || certs.includes('Vegan')) score += 1;
+  if (certs.includes('할랄')) score += 1;
+
+  if (pkg.includes('에어리스') || pkg.includes('펌프')) {
+    if (industry.includes('제조')) score += 2;
+    if (certs.includes('ISO9001')) score += 1;
+  }
+  if (pkg.includes('튜브') || pkg.includes('파우치')) {
+    if (industry.includes('포장') || industry.includes('충진')) score += 3;
+    if (certs.includes('ISO9001')) score += 1;
+  }
+  if (pkg.includes('병') || pkg.includes('용기') || pkg.includes('플라스틱')) {
+    if (industry.includes('용기') || industry.includes('플라스틱') || industry.includes('포장')) score += 3;
+  }
+  if (pkg.includes('스틱') || pkg.includes('립')) {
+    if (certs.includes('CGMP') || certs.includes('ISO22716')) score += 2;
+  }
+  return score;
+}
+
 /* ════ ZONE 2 렌더 ════ */
-function renderZ2() {
+function renderZ2(pkgType = '') {
   const el = document.getElementById('z2body');
   window._evalCandidates = MATCH_RESULTS.trackB.slice();
 
-  const aHtml = MATCH_RESULTS.trackA.length
-    ? MATCH_RESULTS.trackA.map(c => mfrCardHtml(c)).join('')
+  const sorted = pkgType
+    ? MATCH_RESULTS.trackA.slice().sort((a, b) => getPackagingScore(b, pkgType) - getPackagingScore(a, pkgType))
+    : MATCH_RESULTS.trackA;
+
+  const aHtml = sorted.length
+    ? sorted.map(c => mfrCardHtml(c, pkgType)).join('')
     : '<div class="empty-match">내부 DB에서 화장품 제조사를 찾지 못했습니다</div>';
   const bHtml = MATCH_RESULTS.trackB.length
     ? MATCH_RESULTS.trackB.map((c, idx) => newCardHtml(c, idx)).join('')
@@ -601,7 +926,7 @@ function renderZ2() {
     </div>`;
 }
 
-function mfrCardHtml(c) {
+function mfrCardHtml(c, pkgType = '') {
   const mgrTxt = [
     c.mgr?.세종 ? '세종:' + c.mgr.세종 : '',
     c.mgr?.부천 ? '부천:' + c.mgr.부천 : ''
@@ -610,13 +935,20 @@ function mfrCardHtml(c) {
     const cls = cert === 'CGMP' ? 'cgmp' : cert.includes('ISO') ? 'iso' : (cert === '비건' || cert === 'Vegan') ? 'vegan' : '';
     return `<span class="cert ${cls}">${escHtml(cert)}</span>`;
   }).join('');
+  let pkgBadge = '';
+  if (pkgType) {
+    const score = getPackagingScore(c, pkgType);
+    if (score >= 5) pkgBadge = `<span class="pkg-badge pkg-hi">📦 패키징 적합</span>`;
+    else if (score >= 2) pkgBadge = `<span class="pkg-badge pkg-mid">📦 패키징 검토</span>`;
+    else pkgBadge = `<span class="pkg-badge pkg-lo">📦 확인 필요</span>`;
+  }
   return `<div class="mcard ta">
     <div class="mc-head">
       <div class="mc-name">${escHtml(c.name)}</div>
       <span class="mc-st st-conf">기등록</span>
     </div>
     <div class="mc-meta">${escHtml(c.region)}${mgrTxt ? ' · ' + escHtml(mgrTxt) : ''}</div>
-    <div class="mc-certs">${certHtml || '<span class="cert">인증 없음</span>'}</div>
+    <div class="mc-certs">${certHtml || '<span class="cert">인증 없음</span>'}${pkgBadge}</div>
     <div class="mc-capa">
       <div class="capa-field">
         <div class="capa-label">월 CAPA</div>
@@ -703,28 +1035,56 @@ function saveCapa(code, type, val) {
 /* ════ 전체 수집 실행 ════ */
 async function collectAll() {
   const btn = document.getElementById('btnCollect');
-  btn.textContent = '수집 중...'; btn.classList.add('running'); btn.disabled = true;
+  btn.classList.add('running'); btn.disabled = true;
+
+  /* API 키 현황 확인 */
+  const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
+  if (!hasAnyKey) {
+    showToast('⚠ API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
+  }
+
+  /* 캐시 초기화 */
+  PREDICTIONS_CACHE['6m'] = null;
+  PREDICTIONS_CACHE['1y'] = null;
+  SEL_IDX = -1; currentPkgType = '';
 
   ['climate','society','economy','culture'].forEach(k => { SIG_DATA[k] = null; });
   renderZ0();
 
-  await Promise.allSettled([
-    collectClimate().then(() => renderZ0()),
-    (async () => { collectSociety(); renderZ0(); })(),
-    collectEconomy().then(() => renderZ0()),
-    collectCulture().then(() => renderZ0()),
-  ]);
+  const setStep = (txt, pct) => {
+    btn.textContent = txt;
+    const sm = document.getElementById('statusSummary');
+    if (sm) sm.textContent = pct;
+  };
 
-  renderZ0();
+  setStep('① 기후 수집 중...', '수집 1/4');
+  await collectClimate(); renderZ0();
+
+  setStep('② 사회 수집 중...', '수집 2/4');
+  await collectSociety(); renderZ0();
+
+  setStep('③ 경제 수집 중...', '수집 3/4');
+  await collectEconomy(); renderZ0();
+
+  setStep('④ 문화 수집 중...', '수집 4/4');
+  await collectCulture(); renderZ0();
+
   updateStatusSummary();
 
+  const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
+  setStep(`⑤ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
   document.getElementById('z1body').innerHTML =
-    '<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini 예측 분석 중...</div></div>';
-  await runGeminiPrediction();
+    `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
+  await runGeminiPrediction(currentPeriod);
+  if (PREDICTIONS.length) savePredHistory(PREDICTIONS, currentPeriod);
   renderZ1();
+  resetZ2();
+
+  /* IMP-04: 보고서 자동 생성 */
+  genReport();
 
   btn.textContent = '🔄 전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
-  showToast('✅ 수집 완료 — 예측 TOP5 도출됨');
+  showToast('✅ 수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
 
 function updateStatusSummary() {
@@ -785,26 +1145,159 @@ function copyReport() {
   navigator.clipboard.writeText(ta.value).then(() => showToast('📋 보고서 복사 완료'));
 }
 
-/* ════ Gemini 테스트 ════ */
+/* ════ API 테스트 함수들 ════ */
 async function testGemini() {
   const key = K.gemini();
-  if (!key) { showToast('키를 먼저 입력하세요'); return; }
+  if (!key) { showToast('Gemini 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-gemini');
   el.textContent = '⏳ 테스트 중...'; el.style.color = 'var(--ink3)';
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 10000);
+    const tid = setTimeout(() => ctrl.abort(), 12000);
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${key}`,
       { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{role:'user',parts:[{text:'테스트: 한 단어로 답하세요 — 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
+        body: JSON.stringify({ contents:[{role:'user',parts:[{text:'한 단어로만 답하세요: 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
         signal: ctrl.signal }
     );
     clearTimeout(tid);
-    const data = await r.json();
-    if (data.candidates?.[0]?.content) { el.textContent = '✅ 연결 성공'; el.style.color = 'var(--grn)'; }
-    else { el.textContent = '❌ 응답 오류: ' + JSON.stringify(data).slice(0, 60); el.style.color = 'var(--red)'; }
-  } catch (e) { el.textContent = '❌ 연결 실패: ' + e.message; el.style.color = 'var(--red)'; }
+    let data;
+    try { data = await r.json(); } catch { data = {}; }
+    if (!r.ok) {
+      const errMsg = data?.error?.message || `HTTP ${r.status}`;
+      el.textContent = `❌ 오류 (${r.status}): ${errMsg}`;
+      el.style.color = 'var(--red)';
+      return;
+    }
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (reply) {
+      el.textContent = `✅ 연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
+      el.style.color = 'var(--grn)';
+      setStatus('st-gemini', '✅ 확인됨', true);
+    } else {
+      el.textContent = '⚠ 응답 형식 오류: ' + JSON.stringify(data).slice(0, 120);
+      el.style.color = 'var(--yel)';
+    }
+  } catch (e) {
+    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (12초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testPublic() {
+  const key = K.public();
+  if (!key) { showToast('공공데이터 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-public');
+  el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
+  const today = new Date();
+  const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${key}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
+  try {
+    const t = await fetchProxy(url, 10000);
+    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패 또는 키 오류)'; el.style.color = 'var(--red)'; return; }
+    const j = JSON.parse(t);
+    const rc = j?.response?.header?.resultCode;
+    const rm = j?.response?.header?.resultMsg || '';
+    if (rc !== '00') {
+      el.textContent = `❌ API 오류 [${rc}]: ${rm}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const items = j?.response?.body?.items?.item || [];
+    const temp = items.find(i => i.category === 'T1H')?.obsrValue;
+    const hum  = items.find(i => i.category === 'REH')?.obsrValue;
+    const pty  = items.find(i => i.category === 'PTY')?.obsrValue;
+    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%  강수형태: ${pty ?? '—'}\n(기준: ${ds} 06시 서울)`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-public', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testNaver() {
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (!nid || !nsec) { showToast('네이버 Client ID와 Secret을 모두 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-naver');
+  el.textContent = '⏳ 네이버 뉴스 API 테스트 중...'; el.style.color = 'var(--ink3)';
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(
+      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`,
+      { headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec }, signal: ctrl.signal }
+    );
+    clearTimeout(tid);
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      el.textContent = `❌ HTTP ${r.status}: ${errBody.slice(0, 100)}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const j = await r.json();
+    const total = j.total ?? 0;
+    const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
+    el.textContent = `✅ 네이버 뉴스 연결 성공\n검색어 "에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-naver', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (10초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testEcos() {
+  const key = K.ecos();
+  if (!key) { showToast('ECOS 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-ecos');
+  el.textContent = '⏳ ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
+  const now = new Date();
+  const ym = `${now.getFullYear()}${String(now.getMonth()).padStart(2,'0') || '01'}`;
+  const ymFrom = `${now.getFullYear() - 1}01`;
+  const url = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/3/036Y001/MM/${ymFrom}/${ym}/0001000`;
+  try {
+    const t = await fetchProxy(url, 10000);
+    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패)'; el.style.color = 'var(--red)'; return; }
+    const j = JSON.parse(t);
+    if (j?.RESULT?.CODE && j.RESULT.CODE !== 'INFO-000') {
+      el.textContent = `❌ ECOS 오류: ${j.RESULT.CODE} — ${j.RESULT.MESSAGE}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const rows = j?.StatisticSearch?.row || [];
+    if (!rows.length) { el.textContent = '⚠ 데이터 없음 (키는 유효, 기간 조정 필요)'; el.style.color = 'var(--yel)'; return; }
+    const latest = rows[rows.length - 1];
+    const lines = rows.map(r => `  ${r.TIME}: CPI ${r.DATA_VALUE}`).join('\n');
+    el.textContent = `✅ ECOS 연결 성공\n소비자물가지수 (최근 ${rows.length}개월)\n${lines}\n→ 최신: ${latest.TIME} / ${latest.DATA_VALUE}`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-ecos', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+function showCollectedData() {
+  const el = document.getElementById('r-collected');
+  const lines = [];
+  const sigLabels = { climate:'기후·환경', society:'사회·인구', economy:'경제·리테일', culture:'문화·팝트렌드' };
+  Object.entries(SIG_DATA).forEach(([k, v]) => {
+    if (v) {
+      lines.push(`[${sigLabels[k]}] 점수: ${(v.score ?? 0).toFixed(1)}/5${v._sample ? ' ⚠샘플' : ' ✅실데이터'}`);
+      lines.push(`  해석: ${v.interpret}`);
+      lines.push(`  칩: ${(v.chips || []).join(' | ')}`);
+    } else {
+      lines.push(`[${sigLabels[k]}] ⬜ 미수집`);
+    }
+    lines.push('');
+  });
+  if (PREDICTIONS.length) {
+    lines.push(`[예측 TOP5 — ${currentPeriod === '6m' ? '6개월' : '1년'}]`);
+    PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) 패키징: ${p.packaging || '—'}`));
+    lines.push('');
+  }
+  const rss = window._rssText ? `[RSS] 수집됨 (${window._rssText.length}자)` : '[RSS] 미수집';
+  lines.push(rss);
+  el.textContent = lines.join('\n') || '아직 수집된 데이터 없음 — [전체 수집 실행] 먼저 실행하세요';
+  el.style.color = 'var(--ink2)';
 }
 
 /* ════ INIT ════ */
@@ -825,11 +1318,20 @@ function init() {
   document.getElementById('btnTestGemini').addEventListener('click', testGemini);
   document.getElementById('gemini-model').addEventListener('change', () => saveKey('gemini-model'));
   document.getElementById('btnSavePublic').addEventListener('click', () => saveKey('public'));
+  document.getElementById('btnTestPublic').addEventListener('click', testPublic);
   document.getElementById('btnSaveNaver').addEventListener('click', () => saveKey('naver'));
+  document.getElementById('btnTestNaver').addEventListener('click', testNaver);
   document.getElementById('btnSaveEcos').addEventListener('click', () => saveKey('ecos'));
+  document.getElementById('btnTestEcos').addEventListener('click', testEcos);
+  document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);
   document.getElementById('btnClearReport').addEventListener('click', () => { document.getElementById('repText').value = ''; });
+
+  /* 기간 탭 */
+  document.querySelectorAll('.pred-period-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchPredPeriod(btn.dataset.period));
+  });
 
   /* 패널 외부 클릭 닫기 */
   document.addEventListener('click', e => {
@@ -842,11 +1344,20 @@ function init() {
   if (cached) {
     try {
       const d = JSON.parse(cached);
-      if (d.signals)     SIG_DATA = d.signals;
-      if (d.predictions) PREDICTIONS = d.predictions;
+      if (d.signals) SIG_DATA = d.signals;
       if (d.ts && Date.now() - d.ts < 86400000) {
-        renderZ0();
-        if (PREDICTIONS.length) { renderZ1(); showToast('캐시 데이터 로드됨 (24시간 이내)'); }
+        if (d.predictions_6m) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
+        if (d.predictions_1y) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
+        /* 현재 기간의 캐시 로드 */
+        const p = PREDICTIONS_CACHE[currentPeriod];
+        if (p && p.length) {
+          PREDICTIONS = p;
+          renderZ0();
+          renderZ1();
+          showToast('캐시 데이터 로드됨 (24시간 이내)');
+        } else {
+          renderZ0();
+        }
       }
     } catch {}
   }
@@ -854,8 +1365,13 @@ function init() {
 
 /* 24시간 캐시 저장 */
 window.addEventListener('beforeunload', () => {
-  if (PREDICTIONS.length) {
-    ls('m5_cache', JSON.stringify({ signals: SIG_DATA, predictions: PREDICTIONS, ts: Date.now() }));
+  if (PREDICTIONS_CACHE['6m'] || PREDICTIONS_CACHE['1y']) {
+    ls('m5_cache', JSON.stringify({
+      signals: SIG_DATA,
+      predictions_6m: PREDICTIONS_CACHE['6m'],
+      predictions_1y: PREDICTIONS_CACHE['1y'],
+      ts: Date.now()
+    }));
   }
 });
 
