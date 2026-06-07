@@ -1145,26 +1145,159 @@ function copyReport() {
   navigator.clipboard.writeText(ta.value).then(() => showToast('📋 보고서 복사 완료'));
 }
 
-/* ════ Gemini 테스트 ════ */
+/* ════ API 테스트 함수들 ════ */
 async function testGemini() {
   const key = K.gemini();
-  if (!key) { showToast('키를 먼저 입력하세요'); return; }
+  if (!key) { showToast('Gemini 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-gemini');
   el.textContent = '⏳ 테스트 중...'; el.style.color = 'var(--ink3)';
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 10000);
+    const tid = setTimeout(() => ctrl.abort(), 12000);
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${key}`,
       { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{role:'user',parts:[{text:'테스트: 한 단어로 답하세요 — 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
+        body: JSON.stringify({ contents:[{role:'user',parts:[{text:'한 단어로만 답하세요: 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
         signal: ctrl.signal }
     );
     clearTimeout(tid);
-    const data = await r.json();
-    if (data.candidates?.[0]?.content) { el.textContent = '✅ 연결 성공'; el.style.color = 'var(--grn)'; }
-    else { el.textContent = '❌ 응답 오류: ' + JSON.stringify(data).slice(0, 60); el.style.color = 'var(--red)'; }
-  } catch (e) { el.textContent = '❌ 연결 실패: ' + e.message; el.style.color = 'var(--red)'; }
+    let data;
+    try { data = await r.json(); } catch { data = {}; }
+    if (!r.ok) {
+      const errMsg = data?.error?.message || `HTTP ${r.status}`;
+      el.textContent = `❌ 오류 (${r.status}): ${errMsg}`;
+      el.style.color = 'var(--red)';
+      return;
+    }
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (reply) {
+      el.textContent = `✅ 연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
+      el.style.color = 'var(--grn)';
+      setStatus('st-gemini', '✅ 확인됨', true);
+    } else {
+      el.textContent = '⚠ 응답 형식 오류: ' + JSON.stringify(data).slice(0, 120);
+      el.style.color = 'var(--yel)';
+    }
+  } catch (e) {
+    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (12초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testPublic() {
+  const key = K.public();
+  if (!key) { showToast('공공데이터 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-public');
+  el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
+  const today = new Date();
+  const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${key}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
+  try {
+    const t = await fetchProxy(url, 10000);
+    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패 또는 키 오류)'; el.style.color = 'var(--red)'; return; }
+    const j = JSON.parse(t);
+    const rc = j?.response?.header?.resultCode;
+    const rm = j?.response?.header?.resultMsg || '';
+    if (rc !== '00') {
+      el.textContent = `❌ API 오류 [${rc}]: ${rm}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const items = j?.response?.body?.items?.item || [];
+    const temp = items.find(i => i.category === 'T1H')?.obsrValue;
+    const hum  = items.find(i => i.category === 'REH')?.obsrValue;
+    const pty  = items.find(i => i.category === 'PTY')?.obsrValue;
+    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%  강수형태: ${pty ?? '—'}\n(기준: ${ds} 06시 서울)`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-public', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testNaver() {
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (!nid || !nsec) { showToast('네이버 Client ID와 Secret을 모두 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-naver');
+  el.textContent = '⏳ 네이버 뉴스 API 테스트 중...'; el.style.color = 'var(--ink3)';
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(
+      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`,
+      { headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec }, signal: ctrl.signal }
+    );
+    clearTimeout(tid);
+    if (!r.ok) {
+      const errBody = await r.text().catch(() => '');
+      el.textContent = `❌ HTTP ${r.status}: ${errBody.slice(0, 100)}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const j = await r.json();
+    const total = j.total ?? 0;
+    const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
+    el.textContent = `✅ 네이버 뉴스 연결 성공\n검색어 "에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-naver', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (10초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+async function testEcos() {
+  const key = K.ecos();
+  if (!key) { showToast('ECOS 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-ecos');
+  el.textContent = '⏳ ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
+  const now = new Date();
+  const ym = `${now.getFullYear()}${String(now.getMonth()).padStart(2,'0') || '01'}`;
+  const ymFrom = `${now.getFullYear() - 1}01`;
+  const url = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/3/036Y001/MM/${ymFrom}/${ym}/0001000`;
+  try {
+    const t = await fetchProxy(url, 10000);
+    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패)'; el.style.color = 'var(--red)'; return; }
+    const j = JSON.parse(t);
+    if (j?.RESULT?.CODE && j.RESULT.CODE !== 'INFO-000') {
+      el.textContent = `❌ ECOS 오류: ${j.RESULT.CODE} — ${j.RESULT.MESSAGE}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const rows = j?.StatisticSearch?.row || [];
+    if (!rows.length) { el.textContent = '⚠ 데이터 없음 (키는 유효, 기간 조정 필요)'; el.style.color = 'var(--yel)'; return; }
+    const latest = rows[rows.length - 1];
+    const lines = rows.map(r => `  ${r.TIME}: CPI ${r.DATA_VALUE}`).join('\n');
+    el.textContent = `✅ ECOS 연결 성공\n소비자물가지수 (최근 ${rows.length}개월)\n${lines}\n→ 최신: ${latest.TIME} / ${latest.DATA_VALUE}`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-ecos', '✅ 확인됨', true);
+  } catch (e) {
+    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+function showCollectedData() {
+  const el = document.getElementById('r-collected');
+  const lines = [];
+  const sigLabels = { climate:'기후·환경', society:'사회·인구', economy:'경제·리테일', culture:'문화·팝트렌드' };
+  Object.entries(SIG_DATA).forEach(([k, v]) => {
+    if (v) {
+      lines.push(`[${sigLabels[k]}] 점수: ${(v.score ?? 0).toFixed(1)}/5${v._sample ? ' ⚠샘플' : ' ✅실데이터'}`);
+      lines.push(`  해석: ${v.interpret}`);
+      lines.push(`  칩: ${(v.chips || []).join(' | ')}`);
+    } else {
+      lines.push(`[${sigLabels[k]}] ⬜ 미수집`);
+    }
+    lines.push('');
+  });
+  if (PREDICTIONS.length) {
+    lines.push(`[예측 TOP5 — ${currentPeriod === '6m' ? '6개월' : '1년'}]`);
+    PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) 패키징: ${p.packaging || '—'}`));
+    lines.push('');
+  }
+  const rss = window._rssText ? `[RSS] 수집됨 (${window._rssText.length}자)` : '[RSS] 미수집';
+  lines.push(rss);
+  el.textContent = lines.join('\n') || '아직 수집된 데이터 없음 — [전체 수집 실행] 먼저 실행하세요';
+  el.style.color = 'var(--ink2)';
 }
 
 /* ════ INIT ════ */
@@ -1185,8 +1318,12 @@ function init() {
   document.getElementById('btnTestGemini').addEventListener('click', testGemini);
   document.getElementById('gemini-model').addEventListener('change', () => saveKey('gemini-model'));
   document.getElementById('btnSavePublic').addEventListener('click', () => saveKey('public'));
+  document.getElementById('btnTestPublic').addEventListener('click', testPublic);
   document.getElementById('btnSaveNaver').addEventListener('click', () => saveKey('naver'));
+  document.getElementById('btnTestNaver').addEventListener('click', testNaver);
   document.getElementById('btnSaveEcos').addEventListener('click', () => saveKey('ecos'));
+  document.getElementById('btnTestEcos').addEventListener('click', testEcos);
+  document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);
   document.getElementById('btnClearReport').addEventListener('click', () => { document.getElementById('repText').value = ''; });

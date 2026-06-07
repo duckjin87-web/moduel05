@@ -482,7 +482,7 @@ button { font-family: inherit; cursor: pointer; }
 .ap-test:hover { background: var(--bg3); opacity: .8; }
 .ap-hint { font-size: 9px; color: var(--ink3); line-height: 1.6; }
 .ap-hint a { color: var(--blue2); }
-.ap-result { font-size: 10px; margin-top: 4px; }
+.ap-result { font-size: 10px; margin-top: 4px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
 .ap-select {
   font-size: 11px; padding: 3px 6px; width: 100%;
   border: .5px solid var(--bg3); border-radius: var(--r);
