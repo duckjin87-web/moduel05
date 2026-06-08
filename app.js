@@ -336,7 +336,8 @@ async function fetchProxy(url, timeout = 9000) {
     clearTimeout(tid);
     const t = await r.text();
     const tl = t ? t.toLowerCase() : '';
-    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
+    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')
+        && !tl.startsWith('unexpected error') && !tl.startsWith('something went wrong')) return t;
   } catch {}
 
   /* 3. codetabs — 백업, 4xx 포함 */
@@ -347,7 +348,8 @@ async function fetchProxy(url, timeout = 9000) {
     clearTimeout(tid);
     const t = await r.text();
     const tl = t ? t.toLowerCase() : '';
-    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
+    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')
+        && !tl.startsWith('unexpected error') && !tl.startsWith('something went wrong')) return t;
   } catch {}
 
   return null;
@@ -1303,7 +1305,12 @@ async function testPublic() {
     let j;
     try { j = JSON.parse(t); }
     catch {
-      el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"`;
+      const isProxyErr = /unexpected error|something went wrong|bad gateway|service unavailable/i.test(t);
+      if (isProxyErr) {
+        el.textContent = `❌ 프록시 서버 오류: "${t.trim().slice(0, 80)}"\n\n수분 후 재시도하거나 아래 [URL 복사] → 브라우저 직접 확인`;
+      } else {
+        el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"`;
+      }
       el.style.color = 'var(--red)'; return;
     }
     const rc = j?.response?.header?.resultCode;
