@@ -408,21 +408,77 @@ async function collectClimate() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
   const wxBase = getWxBase();
+
+  /* ── 기상 (기온·습도·UV) ────────────────────────────────────────
+     1순위: 기상청 초단기실황 (data.go.kr)
+     2순위: Open-Meteo (무료·CORS 지원·key 불필요 → 기상청 CORS 미지원 시 자동 폴백) */
+  let temp = '—', humid = '—', uv = '—', midTempMax = '—', wxSrc = '기상청';
   const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
-  const wxText = await fetchProxy(wxUrl);
-  let temp = '—', humid = '—';
+  const wxText = await fetchProxy(wxUrl, 10000);
   if (wxText) {
     try {
       const j = JSON.parse(wxText);
-      const items = j?.response?.body?.items?.item || [];
-      const t = items.find(i => i.category === 'T1H');
-      if (t) temp = t.obsrValue + '℃';
-      const h = items.find(i => i.category === 'REH');
-      if (h) humid = h.obsrValue + '%';
+      if (j?.response?.header?.resultCode === '00') {
+        const items = j.response.body.items.item || [];
+        const t = items.find(i => i.category === 'T1H');
+        if (t) temp = t.obsrValue + '℃';
+        const h = items.find(i => i.category === 'REH');
+        if (h) humid = h.obsrValue + '%';
+      }
+    } catch {}
+  }
+  /* UV (기상청 생활기상지수 — 역시 /1360000/ 이므로 실패 가능) */
+  if (temp !== '—') {
+    const uvHH = String(today.getHours()).padStart(2,'0');
+    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=1100000000&time=${dateStr}${uvHH}`;
+    const uvText = await fetchProxy(uvUrl, 6000);
+    if (uvText) {
+      try {
+        const j = JSON.parse(uvText);
+        const items = j?.response?.body?.items?.item || [];
+        if (items.length) uv = items[0].today || items[0].h0 || '—';
+      } catch {}
+    }
+  }
+  /* 기상청 중기예보 (3일 후 최고기온) */
+  if (temp !== '—') {
+    const midUrl = `https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?serviceKey=${encodeURIComponent(key)}&numOfRows=1&pageNo=1&dataType=JSON&regId=11B10101&tmFc=${getMidFcstTime()}`;
+    const midText = await fetchProxy(midUrl, 7000);
+    if (midText) {
+      try {
+        const j = JSON.parse(midText);
+        const items = j?.response?.body?.items?.item || [];
+        if (items.length) midTempMax = items[0].taMax3 ?? items[0].taMax4 ?? '—';
+      } catch {}
+    }
+  }
+
+  /* ── Open-Meteo 폴백 (기상청 CORS 차단 시 자동 대체) ── */
+  if (temp === '—') {
+    wxSrc = 'Open-Meteo';
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000);
+      const omUrl = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
+        '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code' +
+        '&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=4';
+      const r = await fetch(omUrl, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r.ok) {
+        const j = await r.json();
+        const c = j?.current || {};
+        if (c.temperature_2m !== undefined) temp   = c.temperature_2m + '℃';
+        if (c.relative_humidity_2m !== undefined) humid = c.relative_humidity_2m + '%';
+        if (c.uv_index !== undefined) uv = c.uv_index;
+        /* 3일 후 최고기온 */
+        const maxArr = j?.daily?.temperature_2m_max || [];
+        if (maxArr[3] !== undefined) midTempMax = maxArr[3];
+      }
     } catch {}
   }
   setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
-  /* 에어코리아: sidoName=서울 (이전 코드는 '세종'으로 잘못 설정되어 있었음) */
+
+  /* ── 에어코리아 (PM10·PM25) ── CORS 허용, 직접 fetch 성공 */
   const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
   const aqText = await fetchProxy(aqUrl);
   let pm10 = '—', pm25 = '—';
@@ -437,34 +493,7 @@ async function collectClimate() {
     } catch {}
   }
   setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
-  /* UV 지수: areaNo=서울(1100000000), time=YYYYMMDDHH(10자리) */
-  let uv = '—';
-  {
-    const uvHH = String(today.getHours()).padStart(2,'0');
-    const uvTime = dateStr + uvHH;
-    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=1100000000&time=${uvTime}`;
-    const uvText = await fetchProxy(uvUrl, 7000);
-    if (uvText) {
-      try {
-        const j = JSON.parse(uvText);
-        const items = j?.response?.body?.items?.item || [];
-        if (items.length) uv = items[0].today || items[0].h0 || '—';
-      } catch {}
-    }
-  }
-  /* 기상청 중기예보: 3~10일 기온 예측 (화장품 시즌성 분석용) */
-  let midTempMax = '—';
-  {
-    const midUrl = `https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?serviceKey=${encodeURIComponent(key)}&numOfRows=1&pageNo=1&dataType=JSON&regId=11B10101&tmFc=${getMidFcstTime()}`;
-    const midText = await fetchProxy(midUrl, 8000);
-    if (midText) {
-      try {
-        const j = JSON.parse(midText);
-        const items = j?.response?.body?.items?.item || [];
-        if (items.length) midTempMax = items[0].taMax3 ?? items[0].taMax4 ?? '—';
-      } catch {}
-    }
-  }
+
   const score = computeClimateScore(temp, pm10);
   SIG_DATA.climate = {
     score,
@@ -472,7 +501,8 @@ async function collectClimate() {
     chips: [
       `기온 ${temp}`, `PM10 ${pm10}`,
       pm25 !== '—' ? `PM2.5 ${pm25}` : `습도 ${humid}`,
-      uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : '')
+      uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : ''),
+      wxSrc === 'Open-Meteo' ? '(Open-Meteo)' : ''
     ].filter(Boolean)
   };
 }
@@ -1430,10 +1460,26 @@ async function testPublic() {
     return `HTTP ${code}`;
   };
 
-  /* 결과 1: 기상청 */
+  /* 결과 1: 기상청 (CORS 미지원 → 프록시 의존) + Open-Meteo 폴백 확인 */
   if (!wxRes) {
     const d = await diagProxy(wxUrl);
-    addLine('❌', '기상청 단기예보', diagMsg(d), 'var(--red)');
+    const why = d.code === 0
+      ? '기상청 /1360000/ CORS 미지원 + 외부 프록시 IP 차단 (한국 정부 API 정책)'
+      : diagMsg(d);
+    addLine('❌', '기상청 단기예보', why, 'var(--red)');
+    /* Open-Meteo 폴백 동작 여부 확인 */
+    try {
+      const ctrl2 = new AbortController();
+      const tid2 = setTimeout(() => ctrl2.abort(), 6000);
+      const omR = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m,relative_humidity_2m&timezone=Asia%2FSeoul&forecast_days=1', { signal: ctrl2.signal });
+      clearTimeout(tid2);
+      if (omR.ok) {
+        const omJ = await omR.json();
+        const t = omJ?.current?.temperature_2m;
+        const h = omJ?.current?.relative_humidity_2m;
+        addLine('↩', 'Open-Meteo 폴백', `기온 ${t ?? '—'}℃  습도 ${h ?? '—'}%  (수집실행 시 자동 대체됨)`, 'var(--ink2,#666)');
+      }
+    } catch { addLine('⚠', 'Open-Meteo 폴백', '연결 실패', 'var(--red)'); }
   } else {
     try {
       const j = JSON.parse(wxRes);
