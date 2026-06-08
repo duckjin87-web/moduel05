@@ -297,24 +297,51 @@ async function refreshSignal(key) {
 
 /* ════ 수집 함수들 ════ */
 async function fetchProxy(url, timeout = 9000) {
-  const proxies = [
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  ];
-  for (const proxy of proxies) {
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), timeout);
-      const r = await fetch(proxy, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (r.ok) {
-        const t = await r.text();
-        /* allorigins/corsproxy 자체 오류 메시지 + HTML 에러 페이지 필터링 */
-        const tl = t ? t.toLowerCase() : '';
-        if (t && t.length > 10 && !tl.startsWith('unexpected') && !tl.startsWith('error') && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
+  /* 1. allorigins /get — 구조화 JSON (http_code 포함, 항상 200 반환) */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) {
+      const j = await r.json();
+      const code = j?.status?.http_code || 0;
+      const t = j?.contents || '';
+      /* 2xx·4xx 통과 (4xx = API 키 오류 → 호출자에서 JSON resultCode 처리)
+         5xx = 서버 오류 → 다음 프록시 시도 */
+      if (code > 0 && code < 500 && t.length > 5) {
+        const tl = t.toLowerCase();
+        if (!tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
       }
-    } catch {}
-  }
+    }
+  } catch {}
+
+  /* 2. corsproxy.io — raw */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) {
+      const t = await r.text();
+      const tl = t ? t.toLowerCase() : '';
+      if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
+    }
+  } catch {}
+
+  /* 3. codetabs — 백업 */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 8000));
+    const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) {
+      const t = await r.text();
+      const tl = t ? t.toLowerCase() : '';
+      if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
+    }
+  } catch {}
+
   return null;
 }
 
@@ -1239,15 +1266,24 @@ async function testPublic() {
   const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
   const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
   try {
-    const t = await fetchProxy(url, 12000);
+    const t = await fetchProxy(url, 14000);
     if (!t) {
-      el.textContent = '❌ 응답 없음\n\n가능한 원인:\n· serviceKey 오류 (data.go.kr에서 "디코딩된 키" 사용)\n· 기상청 API 활용신청 필요\n· 프록시 서버 일시 불가';
+      /* 프록시 3종 모두 실패 → 직접 진단 시도 (allorigins raw http_code 확인) */
+      let diagInfo = '';
+      try {
+        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
+        if (dr.ok) {
+          const dj = await dr.json();
+          diagInfo = ` (allorigins http_code: ${dj?.status?.http_code ?? '없음'}, 응답길이: ${(dj?.contents||'').length}자)`;
+        }
+      } catch {}
+      el.textContent = `❌ 프록시 3종 모두 응답 없음${diagInfo}\n\n점검 순서:\n① data.go.kr 마이페이지 → "초단기실황" API 활용신청 여부 확인\n② 키 재저장: 설정창에서 키 다시 입력 후 [저장] → [테스트]\n③ 프록시 서버 일시 불가 → 수분 후 재시도`;
       el.style.color = 'var(--red)'; return;
     }
     let j;
     try { j = JSON.parse(t); }
     catch {
-      el.textContent = `❌ 응답 파싱 실패 — 키 오류 가능성\n실제 응답: "${t.slice(0, 120)}"\n\n해결: data.go.kr에서 "디코딩된 키" 복사`;
+      el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"\n\n해결: data.go.kr → "디코딩된 키(Decoding)" 복사 후 재저장`;
       el.style.color = 'var(--red)'; return;
     }
     const rc = j?.response?.header?.resultCode;
@@ -1316,13 +1352,29 @@ async function testEcos() {
   /* Step 1: StatisticList로 키 유효성 먼저 확인 (항목코드 불필요) */
   const listUrl = `https://ecos.bok.or.kr/api/StatisticList/${key}/json/kr/1/3/`;
   try {
-    const t1 = await fetchProxy(listUrl, 12000);
-    if (!t1) { el.textContent = '❌ 응답 없음 — 프록시 실패 또는 키 오류'; el.style.color = 'var(--red)'; return; }
+    const t1 = await fetchProxy(listUrl, 14000);
+    if (!t1) {
+      /* allorigins /get 직접 진단 */
+      let diagCode = 0;
+      try {
+        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(listUrl)}`, { signal: AbortSignal.timeout(8000) });
+        if (dr.ok) { const dj = await dr.json(); diagCode = dj?.status?.http_code || 0; }
+      } catch {}
+      el.textContent = diagCode >= 500
+        ? `❌ ECOS 서버 오류 (HTTP ${diagCode})\necos.bok.or.kr 서버가 일시적으로 불가합니다.\n잠시 후 재시도하세요.`
+        : `❌ ECOS 응답 없음\n\n점검 순서:\n① ecos.bok.or.kr 접속 → API 키 유효성 직접 확인\n② 프록시 서버 일시 불가 → 수분 후 재시도\n③ ECOS API는 해외 IP에서 접근이 차단될 수 있습니다`;
+      el.style.color = 'var(--red)'; return;
+    }
     let j1;
     try { j1 = JSON.parse(t1); }
-    catch { el.textContent = `❌ 파싱 실패\n응답: ${t1.slice(0, 100)}`; el.style.color = 'var(--red)'; return; }
+    catch { el.textContent = `❌ 파싱 실패\n응답: ${t1.slice(0, 150)}`; el.style.color = 'var(--red)'; return; }
     if (j1?.RESULT?.CODE && j1.RESULT.CODE !== 'INFO-000') {
-      el.textContent = `❌ 키 오류: ${j1.RESULT.CODE} — ${j1.RESULT.MESSAGE}\n\necos.bok.or.kr 에서 키 재확인`;
+      const codeMap = {
+        'ERROR-300': '인증키 오류 — ecos.bok.or.kr 에서 키 재확인',
+        'ERROR-200': 'API 요청 형식 오류',
+        'ERROR-100': '필수 파라미터 누락',
+      };
+      el.textContent = `❌ ECOS 키 오류: ${j1.RESULT.CODE}\n${codeMap[j1.RESULT.CODE] || j1.RESULT.MESSAGE}\n\necos.bok.or.kr 접속 → 마이페이지 → API 키 확인`;
       el.style.color = 'var(--red)'; return;
     }
 
