@@ -449,12 +449,13 @@ button { font-family: inherit; cursor: pointer; }
   position: absolute;
   top: calc(100% + 6px); right: 0;
   width: 360px;
+  max-height: calc(100vh - 80px);
   background: var(--w);
   border: .5px solid var(--bg3);
   border-radius: var(--r2);
   box-shadow: var(--s2);
   z-index: 200;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .api-panel.open { display: block; }
 .ap-hd { padding: 9px 13px; background: var(--bg2); border-bottom: .5px solid var(--bg3); font-size: 11px; font-weight: 700; color: var(--ink); }

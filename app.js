@@ -167,7 +167,14 @@ function saveKey(type) {
   if (type === 'gemini-model') { ls('gemini_model', document.getElementById('gemini-model').value); }
   if (type === 'public') {
     const v = document.getElementById('k-public').value.trim();
-    if (v) { ls('public_key', v); setStatus('st-public', '✅ 설정됨', true); showToast('공공데이터 키 저장됨'); }
+    if (v) {
+      /* URL 인코딩된 키(%2B, %2F 등)가 붙여넣어지면 디코딩해서 저장 */
+      let norm = v;
+      try { if (/%[0-9A-Fa-f]{2}/.test(v)) norm = decodeURIComponent(v); } catch {}
+      ls('public_key', norm);
+      setStatus('st-public', '✅ 설정됨', true);
+      showToast('공공데이터 키 저장됨');
+    }
   }
   if (type === 'naver') {
     const id = document.getElementById('k-naver-id').value.trim();
@@ -302,8 +309,9 @@ async function fetchProxy(url, timeout = 9000) {
       clearTimeout(tid);
       if (r.ok) {
         const t = await r.text();
-        /* allorigins/corsproxy 자체 오류 메시지 필터링 */
-        if (t && t.length > 10 && !t.startsWith('Unexpected') && !t.startsWith('Error') && !t.startsWith('<!DOCTYPE')) return t;
+        /* allorigins/corsproxy 자체 오류 메시지 + HTML 에러 페이지 필터링 */
+        const tl = t ? t.toLowerCase() : '';
+        if (t && t.length > 10 && !tl.startsWith('unexpected') && !tl.startsWith('error') && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
       }
     } catch {}
   }
@@ -322,7 +330,7 @@ async function collectClimate() {
   }
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-  const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${key}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${dateStr}&base_time=0600&nx=66&ny=100`;
+  const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${dateStr}&base_time=0600&nx=66&ny=100`;
   const wxText = await fetchProxy(wxUrl);
   let temp = '—', humid = '—';
   if (wxText) {
@@ -336,7 +344,7 @@ async function collectClimate() {
     } catch {}
   }
   setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
-  const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${key}&returnType=json&numOfRows=5&pageNo=1&sidoName=%EC%84%B8%EC%A2%85&ver=1.0`;
+  const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=%EC%84%B8%EC%A2%85&ver=1.0`;
   const aqText = await fetchProxy(aqUrl);
   let pm10 = '—';
   if (aqText) {
@@ -350,7 +358,7 @@ async function collectClimate() {
   /* UV 지수 추가 */
   let uv = '—';
   if (key) {
-    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${key}&areaNo=3611000000&time=${dateStr}`;
+    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=3611000000&time=${dateStr}`;
     const uvText = await fetchProxy(uvUrl, 6000);
     if (uvText) {
       try {
@@ -409,7 +417,7 @@ async function collectEconomy() {
   try {
     const yr = new Date().getFullYear();
     const mo = String(new Date().getMonth() + 1).padStart(2, '0');
-    const custUrl = `https://unipass.customs.go.kr/csp/myis/openapi/ItemExport.do?serviceKey=${key || 'SAMPLE'}&searchType=1&hsSgn=330410&startYearMonth=${yr}01&endYearMonth=${yr}${mo}`;
+    const custUrl = `https://unipass.customs.go.kr/csp/myis/openapi/ItemExport.do?serviceKey=${encodeURIComponent(key || 'SAMPLE')}&searchType=1&hsSgn=330410&startYearMonth=${yr}01&endYearMonth=${yr}${mo}`;
     const custText = await fetchProxy(custUrl, 8000);
     if (custText) {
       /* XML 파싱 간단 처리 */
@@ -473,7 +481,7 @@ async function collectSociety() {
   let singleHH = '—', aging = '—';
   if (key) {
     /* KOSIS 1인가구비중 */
-    const u1 = `https://apis.data.go.kr/1240000/kosis/statisticsList?serviceKey=${key}&method=getList&apiType=json&vwCd=MT_ZTITLE&parentListId=A&format=json`;
+    const u1 = `https://apis.data.go.kr/1240000/kosis/statisticsList?serviceKey=${encodeURIComponent(key)}&method=getList&apiType=json&vwCd=MT_ZTITLE&parentListId=A&format=json`;
     /* KOSIS는 별도 키 필요 — data.go.kr 키로 공통 통계 접근 시도 */
     try {
       const ecosKey = K.ecos();
@@ -569,7 +577,7 @@ async function collectMFDSFunc() {
   const key = K.public();
   if (!key) return { count: 0, ingredients: [] };
   try {
-    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${key}&pageNo=1&numOfRows=20&type=json`;
+    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=20&type=json`;
     const t = await fetchProxy(url, 8000);
     if (!t) return { count: 0, ingredients: [] };
     const j = JSON.parse(t);
@@ -620,7 +628,7 @@ ${sigSummary}
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 30000);
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key.trim())}`,
       { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:1800,temperature:0.3} }),
         signal: ctrl.signal }
@@ -836,7 +844,7 @@ async function findNewManufacturers(productType, tech) {
   let mfdsTexts = '';
   if (pubKey) {
     const kw = productType.split(' ')[0];
-    const mfdsUrl = `https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${pubKey}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=5&pageNo=1&type=json`;
+    const mfdsUrl = `https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(pubKey)}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=5&pageNo=1&type=json`;
     const mfdsT = await fetchProxy(mfdsUrl);
     if (mfdsT) {
       try {
@@ -867,7 +875,7 @@ JSON만 출력:
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 15000);
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${gkey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(gkey.trim())}`,
         { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:600,temperature:0} }),
           signal: ctrl.signal }
@@ -1179,7 +1187,7 @@ async function testGemini() {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 12000);
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${key}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(key.trim())}`,
       { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ contents:[{role:'user',parts:[{text:'한 단어로만 답하세요: 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
         signal: ctrl.signal }
@@ -1196,7 +1204,7 @@ async function testGemini() {
           : `❌ 요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
         el.style.color = 'var(--red)';
       } else if (r.status === 400) {
-        el.textContent = `❌ 잘못된 요청 (400): API 키 형식 오류이거나 모델명이 잘못됐습니다.\n${errMsg}`;
+        el.textContent = `❌ 잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트 (=, + 등 특수문자 인코딩 자동 처리)\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n④ Google Cloud Console → Generative Language API 활성화 확인\n\n원본 오류: ${errMsg}`;
         el.style.color = 'var(--red)';
       } else if (r.status === 403) {
         el.textContent = `❌ 접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
@@ -1229,8 +1237,7 @@ async function testPublic() {
   el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
   const today = new Date();
   const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-  /* serviceKey는 URL에 직접 삽입 (fetchProxy가 전체 URL을 인코딩) */
-  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${key}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
+  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
   try {
     const t = await fetchProxy(url, 12000);
     if (!t) {
