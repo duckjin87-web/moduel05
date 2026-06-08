@@ -306,10 +306,40 @@ function getWxBase() {
     time: String(h).padStart(2,'0') + '00'
   };
 }
+/* 기상청 중기예보 발표시각: 06시·18시, 접근 가능 시각 +1h 고려 */
+function getMidFcstTime() {
+  const now = new Date();
+  const h = now.getHours();
+  const dt = new Date(now);
+  let hhmm;
+  if (h >= 19) { hhmm = '1800'; }
+  else if (h >= 7) { hhmm = '0600'; }
+  else { dt.setDate(dt.getDate() - 1); hhmm = '1800'; }
+  const ds = `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+  return ds + hhmm + '00'; /* YYYYMMDDHHММ 12자리 */
+}
 
 /* ════ 수집 함수들 ════ */
 async function fetchProxy(url, timeout = 9000) {
-  /* 1. allorigins /get — 구조화 JSON (http_code 포함, 항상 200 반환) */
+  /* 응답 유효성 검사: 프록시/서버 오류 텍스트 걸러냄 */
+  const BAD = ['<!doctype', '<html', 'unexpected error', 'something went wrong',
+               'bad gateway', '502 bad', '503 service', 'rate limit exceeded', 'too many requests'];
+  const isGoodText = (t) => {
+    if (!t || t.length < 6) return false;
+    const tl = t.toLowerCase().trimStart();
+    return !BAD.some(p => tl.startsWith(p) || (p.includes(' ') && tl.includes(p)));
+  };
+
+  /* 0. 직접 요청 — data.go.kr·에어코리아 등 CORS 허용 API는 프록시 불필요 */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 7000));
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+  } catch {}
+
+  /* 1. allorigins /get — http_code 포함 구조화 JSON */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
@@ -319,37 +349,38 @@ async function fetchProxy(url, timeout = 9000) {
       const j = await r.json();
       const code = j?.status?.http_code || 0;
       const t = j?.contents || '';
-      /* 2xx·4xx 통과 (4xx = API 키 오류 → 호출자에서 JSON resultCode 처리)
-         5xx = 서버 오류 → 다음 프록시 시도 */
-      if (code > 0 && code < 500 && t.length > 5) {
-        const tl = t.toLowerCase();
-        if (!tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
-      }
+      /* 2xx·4xx 통과, 5xx·0(연결실패) → 다음 프록시 */
+      if (code > 0 && code < 500 && isGoodText(t)) return t;
     }
   } catch {}
 
-  /* 2. corsproxy.io — raw, 4xx도 포함 (data.go.kr 키오류 응답 전달) */
+  /* 2. allorigins /raw — data.go.kr는 항상 HTTP 200 반환하므로 r.ok 신뢰 가능 */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+  } catch {}
+
+  /* 3. corsproxy.io — 4xx 포함 (API 키 오류 응답도 전달) */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
     const t = await r.text();
-    const tl = t ? t.toLowerCase() : '';
-    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')
-        && !tl.startsWith('unexpected error') && !tl.startsWith('something went wrong')) return t;
+    if (isGoodText(t)) return t;
   } catch {}
 
-  /* 3. codetabs — 백업, 4xx 포함 */
+  /* 4. codetabs — 최후 백업 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 8000));
     const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
     const t = await r.text();
-    const tl = t ? t.toLowerCase() : '';
-    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')
-        && !tl.startsWith('unexpected error') && !tl.startsWith('something went wrong')) return t;
+    if (isGoodText(t)) return t;
   } catch {}
 
   return null;
@@ -382,22 +413,28 @@ async function collectClimate() {
     } catch {}
   }
   setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
-  const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=%EC%84%B8%EC%A2%85&ver=1.0`;
+  /* 에어코리아: sidoName=서울 (이전 코드는 '세종'으로 잘못 설정되어 있었음) */
+  const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
   const aqText = await fetchProxy(aqUrl);
-  let pm10 = '—';
+  let pm10 = '—', pm25 = '—';
   if (aqText) {
     try {
       const j = JSON.parse(aqText);
       const items = j?.response?.body?.items || [];
-      if (items.length) pm10 = items[0].pm10Value + '㎍/㎥';
+      if (items.length) {
+        pm10 = items[0].pm10Value + '㎍/㎥';
+        if (items[0].pm25Value && items[0].pm25Value !== '-') pm25 = items[0].pm25Value + '㎍/㎥';
+      }
     } catch {}
   }
   setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
-  /* UV 지수 추가 */
+  /* UV 지수: areaNo=서울(1100000000), time=YYYYMMDDHH(10자리) */
   let uv = '—';
-  if (key) {
-    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=3611000000&time=${dateStr}`;
-    const uvText = await fetchProxy(uvUrl, 6000);
+  {
+    const uvHH = String(today.getHours()).padStart(2,'0');
+    const uvTime = dateStr + uvHH;
+    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=1100000000&time=${uvTime}`;
+    const uvText = await fetchProxy(uvUrl, 7000);
     if (uvText) {
       try {
         const j = JSON.parse(uvText);
@@ -406,11 +443,28 @@ async function collectClimate() {
       } catch {}
     }
   }
+  /* 기상청 중기예보: 3~10일 기온 예측 (화장품 시즌성 분석용) */
+  let midTempMax = '—';
+  {
+    const midUrl = `https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?serviceKey=${encodeURIComponent(key)}&numOfRows=1&pageNo=1&dataType=JSON&regId=11B10101&tmFc=${getMidFcstTime()}`;
+    const midText = await fetchProxy(midUrl, 8000);
+    if (midText) {
+      try {
+        const j = JSON.parse(midText);
+        const items = j?.response?.body?.items?.item || [];
+        if (items.length) midTempMax = items[0].taMax3 ?? items[0].taMax4 ?? '—';
+      } catch {}
+    }
+  }
   const score = computeClimateScore(temp, pm10);
   SIG_DATA.climate = {
     score,
     interpret: buildClimateInterp(temp, pm10),
-    chips: [`기온 ${temp}`, `PM10 ${pm10}`, `습도 ${humid}`, uv !== '—' ? `UV ${uv}` : ''].filter(Boolean)
+    chips: [
+      `기온 ${temp}`, `PM10 ${pm10}`,
+      pm25 !== '—' ? `PM2.5 ${pm25}` : `습도 ${humid}`,
+      uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : '')
+    ].filter(Boolean)
   };
 }
 
@@ -613,23 +667,51 @@ async function collectBeautyRSS() {
 
 async function collectMFDSFunc() {
   const key = K.public();
-  if (!key) return { count: 0, ingredients: [] };
+  if (!key) return { count: 0, ingredients: [], products: [] };
   try {
-    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=20&type=json`;
-    const t = await fetchProxy(url, 8000);
-    if (!t) return { count: 0, ingredients: [] };
+    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=30&type=json`;
+    const t = await fetchProxy(url, 10000);
+    if (!t) return { count: 0, ingredients: [], products: [] };
     const j = JSON.parse(t);
-    const items = j?.body?.items?.item || [];
-    const ingMap = {};
-    items.forEach(i => {
-      (i.MTRAL_NM || '').split(',').forEach(ing => {
-        ing = ing.trim();
-        if (ing.length > 2) ingMap[ing] = (ingMap[ing]||0)+1;
+    /* 응답 구조: response→body→items→item (표준) 또는 body→items→item (일부 MFDS API) */
+    const items = j?.response?.body?.items?.item
+                || j?.body?.items?.item
+                || j?.response?.body?.items
+                || [];
+    const arr = Array.isArray(items) ? items : (items ? [items] : []);
+    const ingMap = {}, products = [];
+    arr.forEach(i => {
+      if (i.ITEM_NAME || i.PRDUCT_NM) products.push(i.ITEM_NAME || i.PRDUCT_NM);
+      (i.MTRAL_NM || i.INGR_NM || '').split(/,|\//).forEach(ing => {
+        ing = ing.trim().replace(/^\d+\.?\s*/, '');
+        if (ing.length > 2 && ing.length < 30) ingMap[ing] = (ingMap[ing]||0)+1;
       });
     });
     const top = Object.entries(ingMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k);
-    return { count: items.length, ingredients: top };
-  } catch { return { count: 0, ingredients: [] }; }
+    return { count: arr.length, ingredients: top, products: products.slice(0,5) };
+  } catch { return { count: 0, ingredients: [], products: [] }; }
+}
+
+/* 식약처 화장품GMP 적합업체 현황 — Track A/B 제조사 DB 보완용 */
+async function collectMFDSGMP() {
+  const key = K.public();
+  if (!key) return [];
+  try {
+    const url = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=50&type=json`;
+    const t = await fetchProxy(url, 10000);
+    if (!t) return [];
+    const j = JSON.parse(t);
+    const items = j?.response?.body?.items?.item
+                || j?.body?.items?.item
+                || j?.response?.body?.items
+                || [];
+    const arr = Array.isArray(items) ? items : (items ? [items] : []);
+    return arr.map(i => ({
+      name: i.ENTP_NAME || i.BSSH_NM || '',
+      addr: i.ADRES || i.ADDR || '',
+      gmpDate: i.APRVL_YMD || ''
+    })).filter(c => c.name);
+  } catch { return []; }
 }
 
 /* ════ Gemini 예측 분석 ════ */
@@ -1272,68 +1354,120 @@ async function testPublic() {
   const key = K.public();
   if (!key) { showToast('공공데이터 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-public');
-  el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
-  /* 동적 base_time: 1시간 전 데이터 요청 (발표 지연 40분 고려) */
+  el.innerHTML = ''; el.style.color = 'var(--ink3)';
+
+  /* 진행 표시 */
+  const prog = document.createElement('div');
+  prog.textContent = '⏳ 승인 API 3종 동시 테스트 중 (기상청 · 에어코리아 · 식약처)...';
+  el.appendChild(prog);
+
+  /* ── API 1: 기상청 초단기실황 ── */
   const wxBase = getWxBase();
-  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
-  try {
-    const t = await fetchProxy(url, 14000);
-    if (!t) {
-      /* 3종 모두 실패 → allorigins 직접 진단 */
-      let diagCode = 0, diagLen = 0;
-      try {
-        const diagCtrl = new AbortController();
-        const diagTid = setTimeout(() => diagCtrl.abort(), 8000);
-        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: diagCtrl.signal });
-        clearTimeout(diagTid);
-        if (dr.ok) { const dj = await dr.json(); diagCode = dj?.status?.http_code || 0; diagLen = (dj?.contents||'').length; }
-      } catch {}
-      const diagTxt = diagCode ? ` (HTTP ${diagCode}, ${diagLen}자)` : ' (연결 자체 불가)';
-      /* 실패시 URL 복사 버튼 노출 (브라우저 직접 테스트 유도) */
-      el.innerHTML = '';
-      const msg = document.createElement('div');
-      msg.style.color = 'var(--red)';
-      msg.textContent = `❌ 프록시 3종 응답 없음${diagTxt}\n\n점검:\n① data.go.kr 마이페이지 → 기상청_단기예보 [승인] 확인\n② 키 저장 후 재테스트\n③ 아래 [URL 복사] → 새 탭에 붙여넣어 JSON 응답 확인`;
-      el.appendChild(msg);
-      const btn = document.createElement('button');
-      btn.className = 'ap-btn ap-test'; btn.style.width = '100%'; btn.style.marginTop = '6px';
-      btn.textContent = '📋 테스트 URL 복사 (새 탭 붙여넣기)';
-      btn.onclick = () => navigator.clipboard.writeText(url).then(() => showToast('URL 복사됨 — 새 탭에 붙여넣어 JSON 확인'));
-      el.appendChild(btn);
-      return;
-    }
-    let j;
-    try { j = JSON.parse(t); }
-    catch {
-      const isProxyErr = /unexpected error|something went wrong|bad gateway|service unavailable/i.test(t);
-      if (isProxyErr) {
-        el.textContent = `❌ 프록시 서버 오류: "${t.trim().slice(0, 80)}"\n\n수분 후 재시도하거나 아래 [URL 복사] → 브라우저 직접 확인`;
+  const wxUrl  = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
+
+  /* ── API 2: 에어코리아 서울 ── */
+  const aqUrl  = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=3&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
+
+  /* ── API 3: 식약처 기능성화장품 보고품목 ── */
+  const mfdsUrl = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=5&type=json`;
+
+  const parseRC = (j) => j?.response?.header?.resultCode || j?.header?.resultCode || null;
+  const rcHint = (rc, rm) =>
+    rc === '30' ? '키 인증 실패 — 키 재확인' :
+    rc === '03' ? '데이터 미발표 — 잠시 후 재시도' :
+    rc === '12' ? 'API 활용신청 필요' :
+    rc === '22' ? '일일 한도 초과' :
+    (rm || `코드 ${rc}`);
+
+  /* 3개 병렬 실행 */
+  const [wxRes, aqRes, mfdsRes] = await Promise.all([
+    fetchProxy(wxUrl,  14000),
+    fetchProxy(aqUrl,  12000),
+    fetchProxy(mfdsUrl, 12000),
+  ]);
+
+  prog.remove();
+  el.style.color = 'inherit';
+
+  const addLine = (icon, label, detail, color) => {
+    const d = document.createElement('div');
+    d.style.cssText = `color:${color};margin-bottom:4px;font-size:10px;line-height:1.4`;
+    d.textContent = `${icon} ${label}: ${detail}`;
+    el.appendChild(d);
+  };
+
+  let anyOk = false;
+
+  /* 결과 1: 기상청 */
+  if (!wxRes) {
+    addLine('❌', '기상청 단기예보', '응답 없음 — 프록시 불가 또는 미승인', 'var(--red)');
+  } else {
+    try {
+      const j = JSON.parse(wxRes);
+      const rc = parseRC(j);
+      if (rc !== '00') {
+        addLine('⚠', '기상청 단기예보', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
       } else {
-        el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"`;
+        const it = j?.response?.body?.items?.item || [];
+        const temp = it.find(i => i.category === 'T1H')?.obsrValue ?? '—';
+        const hum  = it.find(i => i.category === 'REH')?.obsrValue ?? '—';
+        addLine('✅', '기상청 단기예보', `기온 ${temp}℃  습도 ${hum}%  (서울 ${wxBase.time})`, 'var(--grn)');
+        anyOk = true;
       }
-      el.style.color = 'var(--red)'; return;
-    }
-    const rc = j?.response?.header?.resultCode;
-    const rm = j?.response?.header?.resultMsg || '';
-    if (rc !== '00') {
-      const hint = rc === '30' ? '서비스 KEY 인증 실패 — 키 재확인'
-                 : rc === '03' ? `데이터 없음 — ${wxBase.date} ${wxBase.time} 데이터 미발표`
-                 : rc === '12' ? 'API 활용신청 필요 — data.go.kr 마이페이지 확인'
-                 : rc === '22' ? '일일 요청 한도 초과'
-                 : rm;
-      el.textContent = `❌ API 오류 [${rc}]: ${hint}`;
-      el.style.color = 'var(--red)'; return;
-    }
-    const items = j?.response?.body?.items?.item || [];
-    const temp = items.find(i => i.category === 'T1H')?.obsrValue;
-    const hum  = items.find(i => i.category === 'REH')?.obsrValue;
-    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%\n(기준: ${wxBase.date} ${wxBase.time} 서울)`;
-    el.style.color = 'var(--grn)';
-    setStatus('st-public', '✅ 확인됨', true);
-  } catch (e) {
-    el.textContent = '❌ 오류: ' + e.message;
-    el.style.color = 'var(--red)';
+    } catch { addLine('⚠', '기상청 단기예보', `파싱 실패: ${wxRes.slice(0,60)}`, 'var(--red)'); }
   }
+
+  /* 결과 2: 에어코리아 */
+  if (!aqRes) {
+    addLine('❌', '에어코리아 대기오염', '응답 없음', 'var(--red)');
+  } else {
+    try {
+      const j = JSON.parse(aqRes);
+      const rc = parseRC(j);
+      if (rc !== '00') {
+        addLine('⚠', '에어코리아 대기오염', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+      } else {
+        const items = j?.response?.body?.items || [];
+        const pm10 = items[0]?.pm10Value ?? '—';
+        const pm25 = items[0]?.pm25Value ?? '—';
+        addLine('✅', '에어코리아 대기오염', `PM10 ${pm10}㎍/㎥  PM2.5 ${pm25}㎍/㎥  (서울)`, 'var(--grn)');
+        anyOk = true;
+      }
+    } catch { addLine('⚠', '에어코리아 대기오염', `파싱 실패: ${aqRes.slice(0,60)}`, 'var(--red)'); }
+  }
+
+  /* 결과 3: 식약처 기능성화장품 */
+  if (!mfdsRes) {
+    addLine('❌', '식약처 기능성화장품', '응답 없음', 'var(--red)');
+  } else {
+    try {
+      const j = JSON.parse(mfdsRes);
+      const rc = parseRC(j);
+      if (rc && rc !== '00') {
+        addLine('⚠', '식약처 기능성화장품', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+      } else {
+        const items = j?.response?.body?.items?.item || j?.body?.items?.item || j?.response?.body?.items || [];
+        const cnt = Array.isArray(items) ? items.length : (items ? 1 : 0);
+        const total = j?.response?.body?.totalCount || j?.body?.totalCount || '—';
+        addLine('✅', '식약처 기능성화장품', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
+        anyOk = true;
+      }
+    } catch { addLine('⚠', '식약처 기능성화장품', `파싱 실패: ${mfdsRes.slice(0,60)}`, 'var(--red)'); }
+  }
+
+  /* URL 복사 버튼 */
+  const btnDiv = document.createElement('div');
+  btnDiv.style.cssText = 'margin-top:6px;display:flex;gap:4px;flex-wrap:wrap';
+  [['기상청', wxUrl], ['에어코리아', aqUrl], ['식약처', mfdsUrl]].forEach(([lbl, u]) => {
+    const b = document.createElement('button');
+    b.className = 'ap-btn ap-test'; b.style.flex = '1';
+    b.textContent = `📋 ${lbl} URL`;
+    b.onclick = () => navigator.clipboard.writeText(u).then(() => showToast(`${lbl} URL 복사됨`));
+    btnDiv.appendChild(b);
+  });
+  el.appendChild(btnDiv);
+
+  if (anyOk) setStatus('st-public', '✅ 확인됨', true);
 }
 
 async function testNaver() {
