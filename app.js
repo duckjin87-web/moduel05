@@ -152,7 +152,7 @@ window._evalCandidates = [];
 /* ════ API 키 관리 ════ */
 const K = {
   gemini:  () => ls('gemini_key')  || '',
-  model:   () => ls('gemini_model') || 'gemini-2.0-flash',
+  model:   () => ls('gemini_model') || 'gemini-2.5-flash-lite',
   public:  () => ls('public_key')  || '',
   naverID: () => ls('naver_id')    || '',
   naverSec:() => ls('naver_sec')   || '',
@@ -300,7 +300,11 @@ async function fetchProxy(url, timeout = 9000) {
       const tid = setTimeout(() => ctrl.abort(), timeout);
       const r = await fetch(proxy, { signal: ctrl.signal });
       clearTimeout(tid);
-      if (r.ok) { const t = await r.text(); if (t && t.length > 10) return t; }
+      if (r.ok) {
+        const t = await r.text();
+        /* allorigins/corsproxy 자체 오류 메시지 필터링 */
+        if (t && t.length > 10 && !t.startsWith('Unexpected') && !t.startsWith('Error') && !t.startsWith('<!DOCTYPE')) return t;
+      }
     } catch {}
   }
   return null;
@@ -383,7 +387,13 @@ async function collectEconomy() {
   const ekey = K.ecos();
   let cpi = '—', oil = '—';
   if (ekey) {
-    const cpUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${ekey}/json/kr/1/5/036Y001/MM/202501/202504/0001000`;
+    const now = new Date();
+    /* 데이터 지연 고려: 전전월까지만 조회 */
+    const toDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const toYM = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
+    const frYM = `${toDate.getFullYear() - 1}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
+    /* 항목코드 AA = 소비자물가지수 총지수 */
+    const cpUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${ekey}/json/kr/1/6/036Y001/MM/${frYM}/${toYM}/AA`;
     const cpt = await fetchProxy(cpUrl);
     if (cpt) {
       try {
@@ -432,13 +442,15 @@ async function collectCulture() {
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(
-      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kws[0])}&display=5&sort=date`,
-      { headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec }, signal: ctrl.signal }
-    );
+    /* CORS 우회: corsproxy.io 는 헤더 포워딩 지원 */
+    const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kws[0])}&display=5&sort=date`;
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+      headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec },
+      signal: ctrl.signal
+    });
     clearTimeout(tid);
-    if (r.ok) { const j = await r.json(); newsCount = j.total || 0; }
-    setSdot('sd-news', 'ok');
+    if (r.ok) { const j = await r.json(); newsCount = j.total || 0; setSdot('sd-news', 'ok'); }
+    else { setSdot('sd-news', 'warn'); }
   } catch { setSdot('sd-news', 'warn'); }
   setSdot('sd-datalab', 'warn');
   /* 뷰티 RSS 수집 보완 */
@@ -618,7 +630,7 @@ ${sigSummary}
     if (!r.ok) {
       const errMsg = data?.error?.message || `HTTP ${r.status}`;
       if (r.status === 429 && (errMsg.includes('limit: 0') || errMsg.includes('free_tier'))) {
-        showToast('⚠ Gemini 쿼터 0 오류 — aistudio.google.com에서 새 키 발급 또는 모델을 gemini-1.5-flash-latest로 변경하세요');
+        showToast('⚠ Gemini 쿼터 0 오류 — API 설정에서 모델을 gemini-2.5-flash-lite로 변경하세요 (AQ키 무료 지원)');
       } else if (r.status === 429) {
         showToast(`⚠ Gemini 요청 한도 초과 — 잠시 후 재시도하세요`);
       } else {
@@ -810,10 +822,11 @@ async function findNewManufacturers(productType, tech) {
       try {
         const ctrl = new AbortController();
         const tid = setTimeout(() => ctrl.abort(), 8000);
-        const r = await fetch(
-          `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`,
-          { headers: {'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec}, signal: ctrl.signal }
-        );
+        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
+        const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+          headers: {'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec},
+          signal: ctrl.signal
+        });
         clearTimeout(tid);
         if (r.ok) { const j = await r.json(); newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' '); }
       } catch {}
@@ -1179,7 +1192,7 @@ async function testGemini() {
       if (r.status === 429) {
         const isZeroQuota = errMsg.includes('limit: 0') || errMsg.includes('free_tier');
         el.innerHTML = isZeroQuota
-          ? `❌ 쿼터 0 오류 (429)\n\n프로젝트에 할당된 무료 쿼터가 0입니다.\n\n해결:\n① aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n② 또는 모델을 gemini-1.5-flash-latest 로 변경\n③ 또는 Google Cloud Console에서 결제 계정 연결`
+          ? `❌ 쿼터 0 오류 (429)\n\n해결:\n① 모델을 gemini-2.5-flash-lite 로 변경 (AQ키 무료 1,000건)\n② 또는 aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n③ 또는 Google Cloud Console에서 결제 계정 연결`
           : `❌ 요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
         el.style.color = 'var(--red)';
       } else if (r.status === 400) {
@@ -1216,26 +1229,38 @@ async function testPublic() {
   el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
   const today = new Date();
   const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  /* serviceKey는 URL에 직접 삽입 (fetchProxy가 전체 URL을 인코딩) */
   const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${key}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
   try {
-    const t = await fetchProxy(url, 10000);
-    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패 또는 키 오류)'; el.style.color = 'var(--red)'; return; }
-    const j = JSON.parse(t);
+    const t = await fetchProxy(url, 12000);
+    if (!t) {
+      el.textContent = '❌ 응답 없음\n\n가능한 원인:\n· serviceKey 오류 (data.go.kr에서 "디코딩된 키" 사용)\n· 기상청 API 활용신청 필요\n· 프록시 서버 일시 불가';
+      el.style.color = 'var(--red)'; return;
+    }
+    let j;
+    try { j = JSON.parse(t); }
+    catch {
+      el.textContent = `❌ 응답 파싱 실패 — 키 오류 가능성\n실제 응답: "${t.slice(0, 120)}"\n\n해결: data.go.kr에서 "디코딩된 키" 복사`;
+      el.style.color = 'var(--red)'; return;
+    }
     const rc = j?.response?.header?.resultCode;
     const rm = j?.response?.header?.resultMsg || '';
     if (rc !== '00') {
-      el.textContent = `❌ API 오류 [${rc}]: ${rm}`;
+      const hint = rc === '30' ? '서비스 KEY 인증 실패 → 디코딩된 키 사용 확인'
+                 : rc === '12' ? 'API 활용신청 필요 → data.go.kr 마이페이지 확인'
+                 : rc === '22' ? '일일 요청 한도 초과'
+                 : rm;
+      el.textContent = `❌ API 오류 [${rc}]: ${hint}`;
       el.style.color = 'var(--red)'; return;
     }
     const items = j?.response?.body?.items?.item || [];
     const temp = items.find(i => i.category === 'T1H')?.obsrValue;
     const hum  = items.find(i => i.category === 'REH')?.obsrValue;
-    const pty  = items.find(i => i.category === 'PTY')?.obsrValue;
-    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%  강수형태: ${pty ?? '—'}\n(기준: ${ds} 06시 서울)`;
+    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%\n(기준: ${ds} 06시 서울)`;
     el.style.color = 'var(--grn)';
     setStatus('st-public', '✅ 확인됨', true);
   } catch (e) {
-    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.textContent = '❌ 오류: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
@@ -1247,25 +1272,30 @@ async function testNaver() {
   el.textContent = '⏳ 네이버 뉴스 API 테스트 중...'; el.style.color = 'var(--ink3)';
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 10000);
-    const r = await fetch(
-      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`,
-      { headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec }, signal: ctrl.signal }
-    );
+    const tid = setTimeout(() => ctrl.abort(), 12000);
+    /* CORS 우회: corsproxy.io 는 X-Naver-* 헤더를 포워딩 */
+    const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`;
+    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+      headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec },
+      signal: ctrl.signal
+    });
     clearTimeout(tid);
     if (!r.ok) {
       const errBody = await r.text().catch(() => '');
-      el.textContent = `❌ HTTP ${r.status}: ${errBody.slice(0, 100)}`;
+      const hint = r.status === 401 ? 'Client ID 또는 Secret 오류'
+                 : r.status === 403 ? '등록된 도메인에서만 호출 가능 — 네이버 앱 설정 확인'
+                 : errBody.slice(0, 80);
+      el.textContent = `❌ HTTP ${r.status}: ${hint}`;
       el.style.color = 'var(--red)'; return;
     }
     const j = await r.json();
     const total = j.total ?? 0;
     const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
-    el.textContent = `✅ 네이버 뉴스 연결 성공\n검색어 "에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+    el.textContent = `✅ 네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
     el.style.color = 'var(--grn)';
     setStatus('st-naver', '✅ 확인됨', true);
   } catch (e) {
-    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (10초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (12초 초과)' : '❌ 연결 실패: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
@@ -1275,27 +1305,42 @@ async function testEcos() {
   if (!key) { showToast('ECOS 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-ecos');
   el.textContent = '⏳ ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
-  const now = new Date();
-  const ym = `${now.getFullYear()}${String(now.getMonth()).padStart(2,'0') || '01'}`;
-  const ymFrom = `${now.getFullYear() - 1}01`;
-  const url = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/3/036Y001/MM/${ymFrom}/${ym}/0001000`;
+
+  /* Step 1: StatisticList로 키 유효성 먼저 확인 (항목코드 불필요) */
+  const listUrl = `https://ecos.bok.or.kr/api/StatisticList/${key}/json/kr/1/3/`;
   try {
-    const t = await fetchProxy(url, 10000);
-    if (!t) { el.textContent = '❌ 응답 없음 (프록시 우회 실패)'; el.style.color = 'var(--red)'; return; }
-    const j = JSON.parse(t);
-    if (j?.RESULT?.CODE && j.RESULT.CODE !== 'INFO-000') {
-      el.textContent = `❌ ECOS 오류: ${j.RESULT.CODE} — ${j.RESULT.MESSAGE}`;
+    const t1 = await fetchProxy(listUrl, 12000);
+    if (!t1) { el.textContent = '❌ 응답 없음 — 프록시 실패 또는 키 오류'; el.style.color = 'var(--red)'; return; }
+    let j1;
+    try { j1 = JSON.parse(t1); }
+    catch { el.textContent = `❌ 파싱 실패\n응답: ${t1.slice(0, 100)}`; el.style.color = 'var(--red)'; return; }
+    if (j1?.RESULT?.CODE && j1.RESULT.CODE !== 'INFO-000') {
+      el.textContent = `❌ 키 오류: ${j1.RESULT.CODE} — ${j1.RESULT.MESSAGE}\n\necos.bok.or.kr 에서 키 재확인`;
       el.style.color = 'var(--red)'; return;
     }
-    const rows = j?.StatisticSearch?.row || [];
-    if (!rows.length) { el.textContent = '⚠ 데이터 없음 (키는 유효, 기간 조정 필요)'; el.style.color = 'var(--yel)'; return; }
-    const latest = rows[rows.length - 1];
-    const lines = rows.map(r => `  ${r.TIME}: CPI ${r.DATA_VALUE}`).join('\n');
-    el.textContent = `✅ ECOS 연결 성공\n소비자물가지수 (최근 ${rows.length}개월)\n${lines}\n→ 최신: ${latest.TIME} / ${latest.DATA_VALUE}`;
+
+    /* Step 2: CPI 조회 — 항목코드 AA(총지수), 데이터 지연 고려해 전전월까지 */
+    const now = new Date();
+    const toDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const toYM = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
+    const frYM = `${toDate.getFullYear() - 1}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
+    const cpiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/6/036Y001/MM/${frYM}/${toYM}/AA`;
+    const t2 = await fetchProxy(cpiUrl, 12000);
+    let cpiLines = '(CPI 데이터는 수집 실행 시 자동 조회됩니다)';
+    if (t2) {
+      try {
+        const j2 = JSON.parse(t2);
+        const rows = j2?.StatisticSearch?.row || [];
+        if (rows.length) {
+          cpiLines = '소비자물가지수 최근 3개월:\n' + rows.slice(-3).map(r => `  ${r.TIME}: ${r.DATA_VALUE}`).join('\n');
+        }
+      } catch {}
+    }
+    el.textContent = `✅ ECOS 키 유효 — 연결 성공\n${cpiLines}`;
     el.style.color = 'var(--grn)';
     setStatus('st-ecos', '✅ 확인됨', true);
   } catch (e) {
-    el.textContent = '❌ 파싱 오류: ' + e.message;
+    el.textContent = '❌ 오류: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
