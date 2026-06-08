@@ -320,6 +320,38 @@ function getMidFcstTime() {
 }
 
 /* ════ 수집 함수들 ════ */
+
+/* 네이버 API 전용 프록시 — X-Naver-* 헤더 포워딩 필요
+   사내망·방화벽 환경에 따라 차단 프록시가 다르므로 4종 순차 시도 */
+async function fetchNaverAPI(targetUrl, nid, nsec, timeout = 11000) {
+  const hdrs = { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec };
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+    `https://proxy.cors.sh/${targetUrl}`,
+    `https://cors-anywhere.herokuapp.com/${targetUrl}`,
+    `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
+  ];
+  for (const proxyUrl of proxies) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 9000));
+      const r = await fetch(proxyUrl, { headers: hdrs, signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) {
+        /* 401/403은 키 오류 — 다른 프록시가 같은 키를 쓰므로 바로 실패 반환 */
+        if (r.status === 401 || r.status === 403) {
+          const body = await r.text().catch(() => '');
+          return { _error: r.status, _body: body };
+        }
+        continue; /* 4xx 외엔 다음 프록시 시도 */
+      }
+      const j = await r.json();
+      return j;
+    } catch {}
+  }
+  return null; /* 모든 프록시 실패 */
+}
+
 async function fetchProxy(url, timeout = 9000) {
   /* HTML 에러 페이지 / 프록시 자체 오류 텍스트 걸러냄 */
   const BAD = ['<!doctype', '<html', 'unexpected error', 'something went wrong',
@@ -581,19 +613,12 @@ async function collectCulture() {
   }
   const kws = ['에어리스 화장품', '비건 클렌징', '선세럼 OEM', '소용량 앰플'];
   let newsCount = 0;
-  try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 8000);
-    /* CORS 우회: corsproxy.io 는 헤더 포워딩 지원 */
+  {
     const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kws[0])}&display=5&sort=date`;
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-      headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec },
-      signal: ctrl.signal
-    });
-    clearTimeout(tid);
-    if (r.ok) { const j = await r.json(); newsCount = j.total || 0; setSdot('sd-news', 'ok'); }
+    const j = await fetchNaverAPI(targetUrl, nid, nsec, 10000);
+    if (j && !j._error) { newsCount = j.total || 0; setSdot('sd-news', 'ok'); }
     else { setSdot('sd-news', 'warn'); }
-  } catch { setSdot('sd-news', 'warn'); }
+  }
   setSdot('sd-datalab', 'warn');
   /* 뷰티 RSS 수집 보완 */
   const rssData = await collectBeautyRSS();
@@ -989,17 +1014,9 @@ async function findNewManufacturers(productType, tech) {
   if (nid && nsec) {
     const queries = [productType.split(' ')[0] + ' OEM', productType.split(' ')[0] + ' 화장품 제조'];
     for (const q of queries.slice(0, 2)) {
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 8000);
-        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
-        const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-          headers: {'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec},
-          signal: ctrl.signal
-        });
-        clearTimeout(tid);
-        if (r.ok) { const j = await r.json(); newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' '); }
-      } catch {}
+      const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
+      const j = await fetchNaverAPI(targetUrl, nid, nsec, 9000);
+      if (j && !j._error) newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' ');
     }
   }
   const pubKey = K.public();
@@ -1586,35 +1603,29 @@ async function testNaver() {
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid || !nsec) { showToast('네이버 Client ID와 Secret을 모두 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-naver');
-  el.textContent = '⏳ 네이버 뉴스 API 테스트 중...'; el.style.color = 'var(--ink3)';
-  try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 12000);
-    /* CORS 우회: corsproxy.io 는 X-Naver-* 헤더를 포워딩 */
-    const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`;
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-      headers: { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec },
-      signal: ctrl.signal
-    });
-    clearTimeout(tid);
-    if (!r.ok) {
-      const errBody = await r.text().catch(() => '');
-      const hint = r.status === 401 ? 'Client ID 또는 Secret 오류'
-                 : r.status === 403 ? '등록된 도메인에서만 호출 가능 — 네이버 앱 설정 확인'
-                 : errBody.slice(0, 80);
-      el.textContent = `❌ HTTP ${r.status}: ${hint}`;
-      el.style.color = 'var(--red)'; return;
-    }
-    const j = await r.json();
-    const total = j.total ?? 0;
-    const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
-    el.textContent = `✅ 네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
-    el.style.color = 'var(--grn)';
-    setStatus('st-naver', '✅ 확인됨', true);
-  } catch (e) {
-    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (12초 초과)' : '❌ 연결 실패: ' + e.message;
-    el.style.color = 'var(--red)';
+  el.textContent = '⏳ 네이버 뉴스 API 테스트 중 (프록시 4종 순차 시도)...'; el.style.color = 'var(--ink3)';
+  const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`;
+  const j = await fetchNaverAPI(targetUrl, nid, nsec, 14000);
+  if (!j) {
+    el.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.style.color = 'var(--red)';
+    msg.textContent = '❌ 프록시 4종 모두 실패\n\n가능한 원인:\n① 사내망·방화벽이 CORS 프록시 도메인을 차단 (모바일로 재시도)\n② 네트워크 일시 불가 — 수분 후 재시도\n\n※ 기능은 유지됩니다 — 뷰티 RSS(화장품신문 등)로 대체 수집됩니다';
+    el.appendChild(msg);
+    el.style.color = 'inherit'; return;
   }
+  if (j._error) {
+    const hint = j._error === 401 ? 'Client ID 또는 Secret 오류'
+               : j._error === 403 ? '등록된 도메인에서만 호출 가능 — 네이버 앱 설정 확인'
+               : j._body?.slice(0, 80) || '';
+    el.textContent = `❌ HTTP ${j._error}: ${hint}`;
+    el.style.color = 'var(--red)'; return;
+  }
+  const total = j.total ?? 0;
+  const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
+  el.textContent = `✅ 네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+  el.style.color = 'var(--grn)';
+  setStatus('st-naver', '✅ 확인됨', true);
 }
 
 async function testEcos() {
