@@ -321,7 +321,7 @@ function getMidFcstTime() {
 
 /* ════ 수집 함수들 ════ */
 async function fetchProxy(url, timeout = 9000) {
-  /* 응답 유효성 검사: 프록시/서버 오류 텍스트 걸러냄 */
+  /* HTML 에러 페이지 / 프록시 자체 오류 텍스트 걸러냄 */
   const BAD = ['<!doctype', '<html', 'unexpected error', 'something went wrong',
                'bad gateway', '502 bad', '503 service', 'rate limit exceeded', 'too many requests'];
   const isGoodText = (t) => {
@@ -330,16 +330,18 @@ async function fetchProxy(url, timeout = 9000) {
     return !BAD.some(p => tl.startsWith(p) || (p.includes(' ') && tl.includes(p)));
   };
 
-  /* 0. 직접 요청 — data.go.kr·에어코리아 등 CORS 허용 API는 프록시 불필요 */
+  /* 0. 직접 요청 — CORS 허용 API(에어코리아 등)는 프록시 불필요 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 7000));
     const r = await fetch(url, { signal: ctrl.signal });
     clearTimeout(tid);
-    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+    const t = await r.text();
+    if (isGoodText(t)) return t;
   } catch {}
 
-  /* 1. allorigins /get — http_code 포함 구조화 JSON */
+  /* 1. allorigins /get — http_code 포함 구조화 JSON
+     code=0 → 연결 실패, code>0 → 실제 응답 (5xx 포함 통과, isGoodText로 HTML 걸러냄) */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
@@ -349,30 +351,31 @@ async function fetchProxy(url, timeout = 9000) {
       const j = await r.json();
       const code = j?.status?.http_code || 0;
       const t = j?.contents || '';
-      /* 2xx·4xx 통과, 5xx·0(연결실패) → 다음 프록시 */
-      if (code > 0 && code < 500 && isGoodText(t)) return t;
+      if (code > 0 && isGoodText(t)) return t;   /* 5xx도 통과 — JSON 오류메시지 보존 */
     }
   } catch {}
 
-  /* 2. allorigins /raw — data.go.kr는 항상 HTTP 200 반환하므로 r.ok 신뢰 가능 */
+  /* 2. allorigins /raw — r.ok 체크 제거: data.go.kr 5xx 응답 body도 읽기 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
-    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+    const t = await r.text();
+    if (isGoodText(t)) return t;
   } catch {}
 
-  /* 3. thingproxy.freeboard.io — allorigins/corsproxy와 다른 인프라 (한국 정부 API 우회 가능성) */
+  /* 3. thingproxy — r.ok 체크 제거: 5xx body도 읽기 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { signal: ctrl.signal });
     clearTimeout(tid);
-    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+    const t = await r.text();
+    if (isGoodText(t)) return t;
   } catch {}
 
-  /* 4. corsproxy.io — 4xx 포함 (API 키 오류 응답도 전달) */
+  /* 4. corsproxy.io */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
@@ -1452,11 +1455,23 @@ async function testPublic() {
     } catch { return { code: 0, snippet: '' }; }
   };
 
+  /* snippet에서 data.go.kr resultCode XML 추출 시도 */
+  const extractRC = (s) => {
+    const m = s?.match(/returnReasonCode[>](\d+)|resultCode[">](\d+)|<CODE>(\w+)/i);
+    return m ? (m[1] || m[2] || m[3]) : null;
+  };
   const diagMsg = ({ code, snippet }) => {
-    if (code === 0) return '프록시 서버가 API 서버에 연결 실패 (IP 차단 또는 네트워크 오류)';
+    if (code === 0) return '모든 프록시 연결 실패 — URL 복사 후 새 탭에서 직접 확인하세요';
     if (code === 401 || code === 403) return `HTTP ${code}: API 키 미승인 또는 접근 거부`;
-    if (code >= 500) return `HTTP ${code}: API 서버 오류 — 잠시 후 재시도`;
-    if (code >= 200 && snippet) return `HTTP ${code} 응답 수신됐으나 필터링됨: "${snippet}"`;
+    if (code >= 500) {
+      const rc = extractRC(snippet);
+      const detail = rc ? ` (API 코드:${rc})` : (snippet ? ` — 응답: "${snippet.trim().slice(0,60)}"` : '');
+      return `HTTP ${code}: 서버 응답${detail}`;
+    }
+    if (code >= 200 && snippet) {
+      const rc = extractRC(snippet);
+      return `HTTP ${code}${rc ? ` (API코드:${rc})` : ''} — 응답: "${snippet.trim().slice(0,60)}"`;
+    }
     return `HTTP ${code}`;
   };
 
@@ -1493,7 +1508,16 @@ async function testPublic() {
         addLine('✅', '기상청 단기예보', `기온 ${temp}℃  습도 ${hum}%  (서울 ${wxBase.time})`, 'var(--grn)');
         anyOk = true;
       }
-    } catch { addLine('⚠', '기상청 단기예보', `파싱 실패: ${wxRes.slice(0,60)}`, 'var(--red)'); }
+    } catch {
+      /* XML 오류 응답 감지 (data.go.kr 일부 오류는 XML로 반환) */
+      const xmlRc = wxRes.match(/returnReasonCode[^>]*>(\w+)|resultCode[^>]*>(\w+)/)?.[1];
+      const xmlMsg = wxRes.match(/returnAuthMsg[^>]*>([^<]+)|resultMsg[^>]*>([^<]+)/)?.[1];
+      if (xmlRc) {
+        addLine('⚠', '기상청 단기예보', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
+      } else {
+        addLine('⚠', '기상청 단기예보', `응답 형식 오류: "${wxRes.slice(0,80)}"`, 'var(--red)');
+      }
+    }
   }
 
   /* 결과 2: 에어코리아 */
@@ -1532,7 +1556,15 @@ async function testPublic() {
         addLine('✅', '식약처 기능성화장품', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
         anyOk = true;
       }
-    } catch { addLine('⚠', '식약처 기능성화장품', `파싱 실패: ${mfdsRes.slice(0,60)}`, 'var(--red)'); }
+    } catch {
+      const xmlRc = mfdsRes.match(/returnReasonCode[^>]*>(\w+)|resultCode[^>]*>(\w+)/)?.[1];
+      const xmlMsg = mfdsRes.match(/returnAuthMsg[^>]*>([^<]+)|resultMsg[^>]*>([^<]+)/)?.[1];
+      if (xmlRc) {
+        addLine('⚠', '식약처 기능성화장품', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
+      } else {
+        addLine('⚠', '식약처 기능성화장품', `응답 형식 오류: "${mfdsRes.slice(0,80)}"`, 'var(--red)');
+      }
+    }
   }
 
   /* URL 복사 버튼 */
