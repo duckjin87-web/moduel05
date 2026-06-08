@@ -295,6 +295,18 @@ async function refreshSignal(key) {
   showToast(`✅ ${key} 신호 재수집 완료`);
 }
 
+/* 기상청 초단기실황 base_date/base_time 계산 (발표까지 ~40분 지연 고려, 1시간 전 사용) */
+function getWxBase() {
+  const now = new Date();
+  let h = now.getHours() - 1;
+  const base = new Date(now);
+  if (h < 0) { h = 23; base.setDate(base.getDate() - 1); }
+  return {
+    date: `${base.getFullYear()}${String(base.getMonth()+1).padStart(2,'0')}${String(base.getDate()).padStart(2,'0')}`,
+    time: String(h).padStart(2,'0') + '00'
+  };
+}
+
 /* ════ 수집 함수들 ════ */
 async function fetchProxy(url, timeout = 9000) {
   /* 1. allorigins /get — 구조화 JSON (http_code 포함, 항상 200 반환) */
@@ -316,30 +328,26 @@ async function fetchProxy(url, timeout = 9000) {
     }
   } catch {}
 
-  /* 2. corsproxy.io — raw */
+  /* 2. corsproxy.io — raw, 4xx도 포함 (data.go.kr 키오류 응답 전달) */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
-    if (r.ok) {
-      const t = await r.text();
-      const tl = t ? t.toLowerCase() : '';
-      if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
-    }
+    const t = await r.text();
+    const tl = t ? t.toLowerCase() : '';
+    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
   } catch {}
 
-  /* 3. codetabs — 백업 */
+  /* 3. codetabs — 백업, 4xx 포함 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 8000));
     const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
-    if (r.ok) {
-      const t = await r.text();
-      const tl = t ? t.toLowerCase() : '';
-      if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
-    }
+    const t = await r.text();
+    const tl = t ? t.toLowerCase() : '';
+    if (t && t.length > 10 && !tl.startsWith('<!doctype') && !tl.startsWith('<html')) return t;
   } catch {}
 
   return null;
@@ -357,7 +365,8 @@ async function collectClimate() {
   }
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-  const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${dateStr}&base_time=0600&nx=66&ny=100`;
+  const wxBase = getWxBase();
+  const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
   const wxText = await fetchProxy(wxUrl);
   let temp = '—', humid = '—';
   if (wxText) {
@@ -1262,35 +1271,47 @@ async function testPublic() {
   if (!key) { showToast('공공데이터 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-public');
   el.textContent = '⏳ 기상청 연결 테스트 중...'; el.style.color = 'var(--ink3)';
-  const today = new Date();
-  const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${ds}&base_time=0600&nx=66&ny=100`;
+  /* 동적 base_time: 1시간 전 데이터 요청 (발표 지연 40분 고려) */
+  const wxBase = getWxBase();
+  const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=5&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
   try {
     const t = await fetchProxy(url, 14000);
     if (!t) {
-      /* 프록시 3종 모두 실패 → 직접 진단 시도 (allorigins raw http_code 확인) */
-      let diagInfo = '';
+      /* 3종 모두 실패 → allorigins 직접 진단 */
+      let diagCode = 0, diagLen = 0;
       try {
-        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(8000) });
-        if (dr.ok) {
-          const dj = await dr.json();
-          diagInfo = ` (allorigins http_code: ${dj?.status?.http_code ?? '없음'}, 응답길이: ${(dj?.contents||'').length}자)`;
-        }
+        const diagCtrl = new AbortController();
+        const diagTid = setTimeout(() => diagCtrl.abort(), 8000);
+        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: diagCtrl.signal });
+        clearTimeout(diagTid);
+        if (dr.ok) { const dj = await dr.json(); diagCode = dj?.status?.http_code || 0; diagLen = (dj?.contents||'').length; }
       } catch {}
-      el.textContent = `❌ 프록시 3종 모두 응답 없음${diagInfo}\n\n점검 순서:\n① data.go.kr 마이페이지 → "초단기실황" API 활용신청 여부 확인\n② 키 재저장: 설정창에서 키 다시 입력 후 [저장] → [테스트]\n③ 프록시 서버 일시 불가 → 수분 후 재시도`;
-      el.style.color = 'var(--red)'; return;
+      const diagTxt = diagCode ? ` (HTTP ${diagCode}, ${diagLen}자)` : ' (연결 자체 불가)';
+      /* 실패시 URL 복사 버튼 노출 (브라우저 직접 테스트 유도) */
+      el.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.style.color = 'var(--red)';
+      msg.textContent = `❌ 프록시 3종 응답 없음${diagTxt}\n\n점검:\n① data.go.kr 마이페이지 → 기상청_단기예보 [승인] 확인\n② 키 저장 후 재테스트\n③ 아래 [URL 복사] → 새 탭에 붙여넣어 JSON 응답 확인`;
+      el.appendChild(msg);
+      const btn = document.createElement('button');
+      btn.className = 'ap-btn ap-test'; btn.style.width = '100%'; btn.style.marginTop = '6px';
+      btn.textContent = '📋 테스트 URL 복사 (새 탭 붙여넣기)';
+      btn.onclick = () => navigator.clipboard.writeText(url).then(() => showToast('URL 복사됨 — 새 탭에 붙여넣어 JSON 확인'));
+      el.appendChild(btn);
+      return;
     }
     let j;
     try { j = JSON.parse(t); }
     catch {
-      el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"\n\n해결: data.go.kr → "디코딩된 키(Decoding)" 복사 후 재저장`;
+      el.textContent = `❌ 응답 파싱 실패\n실제 응답: "${t.slice(0, 160)}"`;
       el.style.color = 'var(--red)'; return;
     }
     const rc = j?.response?.header?.resultCode;
     const rm = j?.response?.header?.resultMsg || '';
     if (rc !== '00') {
-      const hint = rc === '30' ? '서비스 KEY 인증 실패 → 디코딩된 키 사용 확인'
-                 : rc === '12' ? 'API 활용신청 필요 → data.go.kr 마이페이지 확인'
+      const hint = rc === '30' ? '서비스 KEY 인증 실패 — 키 재확인'
+                 : rc === '03' ? `데이터 없음 — ${wxBase.date} ${wxBase.time} 데이터 미발표`
+                 : rc === '12' ? 'API 활용신청 필요 — data.go.kr 마이페이지 확인'
                  : rc === '22' ? '일일 요청 한도 초과'
                  : rm;
       el.textContent = `❌ API 오류 [${rc}]: ${hint}`;
@@ -1299,7 +1320,7 @@ async function testPublic() {
     const items = j?.response?.body?.items?.item || [];
     const temp = items.find(i => i.category === 'T1H')?.obsrValue;
     const hum  = items.find(i => i.category === 'REH')?.obsrValue;
-    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%\n(기준: ${ds} 06시 서울)`;
+    el.textContent = `✅ 기상청 연결 성공\n기온: ${temp ?? '—'}℃  습도: ${hum ?? '—'}%\n(기준: ${wxBase.date} ${wxBase.time} 서울)`;
     el.style.color = 'var(--grn)';
     setStatus('st-public', '✅ 확인됨', true);
   } catch (e) {
