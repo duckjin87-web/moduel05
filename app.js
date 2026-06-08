@@ -363,7 +363,16 @@ async function fetchProxy(url, timeout = 9000) {
     if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
   } catch {}
 
-  /* 3. corsproxy.io — 4xx 포함 (API 키 오류 응답도 전달) */
+  /* 3. thingproxy.freeboard.io — allorigins/corsproxy와 다른 인프라 (한국 정부 API 우회 가능성) */
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) { const t = await r.text(); if (isGoodText(t)) return t; }
+  } catch {}
+
+  /* 4. corsproxy.io — 4xx 포함 (API 키 오류 응답도 전달) */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
@@ -373,7 +382,7 @@ async function fetchProxy(url, timeout = 9000) {
     if (isGoodText(t)) return t;
   } catch {}
 
-  /* 4. codetabs — 최후 백업 */
+  /* 5. codetabs — 최후 백업 */
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 8000));
@@ -1398,9 +1407,33 @@ async function testPublic() {
 
   let anyOk = false;
 
+  /* 실패한 API에 대해 allorigins /get 으로 진단 (http_code 확인) */
+  const diagProxy = async (u) => {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 7000);
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) return { code: 0, snippet: '' };
+      const j = await r.json();
+      const code = j?.status?.http_code || 0;
+      const snippet = (j?.contents || '').slice(0, 80);
+      return { code, snippet };
+    } catch { return { code: 0, snippet: '' }; }
+  };
+
+  const diagMsg = ({ code, snippet }) => {
+    if (code === 0) return '프록시 서버가 API 서버에 연결 실패 (IP 차단 또는 네트워크 오류)';
+    if (code === 401 || code === 403) return `HTTP ${code}: API 키 미승인 또는 접근 거부`;
+    if (code >= 500) return `HTTP ${code}: API 서버 오류 — 잠시 후 재시도`;
+    if (code >= 200 && snippet) return `HTTP ${code} 응답 수신됐으나 필터링됨: "${snippet}"`;
+    return `HTTP ${code}`;
+  };
+
   /* 결과 1: 기상청 */
   if (!wxRes) {
-    addLine('❌', '기상청 단기예보', '응답 없음 — 프록시 불가 또는 미승인', 'var(--red)');
+    const d = await diagProxy(wxUrl);
+    addLine('❌', '기상청 단기예보', diagMsg(d), 'var(--red)');
   } else {
     try {
       const j = JSON.parse(wxRes);
@@ -1438,7 +1471,8 @@ async function testPublic() {
 
   /* 결과 3: 식약처 기능성화장품 */
   if (!mfdsRes) {
-    addLine('❌', '식약처 기능성화장품', '응답 없음', 'var(--red)');
+    const d = await diagProxy(mfdsUrl);
+    addLine('❌', '식약처 기능성화장품', diagMsg(d), 'var(--red)');
   } else {
     try {
       const j = JSON.parse(mfdsRes);
@@ -1519,7 +1553,10 @@ async function testEcos() {
       /* allorigins /get 직접 진단 */
       let diagCode = 0;
       try {
-        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(listUrl)}`, { signal: AbortSignal.timeout(8000) });
+        const diagCtrl = new AbortController();
+        const diagTid = setTimeout(() => diagCtrl.abort(), 8000);
+        const dr = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(listUrl)}`, { signal: diagCtrl.signal });
+        clearTimeout(diagTid);
         if (dr.ok) { const dj = await dr.json(); diagCode = dj?.status?.http_code || 0; }
       } catch {}
       el.textContent = diagCode >= 500
