@@ -325,31 +325,45 @@ function getMidFcstTime() {
    사내망·방화벽 환경에 따라 차단 프록시가 다르므로 4종 순차 시도 */
 async function fetchNaverAPI(targetUrl, nid, nsec, timeout = 11000) {
   const hdrs = { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec };
+  /* referrer 명시 — 프록시가 Referer 헤더를 네이버로 전달해 도메인 검증 통과
+     corsproxy.io가 사내망 차단일 때 다른 프록시에서도 Referer 전달을 시도 */
+  const fetchOpts = {
+    headers: hdrs,
+    referrer: (typeof window !== 'undefined') ? window.location.href : '',
+    referrerPolicy: 'origin',
+  };
   const proxies = [
     `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
     `https://proxy.cors.sh/${targetUrl}`,
-    `https://cors-anywhere.herokuapp.com/${targetUrl}`,
+    `https://corsproxy.org/?${encodeURIComponent(targetUrl)}`,
     `https://thingproxy.freeboard.io/fetch/${targetUrl}`,
   ];
+  let lastErr = null;
   for (const proxyUrl of proxies) {
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 9000));
-      const r = await fetch(proxyUrl, { headers: hdrs, signal: ctrl.signal });
+      const r = await fetch(proxyUrl, { ...fetchOpts, signal: ctrl.signal });
       clearTimeout(tid);
       if (!r.ok) {
-        /* 401/403은 키 오류 — 다른 프록시가 같은 키를 쓰므로 바로 실패 반환 */
-        if (r.status === 401 || r.status === 403) {
+        if (r.status === 401) {
+          /* 키 자체가 잘못됨 — 다른 프록시도 동일하므로 즉시 반환 */
           const body = await r.text().catch(() => '');
-          return { _error: r.status, _body: body };
+          return { _error: 401, _body: body };
         }
-        continue; /* 4xx 외엔 다음 프록시 시도 */
+        if (r.status === 403) {
+          /* Referer 미전달로 네이버가 거부 가능 — 다른 프록시로 계속 시도 */
+          const body = await r.text().catch(() => '');
+          lastErr = { _error: 403, _body: body };
+          continue;
+        }
+        continue;
       }
       const j = await r.json();
       return j;
     } catch {}
   }
-  return null; /* 모든 프록시 실패 */
+  return lastErr; /* 모든 프록시 403 → lastErr 반환, 완전 실패 → null */
 }
 
 async function fetchProxy(url, timeout = 9000) {
@@ -1615,10 +1629,25 @@ async function testNaver() {
     el.style.color = 'inherit'; return;
   }
   if (j._error) {
-    const hint = j._error === 401 ? 'Client ID 또는 Secret 오류'
-               : j._error === 403 ? '등록된 도메인에서만 호출 가능 — 네이버 앱 설정 확인'
-               : j._body?.slice(0, 80) || '';
-    el.textContent = `❌ HTTP ${j._error}: ${hint}`;
+    if (j._error === 401) {
+      el.textContent = '❌ HTTP 401: Client ID 또는 Secret 오류\nAPI 키를 다시 확인 후 저장하세요';
+    } else if (j._error === 403) {
+      el.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.style.color = 'var(--red)';
+      msg.textContent =
+        '❌ HTTP 403: 등록된 도메인에서만 호출 가능\n\n' +
+        '도메인 등록이 완료된 경우에도 사내망에서 발생하는 원인:\n' +
+        '• 사내 프록시/방화벽이 Referer 헤더를 삭제 → 네이버가 미등록 도메인으로 판단\n' +
+        '• 사내망이 CORS 프록시 서버 차단\n\n' +
+        '해결 방법:\n' +
+        '① 모바일(LTE/5G)에서 재시도\n' +
+        '② 네이버 앱 설정 → 환경 추가 → "모든 환경(서버)" 추가\n' +
+        '③ 또는 URL 제한을 제거하고 IP 제한만 사용';
+      el.appendChild(msg);
+    } else {
+      el.textContent = `❌ HTTP ${j._error}: ${j._body?.slice(0, 80) || ''}`;
+    }
     el.style.color = 'var(--red)'; return;
   }
   const total = j.total ?? 0;
