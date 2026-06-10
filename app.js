@@ -273,7 +273,7 @@ function renderZ0() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           ${autoTag}
-          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}')" title="이 신호만 재수집">🔄</button>
+          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}', this)" title="이 신호만 재수집">🔄</button>
         </div>
       </div>
       ${content}
@@ -282,16 +282,16 @@ function renderZ0() {
   }).join('');
 }
 
-async function refreshSignal(key) {
-  const btn = event.target;
-  btn.disabled = true; btn.style.opacity = '0.5';
+async function refreshSignal(key, btn) {
+  btn = btn || (typeof event !== 'undefined' ? event.target : null);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
   SIG_DATA[key] = null;
   renderZ0();
   const fnMap = { climate: collectClimate, society: collectSociety, economy: collectEconomy, culture: collectCulture };
   if (fnMap[key]) await fnMap[key]();
   renderZ0();
   updateStatusSummary();
-  btn.disabled = false; btn.style.opacity = '1';
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   showToast(`✅ ${key} 신호 재수집 완료`);
 }
 
@@ -316,19 +316,22 @@ function getMidFcstTime() {
   else if (h >= 7) { hhmm = '0600'; }
   else { dt.setDate(dt.getDate() - 1); hhmm = '1800'; }
   const ds = `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
-  return ds + hhmm + '00'; /* YYYYMMDDHHММ 12자리 */
+  return ds + hhmm; /* YYYYMMDDHHMM 12자리 (hhmm이 이미 4자리) */
 }
 
 /* ════ 수집 함수들 ════ */
 
 /* 네이버 API 전용 프록시 — X-Naver-* 헤더 포워딩 필요
    사내망·방화벽 환경에 따라 차단 프록시가 다르므로 4종 순차 시도 */
-async function fetchNaverAPI(targetUrl, nid, nsec, timeout = 11000) {
+async function fetchNaverAPI(targetUrl, nid, nsec, timeout = 11000, opts = {}) {
   const hdrs = { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec };
+  if (opts.body) hdrs['Content-Type'] = opts.contentType || 'application/json';
   /* referrer 명시 — 프록시가 Referer 헤더를 네이버로 전달해 도메인 검증 통과
      corsproxy.io가 사내망 차단일 때 다른 프록시에서도 Referer 전달을 시도 */
   const fetchOpts = {
+    method: opts.method || 'GET',
     headers: hdrs,
+    ...(opts.body ? { body: opts.body } : {}),
     referrer: (typeof window !== 'undefined') ? window.location.href : '',
     referrerPolicy: 'origin',
   };
@@ -447,58 +450,54 @@ async function fetchProxy(url, timeout = 9000) {
 async function collectClimate() {
   const key = K.public();
   setSdot('sd-climate', 'warn');
-  setSdot('sd-air', 'warn');
-  if (!key) {
-    SIG_DATA.climate = { score:4.0, interpret:'기상 데이터 수집 불가 (API 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
-    setSdot('sd-climate', 'warn');
-    setSdot('sd-air', 'off');
-    return;
-  }
+  setSdot('sd-air', key ? 'warn' : 'off');
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
   const wxBase = getWxBase();
 
   /* ── 기상 (기온·습도·UV) ────────────────────────────────────────
-     1순위: 기상청 초단기실황 (data.go.kr)
-     2순위: Open-Meteo (무료·CORS 지원·key 불필요 → 기상청 CORS 미지원 시 자동 폴백) */
+     1순위: 기상청 초단기실황 (data.go.kr — 공공키 필요)
+     2순위: Open-Meteo (무료·CORS 지원·키 불필요 → 키 없거나 기상청 실패 시 자동 사용) */
   let temp = '—', humid = '—', uv = '—', midTempMax = '—', wxSrc = '기상청';
-  const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
-  const wxText = await fetchProxy(wxUrl, 10000);
-  if (wxText) {
-    try {
-      const j = JSON.parse(wxText);
-      if (j?.response?.header?.resultCode === '00') {
-        const items = j.response.body.items.item || [];
-        const t = items.find(i => i.category === 'T1H');
-        if (t) temp = t.obsrValue + '℃';
-        const h = items.find(i => i.category === 'REH');
-        if (h) humid = h.obsrValue + '%';
-      }
-    } catch {}
-  }
-  /* UV (기상청 생활기상지수 — 역시 /1360000/ 이므로 실패 가능) */
-  if (temp !== '—') {
-    const uvHH = String(today.getHours()).padStart(2,'0');
-    const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=1100000000&time=${dateStr}${uvHH}`;
-    const uvText = await fetchProxy(uvUrl, 6000);
-    if (uvText) {
+  if (key) {
+    const wxUrl = `https://apis.data.go.kr/1360000/VilageFcstInfoService2.0/getUltraSrtNcst?serviceKey=${encodeURIComponent(key)}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${wxBase.date}&base_time=${wxBase.time}&nx=60&ny=127`;
+    const wxText = await fetchProxy(wxUrl, 10000);
+    if (wxText) {
       try {
-        const j = JSON.parse(uvText);
-        const items = j?.response?.body?.items?.item || [];
-        if (items.length) uv = items[0].today || items[0].h0 || '—';
+        const j = JSON.parse(wxText);
+        if (j?.response?.header?.resultCode === '00') {
+          const items = j.response.body.items.item || [];
+          const t = items.find(i => i.category === 'T1H');
+          if (t) temp = t.obsrValue + '℃';
+          const h = items.find(i => i.category === 'REH');
+          if (h) humid = h.obsrValue + '%';
+        }
       } catch {}
     }
-  }
-  /* 기상청 중기예보 (3일 후 최고기온) */
-  if (temp !== '—') {
-    const midUrl = `https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?serviceKey=${encodeURIComponent(key)}&numOfRows=1&pageNo=1&dataType=JSON&regId=11B10101&tmFc=${getMidFcstTime()}`;
-    const midText = await fetchProxy(midUrl, 7000);
-    if (midText) {
-      try {
-        const j = JSON.parse(midText);
-        const items = j?.response?.body?.items?.item || [];
-        if (items.length) midTempMax = items[0].taMax3 ?? items[0].taMax4 ?? '—';
-      } catch {}
+    /* UV (기상청 생활기상지수 — 역시 /1360000/ 이므로 실패 가능) */
+    if (temp !== '—') {
+      const uvHH = String(today.getHours()).padStart(2,'0');
+      const uvUrl = `https://apis.data.go.kr/1360000/LivingIndexService/getUVIdx?serviceKey=${encodeURIComponent(key)}&areaNo=1100000000&time=${dateStr}${uvHH}`;
+      const uvText = await fetchProxy(uvUrl, 6000);
+      if (uvText) {
+        try {
+          const j = JSON.parse(uvText);
+          const items = j?.response?.body?.items?.item || [];
+          if (items.length) uv = items[0].today || items[0].h0 || '—';
+        } catch {}
+      }
+    }
+    /* 기상청 중기예보 (3일 후 최고기온) */
+    if (temp !== '—') {
+      const midUrl = `https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa?serviceKey=${encodeURIComponent(key)}&numOfRows=1&pageNo=1&dataType=JSON&regId=11B10101&tmFc=${getMidFcstTime()}`;
+      const midText = await fetchProxy(midUrl, 7000);
+      if (midText) {
+        try {
+          const j = JSON.parse(midText);
+          const items = j?.response?.body?.items?.item || [];
+          if (items.length) midTempMax = items[0].taMax3 ?? items[0].taMax4 ?? '—';
+        } catch {}
+      }
     }
   }
 
@@ -527,32 +526,38 @@ async function collectClimate() {
   }
   setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
 
-  /* ── 에어코리아 (PM10·PM25) ── CORS 허용, 직접 fetch 성공 */
-  const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
-  const aqText = await fetchProxy(aqUrl);
+  /* ── 에어코리아 (PM10·PM25) ── CORS 허용, 직접 fetch 성공 (공공키 필요) */
   let pm10 = '—', pm25 = '—';
-  if (aqText) {
-    try {
-      const j = JSON.parse(aqText);
-      const items = j?.response?.body?.items || [];
-      if (items.length) {
-        pm10 = items[0].pm10Value + '㎍/㎥';
-        if (items[0].pm25Value && items[0].pm25Value !== '-') pm25 = items[0].pm25Value + '㎍/㎥';
-      }
-    } catch {}
+  if (key) {
+    const aqUrl = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=5&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
+    const aqText = await fetchProxy(aqUrl);
+    if (aqText) {
+      try {
+        const j = JSON.parse(aqText);
+        const items = j?.response?.body?.items || [];
+        if (items.length) {
+          pm10 = items[0].pm10Value + '㎍/㎥';
+          if (items[0].pm25Value && items[0].pm25Value !== '-') pm25 = items[0].pm25Value + '㎍/㎥';
+        }
+      } catch {}
+    }
+    setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
   }
-  setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
 
   const score = computeClimateScore(temp, pm10);
   SIG_DATA.climate = {
     score,
-    interpret: buildClimateInterp(temp, pm10),
+    interpret: temp !== '—'
+      ? buildClimateInterp(temp, pm10)
+      : '기상 데이터 수집 실패 — 계절 기본값으로 분석',
     chips: [
-      `기온 ${temp}`, `PM10 ${pm10}`,
+      `기온 ${temp}`,
+      pm10 !== '—' ? `PM10 ${pm10}` : (key ? 'PM10 —' : '에어코리아: 키 필요'),
       pm25 !== '—' ? `PM2.5 ${pm25}` : `습도 ${humid}`,
       uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : ''),
-      wxSrc === 'Open-Meteo' ? '(Open-Meteo)' : ''
-    ].filter(Boolean)
+      (wxSrc === 'Open-Meteo' && temp !== '—') ? '(Open-Meteo)' : ''
+    ].filter(Boolean),
+    _sample: temp === '—'
   };
 }
 
@@ -571,48 +576,71 @@ function buildClimateInterp(temp, pm10) {
 
 async function collectEconomy() {
   setSdot('sd-ecos', 'warn');
-  setSdot('sd-kosis', 'warn');
   const ekey = K.ecos();
-  let cpi = '—', oil = '—';
+  let cpi = '—', cpiYoY = null;
   if (ekey) {
     const now = new Date();
     /* 데이터 지연 고려: 전전월까지만 조회 */
     const toDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const toYM = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
     const frYM = `${toDate.getFullYear() - 1}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
-    /* 항목코드 AA = 소비자물가지수 총지수 */
-    const cpUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${ekey}/json/kr/1/6/036Y001/MM/${frYM}/${toYM}/AA`;
-    const cpt = await fetchProxy(cpUrl);
+    /* ECOS 901Y009 소비자물가지수 / 주기 M(월) / 항목코드 0(총지수)
+       — 13개월 조회로 첫 행 대비 전년동월비 계산 */
+    const cpUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${ekey}/json/kr/1/13/901Y009/M/${frYM}/${toYM}/0`;
+    const cpt = await fetchProxy(cpUrl, 12000);
     if (cpt) {
       try {
         const j = JSON.parse(cpt);
         const rows = j?.StatisticSearch?.row || [];
-        if (rows.length) cpi = rows[rows.length - 1].DATA_VALUE;
+        if (rows.length) {
+          cpi = rows[rows.length - 1].DATA_VALUE;
+          const base = parseFloat(rows[0].DATA_VALUE), last = parseFloat(cpi);
+          if (base > 0 && !isNaN(last)) cpiYoY = ((last - base) / base * 100).toFixed(1);
+        }
       } catch {}
     }
   }
-  /* 관세청 화장품 수출 통계 (HS 3304 기초화장품) */
-  let cosmeExport = '—';
-  const key = K.public();
-  try {
-    const yr = new Date().getFullYear();
-    const mo = String(new Date().getMonth() + 1).padStart(2, '0');
-    const custUrl = `https://unipass.customs.go.kr/csp/myis/openapi/ItemExport.do?serviceKey=${encodeURIComponent(key || 'SAMPLE')}&searchType=1&hsSgn=330410&startYearMonth=${yr}01&endYearMonth=${yr}${mo}`;
-    const custText = await fetchProxy(custUrl, 8000);
-    if (custText) {
-      /* XML 파싱 간단 처리 */
-      const match = custText.match(/<expAmt>([\d,]+)<\/expAmt>/);
-      if (match) cosmeExport = parseInt(match[1].replace(/,/g, '')).toLocaleString() + '달러';
-    }
-  } catch {}
 
   setSdot('sd-ecos', ekey ? (cpi !== '—' ? 'ok' : 'warn') : 'off');
-  const score = (cpi !== '—' && parseFloat(cpi) > 103) ? 3.8 : 3.2;
+  const infl = cpiYoY !== null ? parseFloat(cpiYoY) : null;
+  const score = infl === null ? 3.2 : infl >= 3 ? 4.0 : infl >= 2 ? 3.6 : 3.2;
   SIG_DATA.economy = {
     score,
-    interpret: `소비자물가 상승 기조 → 가성비+리필 이중 수요, 프리미엄 양극화${cosmeExport !== '—' ? ' · 화장품수출 '+cosmeExport : ''}`,
-    chips: [`CPI ${cpi}`, `유가 ${oil}`, cosmeExport !== '—' ? '수출 '+cosmeExport : '수출통계', '리필수요↑']
+    interpret: infl !== null
+      ? `소비자물가 전년동월비 ${cpiYoY}% — ${infl >= 2.5 ? '가성비+리필 이중 수요, 프리미엄 양극화' : '물가 안정 — 신제품 가격 수용도 양호'}`
+      : '물가 데이터 미수집 (ECOS 키 확인) — 가성비·리필 수요 기조 가정',
+    chips: [`CPI ${cpi}`, cpiYoY !== null ? `전년비 ${cpiYoY}%` : 'ECOS 연결 필요', '리필수요↑'],
+    _sample: cpi === '—'
   };
+}
+
+/* 네이버 DataLab 검색어트렌드 — 최근 3개월 주간 데이터로 키워드별 상승률 계산 */
+async function collectDataLab(nid, nsec) {
+  const end = new Date(); end.setDate(end.getDate() - 1);
+  const start = new Date(end); start.setMonth(start.getMonth() - 3);
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const body = JSON.stringify({
+    startDate: fmt(start), endDate: fmt(end), timeUnit: 'week',
+    keywordGroups: [
+      { groupName: '선세럼',  keywords: ['선세럼', '선크림'] },
+      { groupName: '에어리스', keywords: ['에어리스 용기', '에어리스 펌프'] },
+      { groupName: '비건',    keywords: ['비건 화장품', '비건 스킨케어'] },
+      { groupName: '앰플',    keywords: ['앰플', '소용량 앰플'] },
+    ]
+  });
+  const j = await fetchNaverAPI('https://openapi.naver.com/v1/datalab/search', nid, nsec, 10000,
+                                { method: 'POST', body });
+  if (!j || j._error || !Array.isArray(j.results)) return null;
+  /* 기간 전반 평균 대비 후반 평균 → 상승률(%) */
+  const avg = arr => arr.reduce((s, x) => s + (x.ratio || 0), 0) / (arr.length || 1);
+  const trends = j.results.map(g => {
+    const d = g.data || [];
+    if (d.length < 4) return { name: g.title, delta: 0 };
+    const half = Math.floor(d.length / 2);
+    const prev = avg(d.slice(0, half)), recent = avg(d.slice(half));
+    return { name: g.title, delta: prev > 0 ? Math.round((recent - prev) / prev * 100) : 0 };
+  }).sort((a, b) => b.delta - a.delta);
+  return trends.length ? trends : null;
 }
 
 async function collectCulture() {
@@ -620,31 +648,46 @@ async function collectCulture() {
   setSdot('sd-news', 'warn');
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid) {
-    SIG_DATA.culture = { score:4.2, interpret:'문화 데이터 수집 불가 (네이버 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
-    setSdot('sd-datalab', 'off');
+    /* RSS는 키 없이도 수집 가능 — 실데이터 우선 */
+    const rssData = await collectBeautyRSS();
+    window._rssText = rssData.text || '';
     setSdot('sd-news', 'off');
+    if (rssData.count > 0) {
+      setSdot('sd-datalab', 'ok');
+      SIG_DATA.culture = {
+        score: rssData.count > 50 ? 3.8 : 3.4,
+        interpret: `뷰티미디어 RSS ${rssData.count}건 수집 — 네이버 키 입력 시 뉴스·DataLab 추가 분석`,
+        chips: [`RSS ${rssData.count}건`, ...rssData.keywords.slice(0, 3)]
+      };
+    } else {
+      setSdot('sd-datalab', 'off');
+      SIG_DATA.culture = { score:4.2, interpret:'문화 데이터 수집 불가 (네이버 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
+    }
     return;
   }
-  const kws = ['에어리스 화장품', '비건 클렌징', '선세럼 OEM', '소용량 앰플'];
+  /* 뉴스·DataLab·RSS 병렬 수집 */
+  const newsUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품')}&display=5&sort=date`;
+  const [newsJ, dlTrends, rssData] = await Promise.all([
+    fetchNaverAPI(newsUrl, nid, nsec, 10000),
+    collectDataLab(nid, nsec),
+    collectBeautyRSS(),
+  ]);
   let newsCount = 0;
-  {
-    const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kws[0])}&display=5&sort=date`;
-    const j = await fetchNaverAPI(targetUrl, nid, nsec, 10000);
-    if (j && !j._error) { newsCount = j.total || 0; setSdot('sd-news', 'ok'); }
-    else { setSdot('sd-news', 'warn'); }
-  }
-  setSdot('sd-datalab', 'warn');
-  /* 뷰티 RSS 수집 보완 */
-  const rssData = await collectBeautyRSS();
-  if (rssData.count > 0) setSdot('sd-datalab', 'ok');
-  /* RSS 텍스트를 SIG_DATA에 보관 → TRACK B findNewManufacturers에서 활용 */
+  if (newsJ && !newsJ._error) { newsCount = newsJ.total || 0; setSdot('sd-news', 'ok'); }
   window._rssText = rssData.text || '';
+  setSdot('sd-datalab', (dlTrends || rssData.count > 0) ? 'ok' : 'warn');
   const totalNews = newsCount + rssData.count;
-  const score = totalNews > 1000 ? 4.6 : totalNews > 100 ? 4.0 : 3.5;
+  const top = dlTrends?.[0];
+  const dlChip = top ? `DataLab ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
+  let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
+  if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
   SIG_DATA.culture = {
     score,
-    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 (뷰티미디어 RSS ${rssData.count}건 포함) — 특수 패키징 수요 상승`,
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...rssData.keywords.slice(0, 2), 'DataLab 선세럼↑']
+    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 (뷰티 RSS ${rssData.count}건 포함)`
+      + (top ? ` · 검색트렌드 1위 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
+      + ' — 특수 패키징 수요 분석',
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(dlChip ? [dlChip] : []), ...rssData.keywords.slice(0, 2)].slice(0, 4),
+    _sample: totalNews === 0 && !top
   };
 }
 
@@ -653,9 +696,7 @@ async function collectSociety() {
   const key = K.public();
   let singleHH = '—', aging = '—';
   if (key) {
-    /* KOSIS 1인가구비중 */
-    const u1 = `https://apis.data.go.kr/1240000/kosis/statisticsList?serviceKey=${encodeURIComponent(key)}&method=getList&apiType=json&vwCd=MT_ZTITLE&parentListId=A&format=json`;
-    /* KOSIS는 별도 키 필요 — data.go.kr 키로 공통 통계 접근 시도 */
+    /* KOSIS는 별도 키 필요 — ECOS 키 있으면 가계 지표로 보완 */
     try {
       const ecosKey = K.ecos();
       if (ecosKey) {
@@ -708,20 +749,22 @@ function getRankChanges(predictions, period) {
 }
 
 async function collectBeautyRSS() {
+  /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
   const feeds = [
-    'https://rss.cosmeticsnews.co.kr',          /* 화장품신문 */
-    'https://www.cosinkorea.com/rss',            /* 코스인코리아 */
-    'https://www.beautynury.com/rss',            /* 뷰티누리 */
-    'https://www.daized.com/rss',                /* 데이즈드 */
+    'https://www.cosinkorea.com/rss/allArticle.xml',   /* 코스인코리아 */
+    'https://www.jangup.com/rss/allArticle.xml',       /* 장업신문(화장품) */
+    'https://www.cosmorning.com/rss/allArticle.xml',   /* 코스모닝 */
+    'https://www.beautynury.com/rss',                  /* 뷰티누리 */
   ];
   let count = 0;
   const keywords = [];
   const kwMap = {};
   const companyMentions = [];   /* TRACK B 연동용 업체명 언급 텍스트 */
-  for (const url of feeds) {
+  /* 병렬 수집 — 순차 수집 시 프록시 체인 누적 지연(피드당 최대 ~40초) 방지 */
+  const texts = await Promise.all(feeds.map(u => fetchProxy(u, 7000).catch(() => null)));
+  for (const t of texts) {
+    if (!t || !t.includes('<')) continue;
     try {
-      const t = await fetchProxy(url, 7000);
-      if (!t) continue;
       /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
       const titles = [
         ...[...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]),
@@ -1024,28 +1067,38 @@ async function searchManufacturers(pred) {
 async function findNewManufacturers(productType, tech) {
   const results = [];
   const nid = K.naverID(), nsec = K.naverSec(), gkey = K.gemini();
-  let newsTexts = '';
-  if (nid && nsec) {
-    const queries = [productType.split(' ')[0] + ' OEM', productType.split(' ')[0] + ' 화장품 제조'];
-    for (const q of queries.slice(0, 2)) {
-      const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
-      const j = await fetchNaverAPI(targetUrl, nid, nsec, 9000);
-      if (j && !j._error) newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' ');
-    }
-  }
   const pubKey = K.public();
+  const kw = productType.split(' ')[0];
+
+  /* 네이버 뉴스 2건 + 식약처 품목정보 병렬 수집 */
+  const naverPromises = (nid && nsec)
+    ? [kw + ' OEM', kw + ' 화장품 제조'].map(q => {
+        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
+        return fetchNaverAPI(targetUrl, nid, nsec, 9000);
+      })
+    : [];
+  const mfdsPromise = pubKey
+    ? fetchProxy(`https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(pubKey)}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=5&pageNo=1&type=json`)
+    : Promise.resolve(null);
+  const [mfdsT, ...naverResults] = await Promise.all([mfdsPromise, ...naverPromises]);
+
+  let newsTexts = '';
+  naverResults.forEach(j => {
+    if (j && !j._error) newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' ');
+  });
   let mfdsTexts = '';
-  if (pubKey) {
-    const kw = productType.split(' ')[0];
-    const mfdsUrl = `https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(pubKey)}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=5&pageNo=1&type=json`;
-    const mfdsT = await fetchProxy(mfdsUrl);
-    if (mfdsT) {
-      try {
-        const j = JSON.parse(mfdsT);
-        const items = j?.body?.items || [];
-        mfdsTexts = items.map(i => i.MFR_STE_NM || i.ENTP_NAME || '').join(' ');
-      } catch {}
-    }
+  if (mfdsT) {
+    try {
+      const j = JSON.parse(mfdsT);
+      /* 표준(response.body.items.item)·축약(body.items) 응답 구조 모두 처리 */
+      const items = j?.response?.body?.items?.item
+                  || j?.body?.items?.item
+                  || j?.response?.body?.items
+                  || j?.body?.items
+                  || [];
+      const arr = Array.isArray(items) ? items : (items ? [items] : []);
+      mfdsTexts = arr.map(i => i.MFR_STE_NM || i.ENTP_NAME || i.BSSH_NM || '').filter(Boolean).join(' ');
+    } catch {}
   }
   /* RSS 텍스트 합산 (collectCulture에서 저장) */
   const rssText = window._rssText || '';
@@ -1340,7 +1393,7 @@ function genReport() {
   lines.push('');
   lines.push('▶ 4대 신호 종합');
   Object.entries(SIG_DATA).forEach(([k, v]) => {
-    if (v) lines.push(`  ${k}: ${v.score}/5 — ${v.interpret}`);
+    if (v) lines.push(`  ${k}: ${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} — ${v.interpret}`);
   });
   lines.push('');
   lines.push('▶ 예측 화장품 유형 TOP5');
@@ -1695,12 +1748,12 @@ async function testEcos() {
       el.style.color = 'var(--red)'; return;
     }
 
-    /* Step 2: CPI 조회 — 항목코드 AA(총지수), 데이터 지연 고려해 전전월까지 */
+    /* Step 2: CPI 조회 — 901Y009 소비자물가지수 / 주기 M / 항목 0(총지수), 데이터 지연 고려해 전전월까지 */
     const now = new Date();
     const toDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const toYM = `${toDate.getFullYear()}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
     const frYM = `${toDate.getFullYear() - 1}${String(toDate.getMonth() + 1).padStart(2,'0')}`;
-    const cpiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/6/036Y001/MM/${frYM}/${toYM}/AA`;
+    const cpiUrl = `https://ecos.bok.or.kr/api/StatisticSearch/${key}/json/kr/1/13/901Y009/M/${frYM}/${toYM}/0`;
     const t2 = await fetchProxy(cpiUrl, 12000);
     let cpiLines = '(CPI 데이터는 수집 실행 시 자동 조회됩니다)';
     if (t2) {
@@ -1790,8 +1843,9 @@ function init() {
   if (cached) {
     try {
       const d = JSON.parse(cached);
-      if (d.signals) SIG_DATA = d.signals;
+      /* 24시간 이내 캐시만 복원 — 만료 캐시는 신호·예측 모두 무시 */
       if (d.ts && Date.now() - d.ts < 86400000) {
+        if (d.signals) SIG_DATA = d.signals;
         if (d.predictions_6m) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
         if (d.predictions_1y) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
         /* 현재 기간의 캐시 로드 */
