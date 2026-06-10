@@ -599,9 +599,16 @@ async function collectEconomy() {
         }
       } catch {}
     }
+    /* 폴백: StatisticSearch 실패 시 100대 통계지표에서 물가상승률 직접 조회 */
+    if (cpiYoY === null) {
+      const rows = await fetchEcosKeyStats(ekey);
+      const hit = rows.find(r => (r.KEYSTAT_NAME || '').includes('소비자물가'));
+      const v = hit ? parseFloat(hit.DATA_VALUE) : NaN;
+      if (!isNaN(v)) cpiYoY = v.toFixed(1);
+    }
   }
 
-  setSdot('sd-ecos', ekey ? (cpi !== '—' ? 'ok' : 'warn') : 'off');
+  setSdot('sd-ecos', ekey ? (cpiYoY !== null ? 'ok' : 'warn') : 'off');
   const infl = cpiYoY !== null ? parseFloat(cpiYoY) : null;
   const score = infl === null ? 3.2 : infl >= 3 ? 4.0 : infl >= 2 ? 3.6 : 3.2;
   SIG_DATA.economy = {
@@ -609,37 +616,58 @@ async function collectEconomy() {
     interpret: infl !== null
       ? `소비자물가 전년동월비 ${cpiYoY}% — ${infl >= 2.5 ? '가성비+리필 이중 수요, 프리미엄 양극화' : '물가 안정 — 신제품 가격 수용도 양호'}`
       : '물가 데이터 미수집 (ECOS 키 확인) — 가성비·리필 수요 기조 가정',
-    chips: [`CPI ${cpi}`, cpiYoY !== null ? `전년비 ${cpiYoY}%` : 'ECOS 연결 필요', '리필수요↑'],
-    _sample: cpi === '—'
+    chips: [
+      cpi !== '—' ? `CPI ${cpi}` : (cpiYoY !== null ? 'ECOS 100대지표' : 'ECOS 연결 필요'),
+      cpiYoY !== null ? `물가 전년비 ${cpiYoY}%` : '',
+      '리필수요↑'
+    ].filter(Boolean),
+    _sample: cpiYoY === null
   };
 }
 
-/* 네이버 DataLab 검색어트렌드 — 최근 3개월 주간 데이터로 키워드별 상승률 계산 */
+/* 네이버 DataLab 검색어트렌드 — 최근 3개월 주간 데이터로 카테고리별 상승률 계산
+   요청당 키워드그룹 최대 5개 제한 → 10개 카테고리를 2회 병렬 호출 */
+const DATALAB_GROUPS = [
+  [ /* 성분·효능 트렌드 */
+    { groupName: '선케어',      keywords: ['선세럼', '선스틱', '선크림'] },
+    { groupName: '장벽·진정',   keywords: ['시카', '판테놀', '세라마이드'] },
+    { groupName: '안티에이징',  keywords: ['레티놀', '콜라겐', '펩타이드'] },
+    { groupName: '더마 신성분', keywords: ['PDRN', '엑소좀', '마이크로바이옴'] },
+    { groupName: '비건·클린',   keywords: ['비건 화장품', '클린뷰티'] },
+  ],
+  [ /* 제형·패키징·타깃 트렌드 */
+    { groupName: '토너패드',  keywords: ['토너패드', '패드 화장품'] },
+    { groupName: '스틱·밤',   keywords: ['멀티밤', '스틱 화장품'] },
+    { groupName: '앰플',      keywords: ['앰플', '소용량 앰플'] },
+    { groupName: '남성뷰티',  keywords: ['남성 화장품', '올인원 로션'] },
+    { groupName: '두피·헤어', keywords: ['두피케어', '헤어세럼'] },
+  ],
+];
 async function collectDataLab(nid, nsec) {
   const end = new Date(); end.setDate(end.getDate() - 1);
   const start = new Date(end); start.setMonth(start.getMonth() - 3);
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const body = JSON.stringify({
-    startDate: fmt(start), endDate: fmt(end), timeUnit: 'week',
-    keywordGroups: [
-      { groupName: '선세럼',  keywords: ['선세럼', '선크림'] },
-      { groupName: '에어리스', keywords: ['에어리스 용기', '에어리스 펌프'] },
-      { groupName: '비건',    keywords: ['비건 화장품', '비건 스킨케어'] },
-      { groupName: '앰플',    keywords: ['앰플', '소용량 앰플'] },
-    ]
+  const mkBody = groups => JSON.stringify({
+    startDate: fmt(start), endDate: fmt(end), timeUnit: 'week', keywordGroups: groups
   });
-  const j = await fetchNaverAPI('https://openapi.naver.com/v1/datalab/search', nid, nsec, 10000,
-                                { method: 'POST', body });
-  if (!j || j._error || !Array.isArray(j.results)) return null;
+  const resps = await Promise.all(DATALAB_GROUPS.map(g =>
+    fetchNaverAPI('https://openapi.naver.com/v1/datalab/search', nid, nsec, 10000, { method: 'POST', body: mkBody(g) })
+  ));
   /* 기간 전반 평균 대비 후반 평균 → 상승률(%) */
   const avg = arr => arr.reduce((s, x) => s + (x.ratio || 0), 0) / (arr.length || 1);
-  const trends = j.results.map(g => {
-    const d = g.data || [];
-    if (d.length < 4) return { name: g.title, delta: 0 };
-    const half = Math.floor(d.length / 2);
-    const prev = avg(d.slice(0, half)), recent = avg(d.slice(half));
-    return { name: g.title, delta: prev > 0 ? Math.round((recent - prev) / prev * 100) : 0 };
-  }).sort((a, b) => b.delta - a.delta);
+  const trends = [];
+  for (const j of resps) {
+    if (!j || j._error || !Array.isArray(j.results)) continue;
+    j.results.forEach(g => {
+      const d = g.data || [];
+      if (d.length < 4) return;
+      if (trends.some(t => t.name === g.title)) return; /* 그룹명 중복 방지 */
+      const half = Math.floor(d.length / 2);
+      const prev = avg(d.slice(0, half)), recent = avg(d.slice(half));
+      trends.push({ name: g.title, delta: prev > 0 ? Math.round((recent - prev) / prev * 100) : 0 });
+    });
+  }
+  trends.sort((a, b) => b.delta - a.delta);
   return trends.length ? trends : null;
 }
 
@@ -675,6 +703,7 @@ async function collectCulture() {
   let newsCount = 0;
   if (newsJ && !newsJ._error) { newsCount = newsJ.total || 0; setSdot('sd-news', 'ok'); }
   window._rssText = rssData.text || '';
+  window._dlTrends = dlTrends || null;   /* Gemini 프롬프트·보고서에서 활용 */
   setSdot('sd-datalab', (dlTrends || rssData.count > 0) ? 'ok' : 'warn');
   const totalNews = newsCount + rssData.count;
   const top = dlTrends?.[0];
@@ -691,35 +720,38 @@ async function collectCulture() {
   };
 }
 
+/* ECOS 100대 통계지표 — 항목코드 불필요·안정적. 세션 내 1회만 조회 (society·economy 공용) */
+let _ecosKeyStatCache = null;
+async function fetchEcosKeyStats(ekey) {
+  if (_ecosKeyStatCache) return _ecosKeyStatCache;
+  try {
+    const t = await fetchProxy(`https://ecos.bok.or.kr/api/KeyStatisticList/${ekey}/json/kr/1/100/`, 12000);
+    if (t) {
+      const rows = JSON.parse(t)?.KeyStatisticList?.row || [];
+      if (rows.length) { _ecosKeyStatCache = rows; return rows; }
+    }
+  } catch {}
+  return [];
+}
+
 async function collectSociety() {
   setSdot('sd-kosis', 'warn');
-  const key = K.public();
-  let singleHH = '—', aging = '—';
-  if (key) {
-    /* KOSIS는 별도 키 필요 — ECOS 키 있으면 가계 지표로 보완 */
-    try {
-      const ecosKey = K.ecos();
-      if (ecosKey) {
-        /* ECOS 통해 가계소비 지표 조회 */
-        const u = `https://ecos.bok.or.kr/api/StatisticSearch/${ecosKey}/json/kr/1/5/901Y027/YY/2022/2024/`;
-        const t = await fetchProxy(u);
-        if (t) {
-          const j = JSON.parse(t);
-          const rows = j?.StatisticSearch?.row || [];
-          if (rows.length) singleHH = rows[rows.length-1].DATA_VALUE + '%';
-        }
-      }
-    } catch {}
-    setSdot('sd-kosis', singleHH !== '—' ? 'ok' : 'warn');
-  } else {
-    setSdot('sd-kosis', 'off');
+  const ecosKey = K.ecos();
+  let ccsi = '—';
+  if (ecosKey) {
+    /* 소비자심리지수(CCSI)로 소비 여력 판단 (100 이상 = 낙관) */
+    const rows = await fetchEcosKeyStats(ecosKey);
+    const hit = rows.find(r => (r.KEYSTAT_NAME || '').includes('소비자심리'));
+    if (hit && hit.DATA_VALUE) ccsi = hit.DATA_VALUE;
   }
-  /* 기본값 유지 (KOSIS 별도 키 없으면 추정값 사용) */
+  setSdot('sd-kosis', ccsi !== '—' ? 'ok' : (ecosKey ? 'warn' : 'off'));
+  const c = parseFloat(ccsi);
   SIG_DATA.society = {
-    score: 3.8,
-    interpret: `1인가구 34.5%(통계청) · 남성뷰티 +18% → 소용량·편의형 패키징 수요 증가${singleHH !== '—' ? ' · 가계소비 ' + singleHH : ''}`,
-    chips: ['1인가구 34.5%', '남성뷰티 +18%', singleHH !== '—' ? '가계소비 '+singleHH : 'KOSIS 참조'],
-    _sample: singleHH === '—'
+    score: !isNaN(c) ? (c >= 100 ? 4.0 : 3.6) : 3.8,
+    interpret: `1인가구 35.5%(통계청 2023) · 남성뷰티 성장 → 소용량·편의형 패키징 수요 증가`
+      + (ccsi !== '—' ? ` · 소비자심리지수 ${ccsi}${!isNaN(c) ? (c >= 100 ? ' (소비 낙관)' : ' (소비 신중)') : ''}` : ''),
+    chips: ['1인가구 35.5%', '남성뷰티↑', ccsi !== '—' ? `CCSI ${ccsi}` : 'ECOS 키 필요'],
+    _sample: ccsi === '—'
   };
 }
 
@@ -778,7 +810,9 @@ async function collectBeautyRSS() {
       const allText = [...titles, ...descs].join(' ');
       companyMentions.push(allText.slice(0, 2000));
       titles.forEach(tt => {
-        ['에어리스','비건','선세럼','앰플','마이크로바이옴','클렌징','리필','스틱','패드','선케어','수분크림','쿨링'].forEach(kw => {
+        ['에어리스','비건','선세럼','선스틱','선케어','앰플','마이크로바이옴','PDRN','엑소좀',
+         '펩타이드','콜라겐','레티놀','시카','세라마이드','토너패드','패드','멀티밤','스틱',
+         '클렌징','리필','수분크림','쿨링','두피','남성'].forEach(kw => {
           if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
         });
       });
@@ -821,7 +855,7 @@ async function collectMFDSGMP() {
   const key = K.public();
   if (!key) return [];
   try {
-    const url = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=50&type=json`;
+    const url = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=100&type=json`;
     const t = await fetchProxy(url, 10000);
     if (!t) return [];
     const j = JSON.parse(t);
@@ -852,11 +886,15 @@ async function runGeminiPrediction(period) {
   const sigSummary = Object.entries(SIG_DATA)
     .map(([k, v]) => `${k}: ${v?.score || '?'}/5 — ${v?.interpret || '수집 불가'}`)
     .join('\n');
+  const dlDetail = (window._dlTrends && window._dlTrends.length)
+    ? `\n[네이버 검색트렌드 — 최근 3개월 카테고리별 검색량 상승률 (실측)]\n`
+      + window._dlTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
+    : '';
   const prompt = `당신은 화장품 OEM/ODM 업계 전문 트렌드 분석가입니다.
 아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
 
 [4대 신호 현황]
-${sigSummary}
+${sigSummary}${dlDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -1064,27 +1102,56 @@ async function searchManufacturers(pred) {
   MATCH_RESULTS.trackB = await findNewManufacturers(pred.type, pred.tech);
 }
 
+/* 회사명 정규화 — 법인 표기·공백 제거 (중복 판정·DB 대조용) */
+function normCompanyName(n) {
+  return String(n || '').replace(/주식회사|\(주\)|㈜|\s/g, '').trim();
+}
+
+/* 텍스트에서 화장품 업체명 패턴 추출 — Gemini 키 없거나 실패 시 폴백 */
+function extractCompanyNames(text) {
+  const out = new Set();
+  const re = /(?:\(주\)\s?|㈜\s?|주식회사\s?)?([가-힣A-Za-z0-9]{2,12}(?:코스메틱스?|코스텍|코스팜|코스랩|화장품|뷰티|바이오텍|랩스|피앤피|케미컬|케미칼))/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const name = m[1].trim();
+    /* 일반명사·대형3사 제외 */
+    if (name.length < 4) continue;
+    if (/^(기능성|비건|국내|글로벌|중소|신생)?(화장품|코스메틱스?|뷰티)$/.test(name)) continue;
+    if (/콜마|코스맥스|코스메카/.test(name)) continue;
+    out.add(name);
+  }
+  return [...out];
+}
+
 async function findNewManufacturers(productType, tech) {
-  const results = [];
+  let results = [];
   const nid = K.naverID(), nsec = K.naverSec(), gkey = K.gemini();
   const pubKey = K.public();
   const kw = productType.split(' ')[0];
+  /* 패키징 키워드 — 충진·성형 설비 관점 검색어로 탐색 폭 확대 */
+  const pkgKw = (currentPkgType.match(/에어리스|스틱|튜브|파우치|앰플|패드|쿠션|펌프/) || [])[0] || '';
 
-  /* 네이버 뉴스 2건 + 식약처 품목정보 병렬 수집 */
+  /* ── ① 수집: 뉴스(제품·패키징 관점) + 식약처 품목 + 식약처 제조업 등록목록 병렬 ── */
+  const queries = [kw + ' OEM 제조', kw + ' 화장품 ODM'];
+  if (pkgKw && !kw.includes(pkgKw)) queries.push(pkgKw + ' 충진 OEM');
   const naverPromises = (nid && nsec)
-    ? [kw + ' OEM', kw + ' 화장품 제조'].map(q => {
-        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`;
+    ? queries.map(q => {
+        /* sort=sim(관련도) — 최신순보다 OEM 수주·설비 기사 적중률 높음 */
+        const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=10&sort=sim`;
         return fetchNaverAPI(targetUrl, nid, nsec, 9000);
       })
     : [];
   const mfdsPromise = pubKey
-    ? fetchProxy(`https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(pubKey)}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=5&pageNo=1&type=json`)
+    ? fetchProxy(`https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(pubKey)}&prdlst_nm=${encodeURIComponent(kw)}&numOfRows=10&pageNo=1&type=json`)
     : Promise.resolve(null);
-  const [mfdsT, ...naverResults] = await Promise.all([mfdsPromise, ...naverPromises]);
+  /* 제조업 등록목록은 제품과 무관하게 동일 → 세션 1회 수집 후 캐시 */
+  const gmpPromise = (pubKey && !window._gmpCache) ? collectMFDSGMP() : Promise.resolve(window._gmpCache || []);
+  const [mfdsT, gmpList, ...naverResults] = await Promise.all([mfdsPromise, gmpPromise, ...naverPromises]);
+  if (gmpList.length) window._gmpCache = gmpList;
 
   let newsTexts = '';
   naverResults.forEach(j => {
-    if (j && !j._error) newsTexts += (j.items || []).map(i => i.title + ' ' + i.description).join(' ');
+    if (j && !j._error) newsTexts += ' ' + (j.items || []).map(i => i.title + ' ' + i.description).join(' ');
   });
   let mfdsTexts = '';
   if (mfdsT) {
@@ -1100,19 +1167,21 @@ async function findNewManufacturers(productType, tech) {
       mfdsTexts = arr.map(i => i.MFR_STE_NM || i.ENTP_NAME || i.BSSH_NM || '').filter(Boolean).join(' ');
     } catch {}
   }
-  /* RSS 텍스트 합산 (collectCulture에서 저장) */
   const rssText = window._rssText || '';
-  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText).slice(0, 4000);
+  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText).slice(0, 6000);
 
+  /* ── ② 추출: Gemini 우선 → 실패·키없음 시 업체명 패턴 추출 폴백 ── */
   if (gkey && allText.trim()) {
-    const prompt = `아래 텍스트에서 "${productType}" 제품을 실제로 생산하는 국내 화장품 OEM/ODM 제조업체를 찾아주세요.
+    const prompt = `아래 텍스트에서 "${productType}" 제품을 실제로 생산하거나 생산 가능한 국내 화장품 OEM/ODM 제조업체를 찾아주세요.
+패키징·충진 설비 관점(${currentPkgType || '특수 패키징'})에서 적합한 업체를 우선하세요.
 
 [검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS 통합]
 ${allText}
 
 [규칙]
 - 한국콜마·코스맥스·코스메카코리아 절대 제외
-- 텍스트에 실제 언급된 업체만 포함
+- 텍스트에 실제 언급된 업체만 포함 (브랜드사가 아닌 제조사 우선)
+- evidence_detail에는 텍스트의 어떤 내용이 근거인지 1문장으로 기재
 - 추측 금지. 확인된 업체가 없으면 빈 배열 반환
 
 JSON만 출력:
@@ -1130,15 +1199,44 @@ JSON만 출력:
       const data = await r.json();
       const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(txt);
-      (parsed.companies || []).forEach(c => {
-        if (c.name && !['한국콜마','코스맥스','코스메카코리아'].some(ex => c.name.includes(ex))) {
-          const inDB = DB.find(d => d.name === c.name || d.name.includes(c.name.replace(/[㈜(주)]/g, '').trim()));
-          if (!inDB) results.push({...c, inDB: false});
-        }
-      });
+      (parsed.companies || []).forEach(c => { if (c.name) results.push(c); });
     } catch {}
   }
-  return results;
+  if (!results.length && allText.trim()) {
+    /* Gemini 없이도 동작 — 패턴 추출 (확인 필요 표시) */
+    extractCompanyNames(allText).slice(0, 6).forEach(n => {
+      results.push({ name: n, evidence_type: 'news', evidence_detail: '뉴스·RSS 텍스트에서 업체명 감지 — 생산품목 직접 확인 필요', region: '' });
+    });
+  }
+
+  /* ── ③ 식약처 화장품제조업 등록 교차검증 — 등록 확인 시 근거 격상 + 지역 보강 ── */
+  results.forEach(c => {
+    const cn = normCompanyName(c.name);
+    const hit = gmpList.find(g => {
+      const gn = normCompanyName(g.name);
+      return gn && cn && (gn.includes(cn) || cn.includes(gn));
+    });
+    if (hit) {
+      c.evidence_type = 'mfds';
+      c.evidence_detail = `✓ 식약처 화장품제조업 등록 확인${hit.addr ? ' (' + hit.addr.split(' ').slice(0, 2).join(' ') + ')' : ''} · ${c.evidence_detail || ''}`;
+      if (!c.region && hit.addr) c.region = hit.addr.split(' ')[0];
+    }
+  });
+
+  /* ── ④ 대형3사·내부 DB 중복 제외 + 정규화 중복 제거, 상위 8곳 ── */
+  const seen = new Set();
+  return results.filter(c => {
+    if (!c.name) return false;
+    if (/콜마|코스맥스|코스메카/.test(c.name)) return false;
+    const cn = normCompanyName(c.name);
+    if (!cn || seen.has(cn)) return false;
+    seen.add(cn);
+    const inDB = DB.some(d => {
+      const dn = normCompanyName(d.name);
+      return dn.includes(cn) || cn.includes(dn);
+    });
+    return !inDB;
+  }).slice(0, 8);
 }
 
 /* ════ 패키징 적합도 점수 ════ */
@@ -1281,10 +1379,15 @@ function noTrackBHtml() {
       ${!K.naverID() ? '⚠ 네이버 API 키 미설정 — 키 설정 후 수집 실행하면 자동 탐색됩니다' : '뉴스·식약처 데이터에서 신규처 업체명을 확인하지 못했습니다'}
     </div>
     <div class="search-hint">
+      <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">자동 탐색 경로 (재시도 시)</div>
+      <span class="skw">"${kw} OEM 제조" / "${kw} 화장품 ODM"</span> 네이버 뉴스 관련도순<br>
+      <span class="skw">패키징 키워드 + "충진 OEM"</span> 설비 관점 추가 탐색<br>
+      <span class="skw">식약처 품목정보 + 제조업 등록목록</span> 교차검증·지역 보강
+    </div>
+    <div class="search-hint" style="margin-top:6px">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">수동 탐색 기준</div>
-      <span class="skw">"${kw}" AND "화장품 OEM"</span> 네이버 뉴스<br>
-      <span class="skw">"${kw}" AND "화장품"</span> KIPRIS 특허 출원인<br>
-      <span class="skw">제품명으로 제조업소명 추적</span> 식약처 품목정보
+      <span class="skw">"${kw}" AND "화장품"</span> KIPRIS 특허 출원인 (plus.kipris.or.kr)<br>
+      <span class="skw">제품명으로 제조업소명 추적</span> 식약처 의약품안전나라
     </div>
   </div>`;
 }
@@ -1395,6 +1498,11 @@ function genReport() {
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) lines.push(`  ${k}: ${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} — ${v.interpret}`);
   });
+  if (window._dlTrends && window._dlTrends.length) {
+    lines.push('');
+    lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
+    window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
   lines.push('');
   lines.push('▶ 예측 화장품 유형 TOP5');
   PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) — 출시적기: ${p.season}`));
@@ -1716,8 +1824,9 @@ async function testEcos() {
   const el = document.getElementById('r-ecos');
   el.textContent = '⏳ ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
 
-  /* Step 1: StatisticList로 키 유효성 먼저 확인 (항목코드 불필요) */
-  const listUrl = `https://ecos.bok.or.kr/api/StatisticList/${key}/json/kr/1/3/`;
+  /* Step 1: StatisticTableList로 키 유효성 먼저 확인 (항목코드 불필요)
+     ※ 서비스명 주의 — 'StatisticList'는 존재하지 않음 (과거 버그 원인) */
+  const listUrl = `https://ecos.bok.or.kr/api/StatisticTableList/${key}/json/kr/1/3/`;
   try {
     const t1 = await fetchProxy(listUrl, 14000);
     if (!t1) {
@@ -1732,7 +1841,7 @@ async function testEcos() {
       } catch {}
       el.textContent = diagCode >= 500
         ? `❌ ECOS 서버 오류 (HTTP ${diagCode})\necos.bok.or.kr 서버가 일시적으로 불가합니다.\n잠시 후 재시도하세요.`
-        : `❌ ECOS 응답 없음\n\n점검 순서:\n① ecos.bok.or.kr 접속 → API 키 유효성 직접 확인\n② 프록시 서버 일시 불가 → 수분 후 재시도\n③ ECOS API는 해외 IP에서 접근이 차단될 수 있습니다`;
+        : `❌ ECOS 응답 없음\n\n점검 순서:\n① ECOS 키는 한국은행(ecos.bok.or.kr) 발급 키입니다 — data.go.kr 키와 다름\n② ecos.bok.or.kr → 마이페이지 → 인증키 발급내역에서 키 상태 확인\n③ 프록시 서버 일시 불가 → 수분 후 재시도\n④ ECOS API는 해외 IP(프록시 포함) 접근이 차단될 수 있습니다`;
       el.style.color = 'var(--red)'; return;
     }
     let j1;
