@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>TAB05 · 트렌드 예측 &amp; 소싱 검증 — CosmeDB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,11 +21,11 @@
   </div>
   <div class="hd-right">
     <div class="api-wrap">
-      <button class="btn-hd btn-api-set" id="btnApiSet">⚙ API 설정</button>
+      <button class="btn-hd btn-api-set" id="btnApiSet">API 설정</button>
       <div class="api-panel" id="apiPanel">
-        <div class="ap-hd">⚙ API 키 통합 설정</div>
+        <div class="ap-hd">API 키 통합 설정</div>
         <div class="ap-sec">
-          <div class="ap-label">🤖 Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
+          <div class="ap-label">Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
           <div class="ap-row">
             <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy... 또는 AQ...">
             <button class="ap-btn ap-save" id="btnSaveGemini">저장</button>
@@ -39,7 +42,7 @@
           <div id="r-gemini" class="ap-result"></div>
         </div>
         <div class="ap-sec">
-          <div class="ap-label">🏛 공공데이터 (data.go.kr) <span class="ap-status" id="st-public">미설정</span></div>
+          <div class="ap-label">공공데이터 (data.go.kr) <span class="ap-status" id="st-public">미설정</span></div>
           <div class="ap-row">
             <input type="text" class="ap-in" id="k-public" placeholder="serviceKey (인코딩/디코딩 모두 가능)">
             <button class="ap-btn ap-save" id="btnSavePublic">저장</button>
@@ -49,7 +52,7 @@
           <div id="r-public" class="ap-result"></div>
         </div>
         <div class="ap-sec">
-          <div class="ap-label">📰 네이버 API <span class="ap-status" id="st-naver">미설정</span></div>
+          <div class="ap-label">네이버 API <span class="ap-status" id="st-naver">미설정</span></div>
           <div class="ap-row" style="margin-bottom:3px">
             <input type="text" class="ap-in" id="k-naver-id" placeholder="Client ID">
           </div>
@@ -62,7 +65,7 @@
           <div id="r-naver" class="ap-result"></div>
         </div>
         <div class="ap-sec">
-          <div class="ap-label">📊 ECOS (한국은행) <span class="ap-status" id="st-ecos">미설정</span></div>
+          <div class="ap-label">ECOS (한국은행) <span class="ap-status" id="st-ecos">미설정</span></div>
           <div class="ap-row">
             <input type="text" class="ap-in" id="k-ecos" placeholder="ECOS API Key">
             <button class="ap-btn ap-save" id="btnSaveEcos">저장</button>
@@ -72,34 +75,34 @@
           <div id="r-ecos" class="ap-result"></div>
         </div>
         <div class="ap-sec">
-          <div class="ap-label">🔬 KIPRIS (특허청) <span class="ap-status" style="color:var(--ink3)">준비중</span></div>
+          <div class="ap-label">KIPRIS (특허청) <span class="ap-status" style="color:var(--ink3)">준비중</span></div>
           <div class="ap-hint">특허기반 업체 탐색 · <a href="https://plus.kipris.or.kr" target="_blank">plus.kipris.or.kr</a></div>
         </div>
         <div class="ap-sec" style="border-top:.5px solid var(--bg3);padding-top:8px;margin-top:4px">
-          <div class="ap-label" style="margin-bottom:6px">📡 마지막 수집 결과 확인</div>
+          <div class="ap-label" style="margin-bottom:6px">마지막 수집 결과 확인</div>
           <button class="ap-btn ap-test" id="btnShowCollected" style="width:100%;margin-bottom:6px">수집된 데이터 보기</button>
           <div id="r-collected" class="ap-result" style="white-space:pre-wrap;font-size:9px;max-height:160px;overflow-y:auto"></div>
         </div>
       </div>
     </div>
     <div class="rep-wrap">
-      <button class="btn-hd btn-report" id="btnRepPanel">📋 BM 보고서</button>
+      <button class="btn-hd btn-report" id="btnRepPanel">BM 보고서</button>
       <div class="rep-panel" id="repPanel">
         <div class="rp-hd">
-          <span class="rp-title">📋 BM 보고서</span>
-          <button class="rp-close" id="btnRepClose">✕</button>
+          <span class="rp-title">BM 보고서</span>
+          <button class="rp-close" id="btnRepClose">×</button>
         </div>
         <div class="rp-body">
           <button class="btn-regen" id="btnGenReport" style="margin-bottom:8px;width:100%">보고서 생성</button>
           <textarea class="rp-ta" id="repText" readonly placeholder="[보고서 생성] 클릭 시 현재 분석 결과가 텍스트로 정리됩니다."></textarea>
           <div class="rp-actions">
-            <button class="btn-copy" id="btnCopyReport">📋 복사</button>
+            <button class="btn-copy" id="btnCopyReport">복사</button>
             <button class="btn-regen" id="btnClearReport">초기화</button>
           </div>
         </div>
       </div>
     </div>
-    <button class="btn-hd btn-collect" id="btnCollect">🔄 전체 수집 실행</button>
+    <button class="btn-hd btn-collect" id="btnCollect">전체 수집 실행</button>
   </div>
 </div>
 
@@ -118,10 +121,13 @@
 <!-- ── ZONE 0: 4대 신호 ── -->
 <div class="z0" id="z0"></div>
 
+<!-- ── ZONE F: 트렌드 플로우 분석 (손그림 분석표) ── -->
+<div class="zflow" id="zFlow" hidden></div>
+
 <!-- ── ZONE 1: 예측 TOP5 ── -->
 <div class="z1">
   <div class="zone-hd">
-    <div class="zone-title">🔮 예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
+    <div class="zone-title">예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
     <div class="pred-period-tabs" id="predPeriodTabs">
       <button class="pred-period-tab active" data-period="6m">6개월 예측</button>
       <button class="pred-period-tab" data-period="1y">1년 예측</button>
@@ -138,16 +144,16 @@
 <!-- ── ZONE 2: 제조사 매칭 ── -->
 <div class="z2">
   <div class="zone-hd">
-    <div class="zone-title">🏭 제조사 매칭 <span class="ztag" id="z2subtitle">— 위에서 예측 항목을 클릭하세요</span></div>
+    <div class="zone-title">제조사 매칭 <span class="ztag" id="z2subtitle">— 위에서 예측 항목을 클릭하세요</span></div>
     <span class="zmodel">KIPRIS + 네이버뉴스 + 식약처 + Gemini</span>
   </div>
   <div class="z2-grid" id="z2body">
     <div class="z2-placeholder">
-      ✅ TRACK A — 기등록 업체<br>
+      TRACK A — 기등록 업체<br>
       <span style="font-size:10px">예측 항목 선택 시 내부 DB에서 즉시 조회</span>
     </div>
     <div class="z2-placeholder-r">
-      🔍 TRACK B — 신규처 후보<br>
+      TRACK B — 신규처 후보<br>
       <span style="font-size:10px">KIPRIS·뉴스·식약처 자동 탐색 후 표시</span>
     </div>
   </div>

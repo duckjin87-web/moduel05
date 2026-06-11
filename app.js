@@ -162,7 +162,7 @@ const K = {
 function saveKey(type) {
   if (type === 'gemini') {
     const v = document.getElementById('k-gemini').value.trim();
-    if (v) { ls('gemini_key', v); setStatus('st-gemini', '✅ 설정됨', true); showToast('Gemini 키 저장됨'); }
+    if (v) { ls('gemini_key', v); setStatus('st-gemini', '설정됨', true); showToast('Gemini 키 저장됨'); }
   }
   if (type === 'gemini-model') { ls('gemini_model', document.getElementById('gemini-model').value); }
   if (type === 'public') {
@@ -172,18 +172,18 @@ function saveKey(type) {
       let norm = v;
       try { if (/%[0-9A-Fa-f]{2}/.test(v)) norm = decodeURIComponent(v); } catch {}
       ls('public_key', norm);
-      setStatus('st-public', '✅ 설정됨', true);
+      setStatus('st-public', '설정됨', true);
       showToast('공공데이터 키 저장됨');
     }
   }
   if (type === 'naver') {
     const id = document.getElementById('k-naver-id').value.trim();
     const sec = document.getElementById('k-naver-sec').value.trim();
-    if (id && sec) { ls('naver_id', id); ls('naver_sec', sec); setStatus('st-naver', '✅ 설정됨', true); showToast('네이버 API 키 저장됨'); }
+    if (id && sec) { ls('naver_id', id); ls('naver_sec', sec); setStatus('st-naver', '설정됨', true); showToast('네이버 API 키 저장됨'); }
   }
   if (type === 'ecos') {
     const v = document.getElementById('k-ecos').value.trim();
-    if (v) { ls('ecos_key', v); setStatus('st-ecos', '✅ 설정됨', true); showToast('ECOS 키 저장됨'); }
+    if (v) { ls('ecos_key', v); setStatus('st-ecos', '설정됨', true); showToast('ECOS 키 저장됨'); }
   }
 }
 
@@ -193,10 +193,10 @@ function setStatus(id, txt, ok) {
 }
 
 function loadKeys() {
-  if (K.gemini()) { setStatus('st-gemini', '✅ 설정됨', true); document.getElementById('k-gemini').value = K.gemini(); }
-  if (K.public()) { setStatus('st-public', '✅ 설정됨', true); }
-  if (K.naverID()) { setStatus('st-naver', '✅ 설정됨', true); }
-  if (K.ecos())   { setStatus('st-ecos', '✅ 설정됨', true); }
+  if (K.gemini()) { setStatus('st-gemini', '설정됨', true); document.getElementById('k-gemini').value = K.gemini(); }
+  if (K.public()) { setStatus('st-public', '설정됨', true); }
+  if (K.naverID()) { setStatus('st-naver', '설정됨', true); }
+  if (K.ecos())   { setStatus('st-ecos', '설정됨', true); }
   const mSel = document.getElementById('gemini-model');
   if (mSel && K.model()) mSel.value = K.model();
 }
@@ -224,7 +224,7 @@ function renderZ3() {
     return r.level;
   };
   const clsMap = { critical:'rl-crit', imminent:'rl-imm', upcoming:'rl-upco', passed:'rl-pass' };
-  const labelMap = { critical:'즉시대응', imminent:'⚡ 30일이내', upcoming:'예정', passed:'시행완료' };
+  const labelMap = { critical:'즉시대응', imminent:'30일 이내', upcoming:'예정', passed:'시행완료' };
   el.innerHTML = REGS.map(r => {
     const lv = levelOf(r);
     return `<div class="reg-card${lv === 'passed' ? ' reg-passed' : ''}">
@@ -235,7 +235,7 @@ function renderZ3() {
       <div class="reg-body">
         <div class="reg-meta">${escHtml(r.auth)} · ${escHtml(r.date)}</div>
         <div class="reg-detail">${escHtml(r.detail)}</div>
-        <div class="reg-action">📌 ${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">↗</a>` : ''}</div>
+        <div class="reg-action">${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">바로가기</a>` : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -245,10 +245,10 @@ function renderZ3() {
 function renderZ0() {
   const z = document.getElementById('z0');
   const defs = [
-    {key:'climate', cls:'sig-cl', icon:'🌡', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
-    {key:'society', cls:'sig-so', icon:'👥', name:'사회·인구',  auto:true,  src:'KOSIS(1인가구·고령화)'},
-    {key:'economy', cls:'sig-ec', icon:'💰', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
-    {key:'culture', cls:'sig-cu', icon:'📱', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
+    {key:'climate', cls:'sig-cl', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
+    {key:'society', cls:'sig-so', name:'사회·인구',  auto:true,  src:'KOSIS(1인가구·고령화)'},
+    {key:'economy', cls:'sig-ec', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
+    {key:'culture', cls:'sig-cu', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
   ];
   z.innerHTML = defs.map(d => {
     const data = SIG_DATA[d.key];
@@ -258,8 +258,8 @@ function renderZ0() {
       `<div class="dot5 ${i < Math.round(score) ? 'on ' + colKey : 'off'}"></div>`
     ).join('');
     const autoTag = data
-      ? '<span class="sig-auto auto-ok">✅ 자동</span>'
-      : '<span class="sig-auto auto-warn">⏳ 수집 대기</span>';
+      ? '<span class="sig-auto auto-ok">자동</span>'
+      : '<span class="sig-auto auto-warn">수집 대기</span>';
     const content = data
       ? `<div class="sig-dots">${dots}</div>
          <div class="sig-interp">${escHtml(data.interpret)}</div>
@@ -268,12 +268,12 @@ function renderZ0() {
     return `<div class="sig ${d.cls}">
       <div class="sig-top">
         <div>
-          <div class="sig-name">${d.icon} ${d.name}</div>
+          <div class="sig-name"><span class="sig-ico ${colKey}"></span>${d.name}</div>
           <div class="sig-score">${data ? (data.score ?? 0).toFixed(1) : '—'}<span class="sig-max">/5</span></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           ${autoTag}
-          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}', this)" title="이 신호만 재수집">🔄</button>
+          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}', this)" title="이 신호만 재수집">↻</button>
         </div>
       </div>
       ${content}
@@ -292,7 +292,7 @@ async function refreshSignal(key, btn) {
   renderZ0();
   updateStatusSummary();
   if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
-  showToast(`✅ ${key} 신호 재수집 완료`);
+  showToast(`${key} 신호 재수집 완료`);
 }
 
 /* 기상청 초단기실황 base_date/base_time 계산 (발표까지 ~40분 지연 고려, 1시간 전 사용) */
@@ -873,6 +873,155 @@ function getRankChanges(predictions, period) {
   } catch { return {}; }
 }
 
+/* ════════════════════════════════════════════════════════════
+   트렌드 플로우 — "흐름"을 누적·분석하는 시계열(빅데이터) 구조
+   ────────────────────────────────────────────────────────────
+   매 수집마다 4대 신호 점수 + 검색트렌드 + 뉴스 키워드 + 기후추세 + 예측 TOP을
+   타임스탬프 스냅샷으로 localStorage에 누적(최근 40회). 단일 시점이 아니라
+   "시간에 따른 트렌드 이동(궤적)"을 분석·시각화하기 위한 토대.
+   ※ 클라이언트 누적은 단일 브라우저 한정 — 다기기·대규모 집계는 향후
+     백엔드(예: 일배치 적재 → 카테고리별 모멘텀 집계)로 확장 가능. */
+const TREND_FLOW_KEY = 'm5_trendflow';
+const TREND_FLOW_MAX = 40;
+function recordTrendFlow() {
+  try {
+    const sig = {};
+    Object.entries(SIG_DATA).forEach(([k, v]) => { if (v) sig[k] = +(v.score || 0).toFixed(2); });
+    if (!Object.keys(sig).length) return;
+    const snap = {
+      ts: Date.now(),
+      sig,
+      dl: (window._dlTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
+      news: (window._newsTrends || []).slice(0, 5).map(t => ({ n: t.name, c: t.count })),
+      climate: window._climateTrend ? { dev: window._climateTrend.deviation,
+                 t16: window._climateTrend.trend16 ? window._climateTrend.trend16.delta : null } : null,
+      top: (PREDICTIONS || []).slice(0, 3).map(p => p.type),
+    };
+    const arr = JSON.parse(ls(TREND_FLOW_KEY) || '[]');
+    arr.unshift(snap);
+    ls(TREND_FLOW_KEY, JSON.stringify(arr.slice(0, TREND_FLOW_MAX)));
+  } catch {}
+}
+function getTrendFlow() {
+  try { return JSON.parse(ls(TREND_FLOW_KEY) || '[]'); } catch { return []; }
+}
+
+/* 손그림 느낌 SVG 헬퍼 — feTurbulence로 선을 살짝 흔들어 아날로그 질감 부여 */
+const SIG_COLOR = { climate:'#4a72a8', society:'#4a8874', economy:'#b89020', culture:'#bf7b42' };
+const SIG_KO = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
+function ringArc(cx, cy, rO, rI, a0, a1) {
+  const pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  const large = (a1 - a0) > Math.PI ? 1 : 0;
+  const [x1, y1] = pt(rO, a0), [x2, y2] = pt(rO, a1);
+  const [x3, y3] = pt(rI, a1), [x4, y4] = pt(rI, a0);
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)} A${rO} ${rO} 0 ${large} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} `
+       + `L${x3.toFixed(1)} ${y3.toFixed(1)} A${rI} ${rI} 0 ${large} 0 ${x4.toFixed(1)} ${y4.toFixed(1)} Z`;
+}
+
+function renderTrendFlow() {
+  const el = document.getElementById('zFlow');
+  if (!el) return;
+  const hasSig = Object.values(SIG_DATA).some(v => v);
+  if (!hasSig) { el.hidden = true; return; }
+  el.hidden = false;
+
+  /* ── 1) 신호 구성 도넛 (점수 비중) ── */
+  const entries = Object.entries(SIG_DATA).filter(([, v]) => v);
+  const total = entries.reduce((s, [, v]) => s + (v.score || 0), 0) || 1;
+  let ang = -Math.PI / 2;
+  const cx = 70, cy = 70, rO = 58, rI = 33;
+  const arcs = entries.map(([k, v]) => {
+    const frac = (v.score || 0) / total;
+    const a0 = ang, a1 = ang + frac * Math.PI * 2;
+    ang = a1;
+    return `<path d="${ringArc(cx, cy, rO, rI, a0, a1 - 0.02)}" fill="${SIG_COLOR[k]}" opacity="0.82"/>`;
+  }).join('');
+  const dom = entries.slice().sort((a, b) => (b[1].score || 0) - (a[1].score || 0))[0];
+  const legend = entries.map(([k, v]) =>
+    `<div class="fl-leg"><span class="fl-dot" style="background:${SIG_COLOR[k]}"></span>${SIG_KO[k]} <b>${(v.score || 0).toFixed(1)}</b></div>`
+  ).join('');
+  const donut = `
+    <div class="fl-card">
+      <div class="fl-cap">신호 구성</div>
+      <div class="fl-donut-wrap">
+        <svg viewBox="0 0 140 140" class="sketch">
+          <g filter="url(#flRough)">${arcs}</g>
+        </svg>
+        <div class="fl-donut-mid">
+          <div class="fl-mid-k">${SIG_KO[dom[0]]}</div>
+          <div class="fl-mid-s">우세</div>
+        </div>
+      </div>
+      <div class="fl-legend">${legend}</div>
+    </div>`;
+
+  /* ── 2) 트렌드 모멘텀 (검색 상승률 + 뉴스 언급) ── */
+  const dl = (window._dlTrends || []).slice(0, 5);
+  const news = (window._newsTrends || []).slice(0, 3);
+  const maxDelta = Math.max(20, ...dl.map(t => Math.abs(t.delta)));
+  const dlBars = dl.length ? dl.map(t => {
+    const w = Math.min(100, Math.abs(t.delta) / maxDelta * 100);
+    const up = t.delta >= 0;
+    return `<div class="fl-bar-row">
+        <span class="fl-bar-lb">${escHtml(t.name)}</span>
+        <span class="fl-bar-track"><span class="fl-bar-fill ${up ? 'up' : 'dn'}" style="width:${w}%"></span></span>
+        <span class="fl-bar-val ${up ? 'up' : 'dn'}">${up ? '+' : ''}${t.delta}%</span>
+      </div>`;
+  }).join('') : '<div class="fl-empty">검색트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>';
+  const newsChips = news.length
+    ? `<div class="fl-news">최다 언급 · ${news.map(n => `<span class="fl-nchip">${escHtml(n.name)} <b>${n.count}</b></span>`).join('')}</div>`
+    : '';
+  const momentum = `
+    <div class="fl-card fl-grow">
+      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">검색 상승률 · 뉴스 언급</span></div>
+      ${dlBars}
+      ${newsChips}
+    </div>`;
+
+  /* ── 3) 시계열 플로우 (누적 스냅샷으로 본 흐름) ── */
+  const flow = getTrendFlow();
+  let traj;
+  if (flow.length < 2) {
+    traj = `<div class="fl-card">
+        <div class="fl-cap">시계열 플로우 <span class="fl-sub">흐름 누적</span></div>
+        <div class="fl-empty">누적 ${flow.length}회 — 수집을 반복할수록<br>트렌드 이동 궤적이 그려집니다.</div>
+      </div>`;
+  } else {
+    /* 최근→과거 저장이므로 시간순으로 뒤집어 우세 신호 점수 추이 그리기 */
+    const series = flow.slice(0, 12).reverse();
+    const domKey = dom[0];
+    const vals = series.map(s => (s.sig && s.sig[domKey] != null) ? s.sig[domKey] : 0);
+    const w = 230, h = 86, pad = 8;
+    const xs = (i) => pad + i * (w - pad * 2) / (vals.length - 1);
+    const ys = (v) => h - pad - (v / 5) * (h - pad * 2);
+    const line = vals.map((v, i) => `${i ? 'L' : 'M'}${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`).join(' ');
+    const dots = vals.map((v, i) => `<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="2.4" fill="${SIG_COLOR[domKey]}"/>`).join('');
+    const first = vals[0], last = vals[vals.length - 1];
+    const arrow = last > first ? '상승' : last < first ? '하강' : '보합';
+    traj = `<div class="fl-card">
+        <div class="fl-cap">시계열 플로우 <span class="fl-sub">${SIG_KO[domKey]} 신호 · 최근 ${vals.length}회</span></div>
+        <svg viewBox="0 0 ${w} ${h}" class="sketch fl-traj">
+          <g filter="url(#flRough)">
+            <path d="${line}" fill="none" stroke="${SIG_COLOR[domKey]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            ${dots}
+          </g>
+        </svg>
+        <div class="fl-flow-note">흐름: <b style="color:${SIG_COLOR[domKey]}">${arrow}</b> · 누적 ${flow.length}회</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="zflow-hd">
+      <span class="zflow-title">트렌드 플로우 분석</span>
+      <span class="zflow-sub">4대 신호·검색·뉴스의 흐름을 누적 분석</span>
+    </div>
+    <svg width="0" height="0" style="position:absolute"><defs>
+      <filter id="flRough"><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/></filter>
+    </defs></svg>
+    <div class="zflow-grid">${donut}${momentum}${traj}</div>`;
+}
+
 async function collectBeautyRSS() {
   /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
   const feeds = [
@@ -1023,11 +1172,11 @@ ${sigSummary}${dlDetail}${newsDetail}${climateDetail}
     if (!r.ok) {
       const errMsg = data?.error?.message || `HTTP ${r.status}`;
       if (r.status === 429 && (errMsg.includes('limit: 0') || errMsg.includes('free_tier'))) {
-        showToast('⚠ Gemini 쿼터 0 오류 — API 설정에서 모델을 gemini-2.5-flash-lite로 변경하세요 (AQ키 무료 지원)');
+        showToast('Gemini 쿼터 0 오류 — API 설정에서 모델을 gemini-2.5-flash-lite로 변경하세요 (AQ키 무료 지원)');
       } else if (r.status === 429) {
-        showToast(`⚠ Gemini 요청 한도 초과 — 잠시 후 재시도하세요`);
+        showToast(`Gemini 요청 한도 초과 — 잠시 후 재시도하세요`);
       } else {
-        showToast(`⚠ Gemini 오류 (${r.status}) — 샘플 예측 사용`);
+        showToast(`Gemini 오류 (${r.status}) — 샘플 예측 사용`);
       }
       throw new Error(errMsg);
     }
@@ -1097,11 +1246,11 @@ function resetZ2() {
   document.getElementById('z2subtitle').textContent = '— 위에서 예측 항목을 클릭하세요';
   document.getElementById('z2body').innerHTML = `
     <div class="z2-placeholder">
-      ✅ TRACK A — 기등록 업체<br>
+      TRACK A — 기등록 업체<br>
       <span style="font-size:10px">예측 항목 선택 시 내부 DB에서 즉시 조회</span>
     </div>
     <div class="z2-placeholder-r">
-      🔍 TRACK B — 신규처 후보<br>
+      TRACK B — 신규처 후보<br>
       <span style="font-size:10px">KIPRIS·뉴스·식약처 자동 탐색 후 표시</span>
     </div>`;
 }
@@ -1422,14 +1571,14 @@ function renderZ2(pkgType = '') {
   el.innerHTML = `
     <div>
       <div class="track-hd track-a-hd">
-        <div class="track-label">✅ TRACK A — 기등록 업체<span class="track-cnt ta-cnt">${MATCH_RESULTS.trackA.length}곳</span></div>
+        <div class="track-label">TRACK A — 기등록 업체<span class="track-cnt ta-cnt">${MATCH_RESULTS.trackA.length}곳</span></div>
         <span class="track-sub ta-sub">즉시 접촉 가능</span>
       </div>
       ${aHtml}
     </div>
     <div>
       <div class="track-hd track-b-hd">
-        <div class="track-label" style="color:var(--acc)">🔍 TRACK B — 신규처 후보<span class="track-cnt tb-cnt">${MATCH_RESULTS.trackB.length}곳</span></div>
+        <div class="track-label" style="color:var(--acc)">TRACK B — 신규처 후보<span class="track-cnt tb-cnt">${MATCH_RESULTS.trackB.length}곳</span></div>
         <span class="track-sub tb-sub">등록평가 리스트 추가 가능</span>
       </div>
       ${bHtml}
@@ -1486,8 +1635,8 @@ function newCardHtml(c, idx) {
                    c.evidence_type === 'news'     ? 'ev-news'     :
                    c.evidence_type === 'mfds'     ? 'ev-mfds'     :
                    c.evidence_type === 'inferred' ? 'ev-inferred' : 'ev-search';
-  const evLabel = { patent:'📋 특허 근거', news:'📰 뉴스 근거', mfds:'🏛 식약처 근거',
-                    inferred:'🔮 추측 근거', search:'🔍 검색 근거' }[c.evidence_type] || '근거';
+  const evLabel = { patent:'특허 근거', news:'뉴스 근거', mfds:'식약처 근거',
+                    inferred:'추측 근거', search:'검색 근거' }[c.evidence_type] || '근거';
   /* 생산 관점 배지 — 생산중/생산이력/생산가능(추측) */
   const prod = c.production || (c.evidence_type === 'inferred' ? '생산가능(추측)' : '생산중');
   const prodCls = prod === '생산중' ? 'prod-now' : prod === '생산이력' ? 'prod-past' : 'prod-maybe';
@@ -1500,7 +1649,7 @@ function newCardHtml(c, idx) {
     </div>
     <div class="mc-meta">
       <span class="prod-badge ${prodCls}">${escHtml(prod)}</span>
-      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 🏛등록확인' : ''}
+      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 식약처 등록확인' : ''}
     </div>
     <div class="evbox">
       <div class="ev-type ${evTypeCls}">${evLabel}</div>
@@ -1509,7 +1658,7 @@ function newCardHtml(c, idx) {
     <div class="mc-actions">
       <button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>
       <button class="btn-mc btn-eval ${evalAdded ? 'added' : ''}" id="eval-btn-${idx}"
-        onclick="addToEvalList(${idx})">${evalAdded ? '✓ 추가됨' : '+ 등록평가 추가'}</button>
+        onclick="addToEvalList(${idx})">${evalAdded ? '추가됨' : '+ 등록평가 추가'}</button>
     </div>
   </div>`;
 }
@@ -1519,7 +1668,7 @@ function noTrackBHtml() {
   const kw = pred ? escHtml(pred.type.split(' ')[0]) : '화장품 제조';
   return `<div class="mcard">
     <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">
-      ${!K.naverID() ? '⚠ 네이버 API 키 미설정 — 키 설정 후 수집 실행하면 자동 탐색됩니다' : '뉴스·식약처 데이터에서 신규처 업체명을 확인하지 못했습니다'}
+      ${!K.naverID() ? '네이버 API 키 미설정 — 키 설정 후 수집 실행하면 자동 탐색됩니다' : '뉴스·식약처 데이터에서 신규처 업체명을 확인하지 못했습니다'}
     </div>
     <div class="search-hint">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">자동 탐색 경로 (재시도 시)</div>
@@ -1548,8 +1697,8 @@ function addToEvalList(idx) {
   list.push({ name, addedAt: new Date().toISOString(), fromModule: 'trend', ...c });
   ls('eval_pending', JSON.stringify(list));
   const btn = document.getElementById('eval-btn-' + idx);
-  if (btn) { btn.textContent = '✓ 추가됨'; btn.classList.add('added'); }
-  showToast(`✅ "${name}" 등록평가 리스트 추가 (TAB04 연동)`);
+  if (btn) { btn.textContent = '추가됨'; btn.classList.add('added'); }
+  showToast(`"${name}" 등록평가 리스트 추가 (TAB04 연동)`);
 }
 
 function saveCapa(code, type, val) {
@@ -1564,7 +1713,7 @@ async function collectAll() {
   /* API 키 현황 확인 */
   const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
   if (!hasAnyKey) {
-    showToast('⚠ API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
+    showToast('API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
   }
 
   /* 캐시 초기화 */
@@ -1607,8 +1756,9 @@ async function collectAll() {
   /* IMP-04: 보고서 자동 생성 */
   genReport();
 
-  btn.textContent = '🔄 전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
-  showToast('✅ 수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
+  recordTrendFlow(); renderTrendFlow();
+  btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
+  showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
 
 function updateStatusSummary() {
@@ -1683,7 +1833,7 @@ function genReport() {
 function copyReport() {
   const ta = document.getElementById('repText');
   if (!ta.value) genReport();
-  navigator.clipboard.writeText(ta.value).then(() => showToast('📋 보고서 복사 완료'));
+  navigator.clipboard.writeText(ta.value).then(() => showToast('보고서 복사 완료'));
 }
 
 /* ════ API 테스트 함수들 ════ */
@@ -1691,7 +1841,7 @@ async function testGemini() {
   const key = K.gemini();
   if (!key) { showToast('Gemini 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-gemini');
-  el.textContent = '⏳ 테스트 중...'; el.style.color = 'var(--ink3)';
+  el.textContent = '테스트 중...'; el.style.color = 'var(--ink3)';
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), 12000);
@@ -1709,32 +1859,32 @@ async function testGemini() {
       if (r.status === 429) {
         const isZeroQuota = errMsg.includes('limit: 0') || errMsg.includes('free_tier');
         el.innerHTML = isZeroQuota
-          ? `❌ 쿼터 0 오류 (429)\n\n해결:\n① 모델을 gemini-2.5-flash-lite 로 변경 (AQ키 무료 1,000건)\n② 또는 aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n③ 또는 Google Cloud Console에서 결제 계정 연결`
-          : `❌ 요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
+          ? `쿼터 0 오류 (429)\n\n해결:\n① 모델을 gemini-2.5-flash-lite 로 변경 (AQ키 무료 1,000건)\n② 또는 aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n③ 또는 Google Cloud Console에서 결제 계정 연결`
+          : `요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
         el.style.color = 'var(--red)';
       } else if (r.status === 400) {
-        el.textContent = `❌ 잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트 (=, + 등 특수문자 인코딩 자동 처리)\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n④ Google Cloud Console → Generative Language API 활성화 확인\n\n원본 오류: ${errMsg}`;
+        el.textContent = `잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트 (=, + 등 특수문자 인코딩 자동 처리)\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n④ Google Cloud Console → Generative Language API 활성화 확인\n\n원본 오류: ${errMsg}`;
         el.style.color = 'var(--red)';
       } else if (r.status === 403) {
-        el.textContent = `❌ 접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
+        el.textContent = `접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
         el.style.color = 'var(--red)';
       } else {
-        el.textContent = `❌ 오류 (${r.status}): ${errMsg}`;
+        el.textContent = `오류 (${r.status}): ${errMsg}`;
         el.style.color = 'var(--red)';
       }
       return;
     }
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (reply) {
-      el.textContent = `✅ 연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
+      el.textContent = `연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
       el.style.color = 'var(--grn)';
-      setStatus('st-gemini', '✅ 확인됨', true);
+      setStatus('st-gemini', '확인됨', true);
     } else {
-      el.textContent = '⚠ 응답 형식 오류: ' + JSON.stringify(data).slice(0, 120);
+      el.textContent = '응답 형식 오류: ' + JSON.stringify(data).slice(0, 120);
       el.style.color = 'var(--yel)';
     }
   } catch (e) {
-    el.textContent = e.name === 'AbortError' ? '❌ 타임아웃 (12초 초과)' : '❌ 연결 실패: ' + e.message;
+    el.textContent = e.name === 'AbortError' ? '타임아웃 (12초 초과)' : '연결 실패: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
@@ -1747,7 +1897,7 @@ async function testPublic() {
 
   /* 진행 표시 */
   const prog = document.createElement('div');
-  prog.textContent = '⏳ 승인 API 3종 동시 테스트 중 (기상청 · 에어코리아 · 식약처)...';
+  prog.textContent = '승인 API 3종 동시 테스트 중 (기상청 · 에어코리아 · 식약처)...';
   el.appendChild(prog);
 
   /* ── API 1: 기상청 초단기실황 ── */
@@ -1781,7 +1931,8 @@ async function testPublic() {
   const addLine = (icon, label, detail, color) => {
     const d = document.createElement('div');
     d.style.cssText = `color:${color};margin-bottom:4px;font-size:10px;line-height:1.4`;
-    d.textContent = `${icon} ${label}: ${detail}`;
+    /* 상태는 색상으로 구분 — 이모지 대신 단색 점(●) 사용 */
+    d.textContent = `● ${label}: ${detail}`;
     el.appendChild(d);
   };
 
@@ -1828,7 +1979,7 @@ async function testPublic() {
     const why = d.code === 0
       ? '기상청 /1360000/ CORS 미지원 + 외부 프록시 IP 차단 (한국 정부 API 정책)'
       : diagMsg(d);
-    addLine('❌', '기상청 단기예보', why, 'var(--red)');
+    addLine('','기상청 단기예보', why, 'var(--red)');
     /* Open-Meteo 폴백 동작 여부 확인 */
     try {
       const ctrl2 = new AbortController();
@@ -1841,18 +1992,18 @@ async function testPublic() {
         const h = omJ?.current?.relative_humidity_2m;
         addLine('↩', 'Open-Meteo 폴백', `기온 ${t ?? '—'}℃  습도 ${h ?? '—'}%  (수집실행 시 자동 대체됨)`, 'var(--ink2,#666)');
       }
-    } catch { addLine('⚠', 'Open-Meteo 폴백', '연결 실패', 'var(--red)'); }
+    } catch { addLine('','Open-Meteo 폴백', '연결 실패', 'var(--red)'); }
   } else {
     try {
       const j = JSON.parse(wxRes);
       const rc = parseRC(j);
       if (rc !== '00') {
-        addLine('⚠', '기상청 단기예보', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+        addLine('','기상청 단기예보', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
       } else {
         const it = j?.response?.body?.items?.item || [];
         const temp = it.find(i => i.category === 'T1H')?.obsrValue ?? '—';
         const hum  = it.find(i => i.category === 'REH')?.obsrValue ?? '—';
-        addLine('✅', '기상청 단기예보', `기온 ${temp}℃  습도 ${hum}%  (서울 ${wxBase.time})`, 'var(--grn)');
+        addLine('','기상청 단기예보', `기온 ${temp}℃  습도 ${hum}%  (서울 ${wxBase.time})`, 'var(--grn)');
         anyOk = true;
       }
     } catch {
@@ -1860,56 +2011,56 @@ async function testPublic() {
       const xmlRc = wxRes.match(/returnReasonCode[^>]*>(\w+)|resultCode[^>]*>(\w+)/)?.[1];
       const xmlMsg = wxRes.match(/returnAuthMsg[^>]*>([^<]+)|resultMsg[^>]*>([^<]+)/)?.[1];
       if (xmlRc) {
-        addLine('⚠', '기상청 단기예보', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
+        addLine('','기상청 단기예보', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
       } else {
-        addLine('⚠', '기상청 단기예보', `응답 형식 오류: "${wxRes.slice(0,80)}"`, 'var(--red)');
+        addLine('','기상청 단기예보', `응답 형식 오류: "${wxRes.slice(0,80)}"`, 'var(--red)');
       }
     }
   }
 
   /* 결과 2: 에어코리아 */
   if (!aqRes) {
-    addLine('❌', '에어코리아 대기오염', '응답 없음', 'var(--red)');
+    addLine('','에어코리아 대기오염', '응답 없음', 'var(--red)');
   } else {
     try {
       const j = JSON.parse(aqRes);
       const rc = parseRC(j);
       if (rc !== '00') {
-        addLine('⚠', '에어코리아 대기오염', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+        addLine('','에어코리아 대기오염', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
       } else {
         const items = j?.response?.body?.items || [];
         const pm10 = items[0]?.pm10Value ?? '—';
         const pm25 = items[0]?.pm25Value ?? '—';
-        addLine('✅', '에어코리아 대기오염', `PM10 ${pm10}㎍/㎥  PM2.5 ${pm25}㎍/㎥  (서울)`, 'var(--grn)');
+        addLine('','에어코리아 대기오염', `PM10 ${pm10}㎍/㎥  PM2.5 ${pm25}㎍/㎥  (서울)`, 'var(--grn)');
         anyOk = true;
       }
-    } catch { addLine('⚠', '에어코리아 대기오염', `파싱 실패: ${aqRes.slice(0,60)}`, 'var(--red)'); }
+    } catch { addLine('','에어코리아 대기오염', `파싱 실패: ${aqRes.slice(0,60)}`, 'var(--red)'); }
   }
 
   /* 결과 3: 식약처 기능성화장품 */
   if (!mfdsRes) {
     const d = await diagProxy(mfdsUrl);
-    addLine('❌', '식약처 기능성화장품', diagMsg(d), 'var(--red)');
+    addLine('','식약처 기능성화장품', diagMsg(d), 'var(--red)');
   } else {
     try {
       const j = JSON.parse(mfdsRes);
       const rc = parseRC(j);
       if (rc && rc !== '00') {
-        addLine('⚠', '식약처 기능성화장품', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+        addLine('','식약처 기능성화장품', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
       } else {
         const items = j?.response?.body?.items?.item || j?.body?.items?.item || j?.response?.body?.items || [];
         const cnt = Array.isArray(items) ? items.length : (items ? 1 : 0);
         const total = j?.response?.body?.totalCount || j?.body?.totalCount || '—';
-        addLine('✅', '식약처 기능성화장품', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
+        addLine('','식약처 기능성화장품', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
         anyOk = true;
       }
     } catch {
       const xmlRc = mfdsRes.match(/returnReasonCode[^>]*>(\w+)|resultCode[^>]*>(\w+)/)?.[1];
       const xmlMsg = mfdsRes.match(/returnAuthMsg[^>]*>([^<]+)|resultMsg[^>]*>([^<]+)/)?.[1];
       if (xmlRc) {
-        addLine('⚠', '식약처 기능성화장품', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
+        addLine('','식약처 기능성화장품', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
       } else {
-        addLine('⚠', '식약처 기능성화장품', `응답 형식 오류: "${mfdsRes.slice(0,80)}"`, 'var(--red)');
+        addLine('','식약처 기능성화장품', `응답 형식 오류: "${mfdsRes.slice(0,80)}"`, 'var(--red)');
       }
     }
   }
@@ -1920,39 +2071,39 @@ async function testPublic() {
   [['기상청', wxUrl], ['에어코리아', aqUrl], ['식약처', mfdsUrl]].forEach(([lbl, u]) => {
     const b = document.createElement('button');
     b.className = 'ap-btn ap-test'; b.style.flex = '1';
-    b.textContent = `📋 ${lbl} URL`;
+    b.textContent = `${lbl} URL`;
     b.onclick = () => navigator.clipboard.writeText(u).then(() => showToast(`${lbl} URL 복사됨`));
     btnDiv.appendChild(b);
   });
   el.appendChild(btnDiv);
 
-  if (anyOk) setStatus('st-public', '✅ 확인됨', true);
+  if (anyOk) setStatus('st-public', '확인됨', true);
 }
 
 async function testNaver() {
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid || !nsec) { showToast('네이버 Client ID와 Secret을 모두 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-naver');
-  el.textContent = '⏳ 네이버 뉴스 API 테스트 중 (프록시 4종 순차 시도)...'; el.style.color = 'var(--ink3)';
+  el.textContent = '네이버 뉴스 API 테스트 중 (프록시 4종 순차 시도)...'; el.style.color = 'var(--ink3)';
   const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`;
   const j = await fetchNaverAPI(targetUrl, nid, nsec, 14000);
   if (!j) {
     el.innerHTML = '';
     const msg = document.createElement('div');
     msg.style.color = 'var(--red)';
-    msg.textContent = '❌ 프록시 4종 모두 실패\n\n가능한 원인:\n① 사내망·방화벽이 CORS 프록시 도메인을 차단 (모바일로 재시도)\n② 네트워크 일시 불가 — 수분 후 재시도\n\n※ 기능은 유지됩니다 — 뷰티 RSS(화장품신문 등)로 대체 수집됩니다';
+    msg.textContent = '프록시 4종 모두 실패\n\n가능한 원인:\n① 사내망·방화벽이 CORS 프록시 도메인을 차단 (모바일로 재시도)\n② 네트워크 일시 불가 — 수분 후 재시도\n\n※ 기능은 유지됩니다 — 뷰티 RSS(화장품신문 등)로 대체 수집됩니다';
     el.appendChild(msg);
     el.style.color = 'inherit'; return;
   }
   if (j._error) {
     if (j._error === 401) {
-      el.textContent = '❌ HTTP 401: Client ID 또는 Secret 오류\nAPI 키를 다시 확인 후 저장하세요';
+      el.textContent = 'HTTP 401: Client ID 또는 Secret 오류\nAPI 키를 다시 확인 후 저장하세요';
     } else if (j._error === 403) {
       el.innerHTML = '';
       const msg = document.createElement('div');
       msg.style.color = 'var(--red)';
       msg.textContent =
-        '❌ HTTP 403: 등록된 도메인에서만 호출 가능\n\n' +
+        'HTTP 403: 등록된 도메인에서만 호출 가능\n\n' +
         '도메인 등록이 완료된 경우에도 사내망에서 발생하는 원인:\n' +
         '• 사내 프록시/방화벽이 Referer 헤더를 삭제 → 네이버가 미등록 도메인으로 판단\n' +
         '• 사내망이 CORS 프록시 서버 차단\n\n' +
@@ -1962,22 +2113,22 @@ async function testNaver() {
         '③ 또는 URL 제한을 제거하고 IP 제한만 사용';
       el.appendChild(msg);
     } else {
-      el.textContent = `❌ HTTP ${j._error}: ${j._body?.slice(0, 80) || ''}`;
+      el.textContent = `HTTP ${j._error}: ${j._body?.slice(0, 80) || ''}`;
     }
     el.style.color = 'var(--red)'; return;
   }
   const total = j.total ?? 0;
   const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
-  el.textContent = `✅ 네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+  el.textContent = `네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
   el.style.color = 'var(--grn)';
-  setStatus('st-naver', '✅ 확인됨', true);
+  setStatus('st-naver', '확인됨', true);
 }
 
 async function testEcos() {
   const key = K.ecos();
   if (!key) { showToast('ECOS 키를 먼저 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-ecos');
-  el.textContent = '⏳ ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
+  el.textContent = 'ECOS (한국은행) 연결 테스트 중...'; el.style.color = 'var(--ink3)';
 
   /* Step 1: StatisticTableList로 키 유효성 먼저 확인 (항목코드 불필요)
      ※ 서비스명 주의 — 'StatisticList'는 존재하지 않음 (과거 버그 원인) */
@@ -1995,20 +2146,20 @@ async function testEcos() {
         if (dr.ok) { const dj = await dr.json(); diagCode = dj?.status?.http_code || 0; }
       } catch {}
       el.textContent = diagCode >= 500
-        ? `❌ ECOS 서버 오류 (HTTP ${diagCode})\necos.bok.or.kr 서버가 일시적으로 불가합니다.\n잠시 후 재시도하세요.`
-        : `❌ ECOS 응답 없음\n\n점검 순서:\n① ECOS 키는 한국은행(ecos.bok.or.kr) 발급 키입니다 — data.go.kr 키와 다름\n② ecos.bok.or.kr → 마이페이지 → 인증키 발급내역에서 키 상태 확인\n③ 프록시 서버 일시 불가 → 수분 후 재시도\n④ ECOS API는 해외 IP(프록시 포함) 접근이 차단될 수 있습니다`;
+        ? `ECOS 서버 오류 (HTTP ${diagCode})\necos.bok.or.kr 서버가 일시적으로 불가합니다.\n잠시 후 재시도하세요.`
+        : `ECOS 응답 없음\n\n점검 순서:\n① ECOS 키는 한국은행(ecos.bok.or.kr) 발급 키입니다 — data.go.kr 키와 다름\n② ecos.bok.or.kr → 마이페이지 → 인증키 발급내역에서 키 상태 확인\n③ 프록시 서버 일시 불가 → 수분 후 재시도\n④ ECOS API는 해외 IP(프록시 포함) 접근이 차단될 수 있습니다`;
       el.style.color = 'var(--red)'; return;
     }
     let j1;
     try { j1 = JSON.parse(t1); }
-    catch { el.textContent = `❌ 파싱 실패\n응답: ${t1.slice(0, 150)}`; el.style.color = 'var(--red)'; return; }
+    catch { el.textContent = `파싱 실패\n응답: ${t1.slice(0, 150)}`; el.style.color = 'var(--red)'; return; }
     if (j1?.RESULT?.CODE && j1.RESULT.CODE !== 'INFO-000') {
       const codeMap = {
         'ERROR-300': '인증키 오류 — ecos.bok.or.kr 에서 키 재확인',
         'ERROR-200': 'API 요청 형식 오류',
         'ERROR-100': '필수 파라미터 누락',
       };
-      el.textContent = `❌ ECOS 키 오류: ${j1.RESULT.CODE}\n${codeMap[j1.RESULT.CODE] || j1.RESULT.MESSAGE}\n\necos.bok.or.kr 접속 → 마이페이지 → API 키 확인`;
+      el.textContent = `ECOS 키 오류: ${j1.RESULT.CODE}\n${codeMap[j1.RESULT.CODE] || j1.RESULT.MESSAGE}\n\necos.bok.or.kr 접속 → 마이페이지 → API 키 확인`;
       el.style.color = 'var(--red)'; return;
     }
 
@@ -2029,11 +2180,11 @@ async function testEcos() {
         }
       } catch {}
     }
-    el.textContent = `✅ ECOS 키 유효 — 연결 성공\n${cpiLines}`;
+    el.textContent = `ECOS 키 유효 — 연결 성공\n${cpiLines}`;
     el.style.color = 'var(--grn)';
-    setStatus('st-ecos', '✅ 확인됨', true);
+    setStatus('st-ecos', '확인됨', true);
   } catch (e) {
-    el.textContent = '❌ 오류: ' + e.message;
+    el.textContent = '오류: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }
@@ -2044,11 +2195,11 @@ function showCollectedData() {
   const sigLabels = { climate:'기후·환경', society:'사회·인구', economy:'경제·리테일', culture:'문화·팝트렌드' };
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) {
-      lines.push(`[${sigLabels[k]}] 점수: ${(v.score ?? 0).toFixed(1)}/5${v._sample ? ' ⚠샘플' : ' ✅실데이터'}`);
+      lines.push(`[${sigLabels[k]}] 점수: ${(v.score ?? 0).toFixed(1)}/5${v._sample ? ' [샘플]' : ' [실데이터]'}`);
       lines.push(`  해석: ${v.interpret}`);
       lines.push(`  칩: ${(v.chips || []).join(' | ')}`);
     } else {
-      lines.push(`[${sigLabels[k]}] ⬜ 미수집`);
+      lines.push(`[${sigLabels[k]}] 미수집`);
     }
     lines.push('');
   });
@@ -2128,9 +2279,11 @@ function init() {
           PREDICTIONS = p;
           renderZ0();
           renderZ1();
+          renderTrendFlow();
           showToast('캐시 데이터 로드됨 (24시간 이내)');
         } else {
           renderZ0();
+          renderTrendFlow();
         }
       }
     } catch {}
