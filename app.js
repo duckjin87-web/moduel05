@@ -678,7 +678,8 @@ async function collectEconomy() {
 }
 
 /* 네이버 DataLab 검색어트렌드 — 최근 3개월 주간 데이터로 카테고리별 상승률 계산
-   요청당 키워드그룹 최대 5개 제한 → 10개 카테고리를 2회 병렬 호출 */
+   요청당 키워드그룹 최대 5개 제한 → 15개 카테고리를 3회 병렬 호출
+   ※ 스킨케어 편중 방지 — 색조·향수·맨즈그루밍·바디케어 카테고리(3번째 그룹) 포함, 전 성별 트렌드 커버 */
 const DATALAB_GROUPS = [
   [ /* 성분·효능 트렌드 */
     { groupName: '선케어',      keywords: ['선세럼', '선스틱', '선크림'] },
@@ -694,14 +695,32 @@ const DATALAB_GROUPS = [
     { groupName: '남성뷰티',  keywords: ['남성 화장품', '올인원 로션'] },
     { groupName: '두피·헤어', keywords: ['두피케어', '헤어세럼'] },
   ],
+  [ /* 색조·향수·맨즈·바디 트렌드 — 전 성별 카테고리 확장 */
+    { groupName: '색조·메이크업', keywords: ['쿠션', '틴트', '립밤'] },
+    { groupName: '향수·퍼퓸',    keywords: ['향수', '미스트'] },
+    { groupName: '맨즈그루밍',   keywords: ['쉐이빙', '면도크림'] },
+    { groupName: '바디케어',     keywords: ['바디로션', '바디워시'] },
+    { groupName: '헤어스타일링', keywords: ['헤어왁스', '헤어에센스'] },
+  ],
 ];
 
-/* 뷰티 트렌드 키워드 — 성분·제형·패키징·타깃 전반 (RSS·뉴스 언급빈도 분석 공용) */
+/* 뷰티 트렌드 키워드 — 성분·제형·패키징·타깃 전반 (RSS·뉴스 언급빈도 분석 공용)
+   ※ 스킨케어 편중 방지 — 색조·향수·맨즈그루밍·바디케어 키워드 포함, 전 성별·카테고리 커버 */
 const TREND_KEYWORDS = [
   '에어리스','비건','클린뷰티','선세럼','선스틱','선케어','앰플','마이크로바이옴','PDRN','엑소좀',
   '펩타이드','콜라겐','레티놀','시카','판테놀','세라마이드','토너패드','패드','멀티밤','스틱',
   '클렌징','리필','수분크림','쿨링','두피','남성','쿠션',
+  '메이크업','틴트','립밤','향수','쉐이빙','바디케어','헤어왁스',
 ];
+
+/* 네이버 데이터랩(검색트렌드/쇼핑인사이트) 호출 실패 사유 — 트렌드 모멘텀 패널·수집결과 보기에 표시 */
+const NAVER_ERR_MSG = {
+  401: '네이버 API 인증 실패(401) — Client ID/Secret 확인 필요',
+  403: '네이버 데이터랩 권한 없음(403) — 애플리케이션에 검색어트렌드·쇼핑인사이트 API 사용 등록 필요',
+  network: '네이버 API 응답 없음 — 프록시/네트워크 상태 확인 필요',
+  format: '네이버 API 응답 형식 오류',
+  empty: '해당 기간 데이터 없음',
+};
 
 /* 뷰티 섹터 뉴스 — 단일 키워드(에어리스) 고정 대신 전체 유형 스펙트럼 검색 후
    언급빈도 분석으로 "자주 언급/급상승" 트렌드 키워드 도출 */
@@ -738,8 +757,11 @@ async function collectDataLab(nid, nsec) {
   /* 기간 전반 평균 대비 후반 평균 → 상승률(%) */
   const avg = arr => arr.reduce((s, x) => s + (x.ratio || 0), 0) / (arr.length || 1);
   const trends = [];
+  let err = null;
   for (const j of resps) {
-    if (!j || j._error || !Array.isArray(j.results)) continue;
+    if (j && j._error) { err = j._error; continue; }
+    if (!j) { if (typeof err !== 'number') err = 'network'; continue; }
+    if (!Array.isArray(j.results)) { if (typeof err !== 'number') err = 'format'; continue; }
     j.results.forEach(g => {
       const d = g.data || [];
       if (d.length < 4) return;
@@ -750,7 +772,7 @@ async function collectDataLab(nid, nsec) {
     });
   }
   trends.sort((a, b) => b.delta - a.delta);
-  return trends.length ? trends : null;
+  return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
 }
 
 /* ── 실판매(구매의도) 신호 — 네이버 DataLab 쇼핑인사이트 ──────────────
@@ -760,21 +782,25 @@ async function collectDataLab(nid, nsec) {
    ※ 올리브영·다이소 직접 랭킹은 공개 API 부재·JS 렌더링·ToS 문제로
      안정적 실데이터 확보 불가 → 제외. 쇼핑인사이트는 기존 네이버 키로
      실데이터 확보 가능하므로 이를 실판매 모멘텀 신호로 채택.
-   ※ 키에 쇼핑인사이트 권한이 없으면 _error 반환 → null 처리(샘플 미생성). */
+   ※ 키에 쇼핑인사이트 권한이 없으면 _error 반환 → null 처리(샘플 미생성).
+   ※ 스킨케어 편중 방지 — 색조·향수·맨즈그루밍·바디케어 키워드(3번째 그룹) 포함, 전 성별 커버. */
 const COSMETIC_CATEGORY = '50000002';   /* 네이버쇼핑 화장품/미용 */
 const SHOP_KEYWORD_GROUPS = [
   ['선세럼', '토너패드', '멀티밤', '앰플', '비건 화장품'],
   ['시카크림', '레티놀', '콜라겐', '클렌징밤', '수분크림'],
+  ['쿠션', '향수', '틴트', '면도크림', '바디로션'],
 ];
 async function collectSalesTrend(nid, nsec) {
   const end = new Date(); end.setDate(end.getDate() - 1);
   const start = new Date(end); start.setMonth(start.getMonth() - 3);
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  /* device/gender/ages는 생략 시 네이버 API가 "전체(전 기기·성별·연령)" 데이터를 반환.
+     빈 문자열/빈 배열로 명시하면 일부 환경에서 잘못된 파라미터로 처리되어
+     400 오류 → 모든 프록시 실패 → null 반환되는 문제가 있어 필드 자체를 생략. */
   const mkBody = kws => JSON.stringify({
     startDate: fmt(start), endDate: fmt(end), timeUnit: 'week',
     category: COSMETIC_CATEGORY,
     keyword: kws.map(k => ({ name: k, param: [k] })),
-    device: '', gender: '', ages: [],
   });
   const resps = await Promise.all(SHOP_KEYWORD_GROUPS.map(kws =>
     fetchNaverAPI('https://openapi.naver.com/v1/datalab/shopping/category/keywords', nid, nsec, 10000,
@@ -782,10 +808,11 @@ async function collectSalesTrend(nid, nsec) {
   ));
   const avg = arr => arr.reduce((s, x) => s + (x.ratio || 0), 0) / (arr.length || 1);
   const trends = [];
-  let anyOk = false;
+  let err = null;
   for (const j of resps) {
-    if (!j || j._error || !Array.isArray(j.results)) continue;
-    anyOk = true;
+    if (j && j._error) { err = j._error; continue; }
+    if (!j) { if (typeof err !== 'number') err = 'network'; continue; }
+    if (!Array.isArray(j.results)) { if (typeof err !== 'number') err = 'format'; continue; }
     j.results.forEach(g => {
       const d = g.data || [];
       if (d.length < 4) return;
@@ -797,7 +824,7 @@ async function collectSalesTrend(nid, nsec) {
   }
   trends.sort((a, b) => b.delta - a.delta);
   /* 실데이터를 못 받았으면 null — 샘플/추정값을 만들지 않음 */
-  return anyOk && trends.length ? trends : null;
+  return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
 }
 
 async function collectCulture() {
@@ -809,6 +836,9 @@ async function collectCulture() {
     const rssData = await collectBeautyRSS();
     window._rssText = rssData.text || '';
     window._salesTrends = null;   /* 쇼핑인사이트는 네이버 키 필요 */
+    window._dlTrends = null;
+    window._salesErr = null;
+    window._dlErr = null;
     setSdot('sd-news', 'off');
     if (rssData.count > 0) {
       setSdot('sd-datalab', 'ok');
@@ -827,17 +857,19 @@ async function collectCulture() {
     return;
   }
   /* 뉴스·DataLab(검색)·쇼핑인사이트(구매의도)·RSS 병렬 수집 */
-  const [newsTrends, dlTrends, salesTrends, rssData] = await Promise.all([
+  const [newsTrends, dlResult, salesResult, rssData] = await Promise.all([
     collectNewsTrends(nid, nsec),
     collectDataLab(nid, nsec),
     collectSalesTrend(nid, nsec),
     collectBeautyRSS(),
   ]);
   window._rssText = rssData.text || '';
-  window._dlTrends = dlTrends || null;   /* Gemini 프롬프트·보고서에서 활용 */
-  window._salesTrends = salesTrends || null;   /* 실판매(구매의도) 모멘텀 — 실데이터 없으면 null */
+  window._dlTrends = dlResult.trends;   /* Gemini 프롬프트·보고서·트렌드 모멘텀에서 활용 */
+  window._dlErr = dlResult.err;
+  window._salesTrends = salesResult.trends;   /* 실판매(구매의도) 모멘텀 — 실데이터 없으면 null */
+  window._salesErr = salesResult.err;
   setSdot('sd-news', newsTrends.ok ? 'ok' : 'warn');
-  setSdot('sd-datalab', (dlTrends || rssData.count > 0) ? 'ok' : 'warn');
+  setSdot('sd-datalab', (dlResult.trends || rssData.count > 0) ? 'ok' : 'warn');
 
   /* 뉴스 + RSS 키워드 언급빈도 합산 → "자주 언급" 트렌드 (단일 키워드 편향 제거) */
   const combinedKw = {};
@@ -847,8 +879,8 @@ async function collectCulture() {
   window._newsTrends = topMentioned.length ? topMentioned.map(([name,count])=>({name,count})) : null;
 
   const totalNews = (newsTrends.total || 0) + rssData.count;
-  const top = dlTrends?.[0];
-  const sTop = salesTrends?.[0];
+  const top = dlResult.trends?.[0];
+  const sTop = salesResult.trends?.[0];
   const dlChip = top ? `검색 ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
   const salesChip = sTop ? `구매 ${sTop.name} ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : null;
   const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]})` : null;
@@ -1027,13 +1059,17 @@ function renderTrendFlow() {
       </div>`;
     }).join('');
   };
-  /* 구매(쇼핑클릭)는 판매 선행 신호 — 있으면 최상단에 강조 */
+  /* 구매(쇼핑클릭)는 판매 선행 신호 — 있으면 최상단에 강조
+     데이터가 없을 때는 NAVER_ERR_MSG로 실패 사유(키 인증/권한/네트워크)를 구분 표시 */
   const salesBlock = sales.length
     ? `<div class="fl-seg">구매 모멘텀 <span class="fl-tag-lead">LEAD · 네이버쇼핑 클릭</span></div>${bars(sales, true)}`
-    : '';
+    : (window._salesErr ? `<div class="fl-empty">구매 모멘텀 — ${NAVER_ERR_MSG[window._salesErr] || '데이터 없음'}</div>` : '');
   const searchBlock = dl.length
     ? `<div class="fl-seg">검색 모멘텀 <span class="fl-sub">네이버 검색트렌드</span></div>${bars(dl, false)}`
-    : (sales.length ? '' : '<div class="fl-empty">검색·구매 트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>');
+    : (window._dlErr ? `<div class="fl-empty">검색 모멘텀 — ${NAVER_ERR_MSG[window._dlErr] || '데이터 없음'}</div>` : '');
+  const noNaverBlock = (!sales.length && !dl.length && !window._salesErr && !window._dlErr)
+    ? '<div class="fl-empty">검색·구매 트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>'
+    : '';
   const newsChips = news.length
     ? `<div class="fl-news">최다 언급 · ${news.map(n => `<span class="fl-nchip">${escHtml(n.name)} <b>${n.count}</b></span>`).join('')}</div>`
     : '';
@@ -1042,6 +1078,7 @@ function renderTrendFlow() {
       <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">구매·검색·뉴스</span></div>
       ${salesBlock}
       ${searchBlock}
+      ${noNaverBlock}
       ${newsChips}
     </div>`;
 
@@ -1226,7 +1263,8 @@ ${sigSummary}${salesDetail}${dlDetail}${newsDetail}${climateDetail}
 2. 제형이 아닌 패키징+충진 설비 관점에서 분석
 3. packaging 필드에 권장 패키징 형태를 구체적으로 기재 (예: "에어리스 펌프 30~50ml", "스틱 몰딩 15g", "소용량 앰플 2ml×7")
 4. 한국콜마·코스맥스·코스메카코리아 절대 언급 금지
-5. JSON만 출력 (설명 텍스트 없음)
+5. 스킨케어에 한정하지 말고 색조·향수·맨즈 그루밍·바디케어 등 전 카테고리·전 성별 트렌드를 균형있게 검토
+6. JSON만 출력 (설명 텍스트 없음)
 
 [필수 JSON 형식]
 {"predictions":[{"rank":1,"type":"정확한 화장품 유형명","packaging":"권장 패키징 형태","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
@@ -2289,6 +2327,13 @@ function showCollectedData() {
   lines.push(rss);
   if (window._salesTrends && window._salesTrends.length) {
     lines.push(`[구매 모멘텀·쇼핑클릭] ` + window._salesTrends.map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
+  } else if (window._salesErr) {
+    lines.push(`[구매 모멘텀] ${NAVER_ERR_MSG[window._salesErr] || window._salesErr}`);
+  }
+  if (window._dlTrends && window._dlTrends.length) {
+    lines.push(`[검색 모멘텀·DataLab] ` + window._dlTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · '));
+  } else if (window._dlErr) {
+    lines.push(`[검색 모멘텀] ${NAVER_ERR_MSG[window._dlErr] || window._dlErr}`);
   }
   if (window._newsTrends && window._newsTrends.length) {
     lines.push(`[뉴스 최다언급] ` + window._newsTrends.map(t => `${t.name}(${t.count})`).join(' · '));
