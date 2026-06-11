@@ -343,6 +343,14 @@ button { font-family: inherit; cursor: pointer; }
 .st-new  { background: #ffe8d8; color: #9a3818; }
 .st-pend { background: var(--bg2); color: var(--ink3); }
 .mc-meta { font-size: 10px; color: var(--ink3); margin-bottom: 5px; }
+/* 추측 후보 카드 — 점선 테두리로 확인 후보와 시각 구분 */
+.mcard-infer { background: repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(184,144,32,.04) 6px, rgba(184,144,32,.04) 12px); }
+.mcard-infer .mc-name::before { content: '🔮 '; }
+/* 생산 관점 배지 */
+.prod-badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-right: 4px; }
+.prod-now   { background: #d4f0e0; color: #2a7a50; }
+.prod-past  { background: #e6ecf5; color: #3a5a8f; }
+.prod-maybe { background: #fbf0d2; color: #8a6a10; }
 .mc-certs { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; }
 .cert { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg2); color: var(--ink2); border: .5px solid var(--bg3); }
 .cert.cgmp  { background: #dbeafe; color: #2a4a9f; border-color: #bfdbfe; }
@@ -355,6 +363,7 @@ button { font-family: inherit; cursor: pointer; }
 .ev-patent { color: var(--blue); }
 .ev-news   { color: var(--acc); }
 .ev-mfds   { color: var(--teal); }
+.ev-inferred { color: var(--yel); }
 .ev-search { color: var(--ink3); }
 .ev-txt  { font-size: 10px; color: var(--ink2); line-height: 1.5; }
 .ev-link { font-size: 9px; color: var(--blue2); display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; cursor: pointer; }

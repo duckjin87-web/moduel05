@@ -1234,9 +1234,14 @@ async function findNewManufacturers(productType, tech) {
   /* 패키징 키워드 — 충진·성형 설비 관점 검색어로 탐색 폭 확대 */
   const pkgKw = (currentPkgType.match(/에어리스|스틱|튜브|파우치|앰플|패드|쿠션|펌프/) || [])[0] || '';
 
-  /* ── ① 수집: 뉴스(제품·패키징 관점) + 식약처 품목 + 식약처 제조업 등록목록 병렬 ── */
-  const queries = [kw + ' OEM 제조', kw + ' 화장품 ODM'];
-  if (pkgKw && !kw.includes(pkgKw)) queries.push(pkgKw + ' 충진 OEM');
+  /* ── ① 수집: 뉴스(3관점) + 식약처 품목 + 식약처 제조업 등록목록 병렬 ──
+     생산하는(현재)·생산했던(이력)·생산가능(설비/제형 관점)을 모두 포괄하도록 쿼리 확장 */
+  const queries = [
+    kw + ' OEM',          /* 생산중 — 현재 수주·생산 */
+    kw + ' 제조사 출시',   /* 생산이력 — 출시 기사에 제조사 등장(과거·현재) */
+  ];
+  if (pkgKw && !kw.includes(pkgKw)) queries.push(pkgKw + ' 충진 OEM');  /* 생산가능 — 동일 충진설비 보유사 */
+  else queries.push(kw + ' ODM 제조');
   const naverPromises = (nid && nsec)
     ? queries.map(q => {
         /* sort=sim(관련도) — 최신순보다 OEM 수주·설비 기사 적중률 높음 */
@@ -1275,20 +1280,31 @@ async function findNewManufacturers(productType, tech) {
 
   /* ── ② 추출: Gemini 우선 → 실패·키없음 시 업체명 패턴 추출 폴백 ── */
   if (gkey && allText.trim()) {
-    const prompt = `아래 텍스트에서 "${productType}" 제품을 실제로 생산하거나 생산 가능한 국내 화장품 OEM/ODM 제조업체를 찾아주세요.
-패키징·충진 설비 관점(${currentPkgType || '특수 패키징'})에서 적합한 업체를 우선하세요.
+    const prompt = `아래 텍스트에서 "${productType}" 제품과 관련된 국내 화장품 OEM/ODM 제조업체를 "세 가지 생산 관점"에서 모두 찾아주세요.
+패키징·충진 설비 관점(${currentPkgType || '특수 패키징'})을 핵심 기준으로 삼으세요.
+추측되는 업체도 반드시 포함하되, 확인된 업체와 근거를 명확히 구분하세요.
 
 [검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS 통합]
 ${allText}
 
+[3관점 분류 — production 필드]
+1. "생산중"  : 현재 이 제품(또는 동일 유형)을 생산 중인 정황이 텍스트에 있는 업체
+2. "생산이력": 과거 이 제품/유사 제품을 생산·출시한 이력이 텍스트에 있는 업체
+3. "생산가능(추측)": 직접 언급은 없으나 ▲동일 충진/성형 설비 ▲동일 제형 취급 ▲유사 제품 포트폴리오로 보아 생산 가능하다고 추측되는 업체
+
+[근거 등급 — evidence_type 필드]
+- "mfds" : 식약처/제조업 등록 등 공적 근거가 텍스트에 있음
+- "news" : 뉴스·RSS에 생산/수주 정황이 직접 언급됨
+- "inferred" : 추측(생산가능). 이 경우 evidence_detail을 반드시 "추측: …(추측근거) …이므로 생산 가능"으로 작성
+
 [규칙]
 - 한국콜마·코스맥스·코스메카코리아 절대 제외
-- 텍스트에 실제 언급된 업체만 포함 (브랜드사가 아닌 제조사 우선)
-- evidence_detail에는 텍스트의 어떤 내용이 근거인지 1문장으로 기재
-- 추측 금지. 확인된 업체가 없으면 빈 배열 반환
+- 생산중/생산이력은 텍스트에 실제 언급된 업체만, 브랜드사가 아닌 제조사 우선
+- 생산가능(추측)은 추측이어도 포함하되 evidence_type을 "inferred"로, 근거를 추측임이 드러나게 1문장 명시
+- evidence_detail에는 텍스트의 어떤 내용이 근거인지 구체적으로 기재
 
 JSON만 출력:
-{"companies":[{"name":"업체명","evidence_type":"news|mfds","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
+{"companies":[{"name":"업체명","evidence_type":"mfds|news|inferred","production":"생산중|생산이력|생산가능(추측)","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 15000);
@@ -1306,29 +1322,35 @@ JSON만 출력:
     } catch {}
   }
   if (!results.length && allText.trim()) {
-    /* Gemini 없이도 동작 — 패턴 추출 (확인 필요 표시) */
+    /* Gemini 없이도 동작 — 패턴 추출(업체명만 감지). 생산 여부 미확인 → 추측 후보로 표기 */
     extractCompanyNames(allText).slice(0, 6).forEach(n => {
-      results.push({ name: n, evidence_type: 'news', evidence_detail: '뉴스·RSS 텍스트에서 업체명 감지 — 생산품목 직접 확인 필요', region: '' });
+      results.push({ name: n, evidence_type: 'inferred', production: '생산가능(추측)',
+        evidence_detail: '추측: "' + kw + '" OEM·제조 관련 뉴스/RSS 텍스트에서 업체명이 감지됨 — 생산품목 직접 확인 필요', region: '' });
     });
   }
 
-  /* ── ③ 식약처 화장품제조업 등록 교차검증 — 등록 확인 시 근거 격상 + 지역 보강 ── */
+  /* ── ③ 식약처 화장품제조업 등록 교차검증 ──
+     등록 확인 시: 업체 실재·제조업 등록은 격상(mfds)하되, "이 제품 생산 여부"는 별개이므로
+     production(생산중/이력/추측)은 그대로 유지 → 추측 업체도 "등록 확인된 추측"으로 신뢰도만 보강 */
   results.forEach(c => {
+    if (!c.production) c.production = c.evidence_type === 'inferred' ? '생산가능(추측)' : '생산중';
     const cn = normCompanyName(c.name);
     const hit = gmpList.find(g => {
       const gn = normCompanyName(g.name);
       return gn && cn && (gn.includes(cn) || cn.includes(gn));
     });
     if (hit) {
-      c.evidence_type = 'mfds';
+      /* 추측 후보는 evidence_type을 inferred로 두되 등록 확인 사실을 근거에 추가 */
+      if (c.evidence_type !== 'inferred') c.evidence_type = 'mfds';
+      c.gmpConfirmed = true;
       c.evidence_detail = `✓ 식약처 화장품제조업 등록 확인${hit.addr ? ' (' + hit.addr.split(' ').slice(0, 2).join(' ') + ')' : ''} · ${c.evidence_detail || ''}`;
       if (!c.region && hit.addr) c.region = hit.addr.split(' ')[0];
     }
   });
 
-  /* ── ④ 대형3사·내부 DB 중복 제외 + 정규화 중복 제거, 상위 8곳 ── */
+  /* ── ④ 대형3사·내부 DB 중복 제외 + 정규화 중복 제거 ── */
   const seen = new Set();
-  return results.filter(c => {
+  const filtered = results.filter(c => {
     if (!c.name) return false;
     if (/콜마|코스맥스|코스메카/.test(c.name)) return false;
     const cn = normCompanyName(c.name);
@@ -1339,7 +1361,16 @@ JSON만 출력:
       return dn.includes(cn) || cn.includes(dn);
     });
     return !inDB;
-  }).slice(0, 8);
+  });
+  /* 근거 신뢰도 우선 정렬 — 확인(mfds>news) 업체가 추측에 밀려나지 않도록.
+     동급이면 생산중 > 생산이력 > 생산가능(추측) 순 */
+  const evRank = { mfds: 0, news: 1, inferred: 2 };
+  const prodRank = { '생산중': 0, '생산이력': 1, '생산가능(추측)': 2 };
+  filtered.sort((a, b) =>
+    (evRank[a.evidence_type] ?? 3) - (evRank[b.evidence_type] ?? 3)
+    || (prodRank[a.production] ?? 3) - (prodRank[b.production] ?? 3)
+  );
+  return filtered.slice(0, 10);
 }
 
 /* ════ 패키징 적합도 점수 ════ */
@@ -1451,17 +1482,26 @@ function mfrCardHtml(c, pkgType = '') {
 }
 
 function newCardHtml(c, idx) {
-  const evTypeCls = c.evidence_type === 'patent' ? 'ev-patent' :
-                   c.evidence_type === 'news'   ? 'ev-news'   :
-                   c.evidence_type === 'mfds'   ? 'ev-mfds'   : 'ev-search';
-  const evLabel = { patent:'📋 특허 근거', news:'📰 뉴스 근거', mfds:'🏛 식약처 근거', search:'🔍 검색 근거' }[c.evidence_type] || '근거';
+  const evTypeCls = c.evidence_type === 'patent'   ? 'ev-patent'   :
+                   c.evidence_type === 'news'     ? 'ev-news'     :
+                   c.evidence_type === 'mfds'     ? 'ev-mfds'     :
+                   c.evidence_type === 'inferred' ? 'ev-inferred' : 'ev-search';
+  const evLabel = { patent:'📋 특허 근거', news:'📰 뉴스 근거', mfds:'🏛 식약처 근거',
+                    inferred:'🔮 추측 근거', search:'🔍 검색 근거' }[c.evidence_type] || '근거';
+  /* 생산 관점 배지 — 생산중/생산이력/생산가능(추측) */
+  const prod = c.production || (c.evidence_type === 'inferred' ? '생산가능(추측)' : '생산중');
+  const prodCls = prod === '생산중' ? 'prod-now' : prod === '생산이력' ? 'prod-past' : 'prod-maybe';
+  const isInfer = c.evidence_type === 'inferred';
   const evalAdded = isInEvalList(c.name);
-  return `<div class="mcard">
+  return `<div class="mcard${isInfer ? ' mcard-infer' : ''}">
     <div class="mc-head">
       <div class="mc-name">${escHtml(c.name)}</div>
       <span class="mc-st st-new">신규처 후보</span>
     </div>
-    <div class="mc-meta">${escHtml(c.region || '지역 확인 필요')} · DB 미등록</div>
+    <div class="mc-meta">
+      <span class="prod-badge ${prodCls}">${escHtml(prod)}</span>
+      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 🏛등록확인' : ''}
+    </div>
     <div class="evbox">
       <div class="ev-type ${evTypeCls}">${evLabel}</div>
       <div class="ev-txt">${escHtml(c.evidence_detail || '근거 상세 없음')}</div>
@@ -1483,8 +1523,8 @@ function noTrackBHtml() {
     </div>
     <div class="search-hint">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">자동 탐색 경로 (재시도 시)</div>
-      <span class="skw">"${kw} OEM 제조" / "${kw} 화장품 ODM"</span> 네이버 뉴스 관련도순<br>
-      <span class="skw">패키징 키워드 + "충진 OEM"</span> 설비 관점 추가 탐색<br>
+      <span class="skw">"${kw} OEM"(생산중) / "${kw} 제조사 출시"(생산이력)</span><br>
+      <span class="skw">패키징 키워드 + "충진 OEM"</span> 생산가능(설비) 관점 추측 탐색<br>
       <span class="skw">식약처 품목정보 + 제조업 등록목록</span> 교차검증·지역 보강
     </div>
     <div class="search-hint" style="margin-top:6px">
@@ -1629,7 +1669,7 @@ function genReport() {
     MATCH_RESULTS.trackA.forEach(c => lines.push(`    • ${c.name} (${c.region}) 인증: ${(c.certs || []).join('/')}`));
     if (MATCH_RESULTS.trackB.length) {
       lines.push('  [TRACK B — 신규처 후보]');
-      MATCH_RESULTS.trackB.forEach(c => lines.push(`    • ${c.name} — ${c.evidence_detail || '근거 확인 필요'}`));
+      MATCH_RESULTS.trackB.forEach(c => lines.push(`    • [${c.production || '생산중'}] ${c.name} — ${c.evidence_detail || '근거 확인 필요'}`));
     }
   }
   lines.push('');
