@@ -501,30 +501,63 @@ async function collectClimate() {
     }
   }
 
-  /* ── Open-Meteo 폴백 (기상청 CORS 차단 시 자동 대체) ── */
-  if (temp === '—') {
-    wxSrc = 'Open-Meteo';
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 8000);
-      const omUrl = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
-        '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code' +
-        '&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=4';
-      const r = await fetch(omUrl, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (r.ok) {
-        const j = await r.json();
+  /* ── Open-Meteo 16일 예보 (항상 수집) ──────────────────────────
+     - 기상청 실패/키 없을 때 현재기온·습도·UV 폴백 데이터 제공
+     - 16일 예보 전반부(1~8일) vs 후반부(9~16일) 평균 최고기온으로 단기 추세(trend16) 산출 */
+  let trend16 = null, omTodayMax = null;
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    const omUrl = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
+      '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code' +
+      '&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=16';
+    const r = await fetch(omUrl, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) {
+      const j = await r.json();
+      const maxArr = j?.daily?.temperature_2m_max || [];
+      if (maxArr[0] !== undefined) omTodayMax = maxArr[0];
+      if (maxArr.length >= 16) {
+        const avg = arr => arr.reduce((s, x) => s + x, 0) / arr.length;
+        const w1 = avg(maxArr.slice(0, 8)), w2 = avg(maxArr.slice(8, 16));
+        trend16 = { week1: +w1.toFixed(1), week2: +w2.toFixed(1), delta: +(w2 - w1).toFixed(1) };
+      }
+      if (temp === '—') {
+        wxSrc = 'Open-Meteo';
         const c = j?.current || {};
         if (c.temperature_2m !== undefined) temp   = c.temperature_2m + '℃';
         if (c.relative_humidity_2m !== undefined) humid = c.relative_humidity_2m + '%';
         if (c.uv_index !== undefined) uv = c.uv_index;
-        /* 3일 후 최고기온 */
-        const maxArr = j?.daily?.temperature_2m_max || [];
         if (maxArr[3] !== undefined) midTempMax = maxArr[3];
+      }
+    }
+  } catch {}
+  setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
+
+  /* ── Open-Meteo Archive: 평년(작년 동기간 ±3일) 대비 오늘 최고기온 편차 ── */
+  let deviation = null;
+  if (omTodayMax !== null) {
+    try {
+      const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const start = new Date(today); start.setFullYear(start.getFullYear() - 1); start.setDate(start.getDate() - 3);
+      const end = new Date(today); end.setFullYear(end.getFullYear() - 1); end.setDate(end.getDate() + 3);
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000);
+      const histUrl = 'https://archive-api.open-meteo.com/v1/archive?latitude=37.5665&longitude=126.9780' +
+        `&start_date=${fmt(start)}&end_date=${fmt(end)}&daily=temperature_2m_max&timezone=Asia%2FSeoul`;
+      const r = await fetch(histUrl, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r.ok) {
+        const j = await r.json();
+        const arr = (j?.daily?.temperature_2m_max || []).filter(v => v !== null && v !== undefined);
+        if (arr.length) {
+          const normalAvg = arr.reduce((s, x) => s + x, 0) / arr.length;
+          deviation = +(omTodayMax - normalAvg).toFixed(1);
+        }
       }
     } catch {}
   }
-  setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
+  window._climateTrend = (trend16 || deviation !== null) ? { trend16, deviation } : null;
 
   /* ── 에어코리아 (PM10·PM25) ── CORS 허용, 직접 fetch 성공 (공공키 필요) */
   let pm10 = '—', pm25 = '—';
@@ -544,34 +577,53 @@ async function collectClimate() {
     setSdot('sd-air', pm10 !== '—' ? 'ok' : 'warn');
   }
 
-  const score = computeClimateScore(temp, pm10);
+  const score = computeClimateScore(temp, pm10, deviation, trend16);
   SIG_DATA.climate = {
     score,
     interpret: temp !== '—'
-      ? buildClimateInterp(temp, pm10)
+      ? buildClimateInterp(temp, pm10, deviation, trend16)
       : '기상 데이터 수집 실패 — 계절 기본값으로 분석',
     chips: [
       `기온 ${temp}`,
       pm10 !== '—' ? `PM10 ${pm10}` : (key ? 'PM10 —' : '에어코리아: 키 필요'),
       pm25 !== '—' ? `PM2.5 ${pm25}` : `습도 ${humid}`,
       uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : ''),
-      (wxSrc === 'Open-Meteo' && temp !== '—') ? '(Open-Meteo)' : ''
+      deviation !== null ? `평년대비 ${deviation >= 0 ? '+' : ''}${deviation}℃` : '',
+      trend16 ? `16일추세 ${trend16.delta >= 0 ? '+' : ''}${trend16.delta}℃` : ''
     ].filter(Boolean),
     _sample: temp === '—'
   };
 }
 
-function computeClimateScore(temp, pm10) {
+function computeClimateScore(temp, pm10, deviation, trend16) {
   let s = 3.0;
   const t = parseFloat(temp); if (!isNaN(t)) { if (t > 25) s += 0.8; else if (t > 20) s += 0.4; }
   const pm = parseFloat(pm10); if (!isNaN(pm)) { if (pm > 50) s += 0.4; }
+  if (deviation !== null && !isNaN(deviation)) {
+    if (deviation >= 2) s += 0.4;
+    else if (deviation <= -2) s -= 0.2;
+  }
+  if (trend16) {
+    if (trend16.delta >= 2) s += 0.2;
+    else if (trend16.delta <= -2) s -= 0.1;
+  }
   return Math.min(Math.max(s, 1), 5);
 }
-function buildClimateInterp(temp, pm10) {
+function buildClimateInterp(temp, pm10, deviation, trend16) {
   const t = parseFloat(temp);
-  if (!isNaN(t) && t > 25) return '고온 지속 → 선케어·쿨링·에어리스 밀폐 패키징 수요 선행 증가';
-  if (!isNaN(t) && t > 15) return '봄철 기온 상승 → 선케어 시즌 진입, UV 차단 제품 수요 상승';
-  return '기온 데이터 기반 계절 선케어·보습 수요 분석';
+  const parts = [];
+  if (!isNaN(t) && t > 25) parts.push('고온 지속 → 선케어·쿨링·에어리스 밀폐 패키징 수요 선행 증가');
+  else if (!isNaN(t) && t > 15) parts.push('봄철 기온 상승 → 선케어 시즌 진입, UV 차단 제품 수요 상승');
+  else parts.push('기온 데이터 기반 계절 선케어·보습 수요 분석');
+  if (deviation !== null && !isNaN(deviation)) {
+    if (deviation >= 2) parts.push(`평년 대비 +${deviation}℃ → 시즌 조기 진입 가능성`);
+    else if (deviation <= -2) parts.push(`평년 대비 ${deviation}℃ → 시즌 지연 가능성`);
+  }
+  if (trend16) {
+    if (trend16.delta >= 2) parts.push(`16일 예보 상승추세(+${trend16.delta}℃) → 단기 수요 증가 신호`);
+    else if (trend16.delta <= -2) parts.push(`16일 예보 하강추세(${trend16.delta}℃) → 보습라인 전환 고려`);
+  }
+  return parts.join(' · ');
 }
 
 async function collectEconomy() {
@@ -643,6 +695,36 @@ const DATALAB_GROUPS = [
     { groupName: '두피·헤어', keywords: ['두피케어', '헤어세럼'] },
   ],
 ];
+
+/* 뷰티 트렌드 키워드 — 성분·제형·패키징·타깃 전반 (RSS·뉴스 언급빈도 분석 공용) */
+const TREND_KEYWORDS = [
+  '에어리스','비건','클린뷰티','선세럼','선스틱','선케어','앰플','마이크로바이옴','PDRN','엑소좀',
+  '펩타이드','콜라겐','레티놀','시카','판테놀','세라마이드','토너패드','패드','멀티밤','스틱',
+  '클렌징','리필','수분크림','쿨링','두피','남성','쿠션',
+];
+
+/* 뷰티 섹터 뉴스 — 단일 키워드(에어리스) 고정 대신 전체 유형 스펙트럼 검색 후
+   언급빈도 분석으로 "자주 언급/급상승" 트렌드 키워드 도출 */
+const NEWS_TREND_QUERIES = ['화장품 신제품', '뷰티 트렌드', '더마 코스메틱', 'K뷰티 수출'];
+async function collectNewsTrends(nid, nsec) {
+  const resps = await Promise.all(NEWS_TREND_QUERIES.map(q => {
+    const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=30&sort=date`;
+    return fetchNaverAPI(url, nid, nsec, 10000);
+  }));
+  let total = 0, ok = false;
+  const kwMap = {};
+  resps.forEach(j => {
+    if (!j || j._error) return;
+    ok = true;
+    total += j.total || 0;
+    (j.items || []).forEach(it => {
+      const text = `${it.title} ${it.description}`.replace(/<[^>]+>/g, '');
+      TREND_KEYWORDS.forEach(kw => { if (text.includes(kw)) kwMap[kw] = (kwMap[kw]||0) + 1; });
+    });
+  });
+  return { total, kwMap, ok };
+}
+
 async function collectDataLab(nid, nsec) {
   const end = new Date(); end.setDate(end.getDate() - 1);
   const start = new Date(end); start.setMonth(start.getMonth() - 3);
@@ -682,6 +764,8 @@ async function collectCulture() {
     setSdot('sd-news', 'off');
     if (rssData.count > 0) {
       setSdot('sd-datalab', 'ok');
+      const ranked = Object.entries(rssData.kwMap || {}).sort((a,b)=>b[1]-a[1]);
+      window._newsTrends = ranked.length ? ranked.slice(0,3).map(([name,count])=>({name,count})) : null;
       SIG_DATA.culture = {
         score: rssData.count > 50 ? 3.8 : 3.4,
         interpret: `뷰티미디어 RSS ${rssData.count}건 수집 — 네이버 키 입력 시 뉴스·DataLab 추가 분석`,
@@ -689,33 +773,42 @@ async function collectCulture() {
       };
     } else {
       setSdot('sd-datalab', 'off');
+      window._newsTrends = null;
       SIG_DATA.culture = { score:4.2, interpret:'문화 데이터 수집 불가 (네이버 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
     }
     return;
   }
-  /* 뉴스·DataLab·RSS 병렬 수집 */
-  const newsUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품')}&display=5&sort=date`;
-  const [newsJ, dlTrends, rssData] = await Promise.all([
-    fetchNaverAPI(newsUrl, nid, nsec, 10000),
+  /* 뉴스(전체 유형 스펙트럼)·DataLab·RSS 병렬 수집 */
+  const [newsTrends, dlTrends, rssData] = await Promise.all([
+    collectNewsTrends(nid, nsec),
     collectDataLab(nid, nsec),
     collectBeautyRSS(),
   ]);
-  let newsCount = 0;
-  if (newsJ && !newsJ._error) { newsCount = newsJ.total || 0; setSdot('sd-news', 'ok'); }
   window._rssText = rssData.text || '';
   window._dlTrends = dlTrends || null;   /* Gemini 프롬프트·보고서에서 활용 */
+  setSdot('sd-news', newsTrends.ok ? 'ok' : 'warn');
   setSdot('sd-datalab', (dlTrends || rssData.count > 0) ? 'ok' : 'warn');
-  const totalNews = newsCount + rssData.count;
+
+  /* 뉴스 + RSS 키워드 언급빈도 합산 → "자주 언급" 트렌드 (단일 키워드 편향 제거) */
+  const combinedKw = {};
+  Object.entries(newsTrends.kwMap || {}).forEach(([k,v]) => combinedKw[k] = (combinedKw[k]||0) + v);
+  Object.entries(rssData.kwMap || {}).forEach(([k,v]) => combinedKw[k] = (combinedKw[k]||0) + v);
+  const topMentioned = Object.entries(combinedKw).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  window._newsTrends = topMentioned.length ? topMentioned.map(([name,count])=>({name,count})) : null;
+
+  const totalNews = (newsTrends.total || 0) + rssData.count;
   const top = dlTrends?.[0];
   const dlChip = top ? `DataLab ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
+  const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]})` : null;
   let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
   if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
   SIG_DATA.culture = {
     score,
-    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 (뷰티 RSS ${rssData.count}건 포함)`
-      + (top ? ` · 검색트렌드 1위 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
-      + ' — 특수 패키징 수요 분석',
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(dlChip ? [dlChip] : []), ...rssData.keywords.slice(0, 2)].slice(0, 4),
+    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
+      + (topMentioned.length ? ` · 최다 언급 "${topMentioned.map(([n])=>n).join('·')}"` : '')
+      + (top ? ` · 검색트렌드 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
+      + ' — 전체 유형 트렌드 종합',
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
     _sample: totalNews === 0 && !top
   };
 }
@@ -810,9 +903,7 @@ async function collectBeautyRSS() {
       const allText = [...titles, ...descs].join(' ');
       companyMentions.push(allText.slice(0, 2000));
       titles.forEach(tt => {
-        ['에어리스','비건','선세럼','선스틱','선케어','앰플','마이크로바이옴','PDRN','엑소좀',
-         '펩타이드','콜라겐','레티놀','시카','세라마이드','토너패드','패드','멀티밤','스틱',
-         '클렌징','리필','수분크림','쿨링','두피','남성'].forEach(kw => {
+        TREND_KEYWORDS.forEach(kw => {
           if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
         });
       });
@@ -820,7 +911,7 @@ async function collectBeautyRSS() {
   }
   const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
   sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
-  return { count, keywords, text: companyMentions.join(' ').slice(0, 4000) };
+  return { count, keywords, kwMap, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
 async function collectMFDSFunc() {
@@ -890,11 +981,23 @@ async function runGeminiPrediction(period) {
     ? `\n[네이버 검색트렌드 — 최근 3개월 카테고리별 검색량 상승률 (실측)]\n`
       + window._dlTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
     : '';
+  const newsDetail = (window._newsTrends && window._newsTrends.length)
+    ? `\n[뷰티 뉴스·미디어 최다 언급 키워드 — 실측]\n`
+      + window._newsTrends.map(t => `${t.name}(${t.count}건)`).join(' · ')
+    : '';
+  const ct = window._climateTrend;
+  const climateDetail = ct
+    ? `\n[기후 추세 — Open-Meteo 실측]\n`
+      + [
+          ct.deviation !== null ? `평년(작년 동기) 대비 ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃` : '',
+          ct.trend16 ? `16일 예보 추세 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 평균 ${ct.trend16.week1}℃ → 2주차 평균 ${ct.trend16.week2}℃)` : ''
+        ].filter(Boolean).join(' · ')
+    : '';
   const prompt = `당신은 화장품 OEM/ODM 업계 전문 트렌드 분석가입니다.
 아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
 
 [4대 신호 현황]
-${sigSummary}${dlDetail}
+${sigSummary}${dlDetail}${newsDetail}${climateDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -1503,6 +1606,18 @@ function genReport() {
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
     window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
   }
+  if (window._newsTrends && window._newsTrends.length) {
+    lines.push('');
+    lines.push('▶ 뷰티 뉴스·미디어 최다 언급 키워드');
+    window._newsTrends.forEach(t => lines.push(`  • ${t.name}: ${t.count}건`));
+  }
+  if (window._climateTrend) {
+    const ct = window._climateTrend;
+    lines.push('');
+    lines.push('▶ 기후 추세 (Open-Meteo)');
+    if (ct.deviation !== null) lines.push(`  • 평년(작년 동기) 대비: ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃`);
+    if (ct.trend16) lines.push(`  • 16일 예보 추세: ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 ${ct.trend16.week1}℃ → 2주차 ${ct.trend16.week2}℃)`);
+  }
   lines.push('');
   lines.push('▶ 예측 화장품 유형 TOP5');
   PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) — 출시적기: ${p.season}`));
@@ -1904,6 +2019,16 @@ function showCollectedData() {
   }
   const rss = window._rssText ? `[RSS] 수집됨 (${window._rssText.length}자)` : '[RSS] 미수집';
   lines.push(rss);
+  if (window._newsTrends && window._newsTrends.length) {
+    lines.push(`[뉴스 최다언급] ` + window._newsTrends.map(t => `${t.name}(${t.count})`).join(' · '));
+  }
+  if (window._climateTrend) {
+    const ct = window._climateTrend;
+    const parts = [];
+    if (ct.deviation !== null) parts.push(`평년대비 ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃`);
+    if (ct.trend16) parts.push(`16일추세 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃`);
+    if (parts.length) lines.push(`[기후추세] ` + parts.join(' · '));
+  }
   el.textContent = lines.join('\n') || '아직 수집된 데이터 없음 — [전체 수집 실행] 먼저 실행하세요';
   el.style.color = 'var(--ink2)';
 }
