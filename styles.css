@@ -267,12 +267,17 @@ button { font-family: inherit; cursor: pointer; }
 .fl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 /* 모멘텀 막대 */
+.fl-seg { font-size: 10px; font-weight: 700; color: var(--ink2); margin: 2px 0 5px; display: flex; align-items: center; gap: 5px; }
+.fl-seg:not(:first-child) { margin-top: 9px; }
+.fl-tag-lead { font-size: 8px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--grn); padding: 1px 5px; border-radius: 3px; }
 .fl-bar-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
 .fl-bar-lb { font-size: 10px; color: var(--ink2); width: 84px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fl-bar-track { flex: 1; height: 9px; background: var(--bg2); border-radius: 5px; overflow: hidden; }
 .fl-bar-fill { display: block; height: 100%; border-radius: 5px; }
 .fl-bar-fill.up { background: var(--teal2); }
 .fl-bar-fill.dn { background: var(--acc2); }
+.fl-bar-fill.buy.up { background: var(--grn); }
+.fl-bar-fill.buy.dn { background: var(--acc); }
 .fl-bar-val { font-size: 10px; font-weight: 700; width: 42px; text-align: right; flex-shrink: 0; }
 .fl-bar-val.up { color: var(--teal); }
 .fl-bar-val.dn { color: var(--acc); }

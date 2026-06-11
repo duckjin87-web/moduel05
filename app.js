@@ -753,6 +753,53 @@ async function collectDataLab(nid, nsec) {
   return trends.length ? trends : null;
 }
 
+/* ── 실판매(구매의도) 신호 — 네이버 DataLab 쇼핑인사이트 ──────────────
+   일반 검색트렌드(/datalab/search)와 달리 "네이버쇼핑 클릭량 추이"라
+   구매의도에 직결된 선행 신호. 화장품/미용 카테고리(50000002) 내
+   제품 키워드별 클릭 상승률을 계산.
+   ※ 올리브영·다이소 직접 랭킹은 공개 API 부재·JS 렌더링·ToS 문제로
+     안정적 실데이터 확보 불가 → 제외. 쇼핑인사이트는 기존 네이버 키로
+     실데이터 확보 가능하므로 이를 실판매 모멘텀 신호로 채택.
+   ※ 키에 쇼핑인사이트 권한이 없으면 _error 반환 → null 처리(샘플 미생성). */
+const COSMETIC_CATEGORY = '50000002';   /* 네이버쇼핑 화장품/미용 */
+const SHOP_KEYWORD_GROUPS = [
+  ['선세럼', '토너패드', '멀티밤', '앰플', '비건 화장품'],
+  ['시카크림', '레티놀', '콜라겐', '클렌징밤', '수분크림'],
+];
+async function collectSalesTrend(nid, nsec) {
+  const end = new Date(); end.setDate(end.getDate() - 1);
+  const start = new Date(end); start.setMonth(start.getMonth() - 3);
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const mkBody = kws => JSON.stringify({
+    startDate: fmt(start), endDate: fmt(end), timeUnit: 'week',
+    category: COSMETIC_CATEGORY,
+    keyword: kws.map(k => ({ name: k, param: [k] })),
+    device: '', gender: '', ages: [],
+  });
+  const resps = await Promise.all(SHOP_KEYWORD_GROUPS.map(kws =>
+    fetchNaverAPI('https://openapi.naver.com/v1/datalab/shopping/category/keywords', nid, nsec, 10000,
+      { method: 'POST', body: mkBody(kws) })
+  ));
+  const avg = arr => arr.reduce((s, x) => s + (x.ratio || 0), 0) / (arr.length || 1);
+  const trends = [];
+  let anyOk = false;
+  for (const j of resps) {
+    if (!j || j._error || !Array.isArray(j.results)) continue;
+    anyOk = true;
+    j.results.forEach(g => {
+      const d = g.data || [];
+      if (d.length < 4) return;
+      if (trends.some(t => t.name === g.title)) return;
+      const half = Math.floor(d.length / 2);
+      const prev = avg(d.slice(0, half)), recent = avg(d.slice(half));
+      trends.push({ name: g.title, delta: prev > 0 ? Math.round((recent - prev) / prev * 100) : 0 });
+    });
+  }
+  trends.sort((a, b) => b.delta - a.delta);
+  /* 실데이터를 못 받았으면 null — 샘플/추정값을 만들지 않음 */
+  return anyOk && trends.length ? trends : null;
+}
+
 async function collectCulture() {
   setSdot('sd-datalab', 'warn');
   setSdot('sd-news', 'warn');
@@ -761,6 +808,7 @@ async function collectCulture() {
     /* RSS는 키 없이도 수집 가능 — 실데이터 우선 */
     const rssData = await collectBeautyRSS();
     window._rssText = rssData.text || '';
+    window._salesTrends = null;   /* 쇼핑인사이트는 네이버 키 필요 */
     setSdot('sd-news', 'off');
     if (rssData.count > 0) {
       setSdot('sd-datalab', 'ok');
@@ -778,14 +826,16 @@ async function collectCulture() {
     }
     return;
   }
-  /* 뉴스(전체 유형 스펙트럼)·DataLab·RSS 병렬 수집 */
-  const [newsTrends, dlTrends, rssData] = await Promise.all([
+  /* 뉴스·DataLab(검색)·쇼핑인사이트(구매의도)·RSS 병렬 수집 */
+  const [newsTrends, dlTrends, salesTrends, rssData] = await Promise.all([
     collectNewsTrends(nid, nsec),
     collectDataLab(nid, nsec),
+    collectSalesTrend(nid, nsec),
     collectBeautyRSS(),
   ]);
   window._rssText = rssData.text || '';
   window._dlTrends = dlTrends || null;   /* Gemini 프롬프트·보고서에서 활용 */
+  window._salesTrends = salesTrends || null;   /* 실판매(구매의도) 모멘텀 — 실데이터 없으면 null */
   setSdot('sd-news', newsTrends.ok ? 'ok' : 'warn');
   setSdot('sd-datalab', (dlTrends || rssData.count > 0) ? 'ok' : 'warn');
 
@@ -798,17 +848,22 @@ async function collectCulture() {
 
   const totalNews = (newsTrends.total || 0) + rssData.count;
   const top = dlTrends?.[0];
-  const dlChip = top ? `DataLab ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
+  const sTop = salesTrends?.[0];
+  const dlChip = top ? `검색 ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
+  const salesChip = sTop ? `구매 ${sTop.name} ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : null;
   const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]})` : null;
   let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
   if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
+  /* 구매의도(쇼핑클릭) 급등은 가장 강한 선행 신호 — 추가 가산 */
+  if (sTop && sTop.delta >= 20) score = Math.min(5, score + 0.3);
   SIG_DATA.culture = {
     score,
     interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
       + (topMentioned.length ? ` · 최다 언급 "${topMentioned.map(([n])=>n).join('·')}"` : '')
-      + (top ? ` · 검색트렌드 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
+      + (top ? ` · 검색 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
+      + (sTop ? ` · 구매(쇼핑클릭) 급상승 "${sTop.name}" ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : '')
       + ' — 전체 유형 트렌드 종합',
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
     _sample: totalNews === 0 && !top
   };
 }
@@ -892,6 +947,7 @@ function recordTrendFlow() {
       ts: Date.now(),
       sig,
       dl: (window._dlTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
+      sales: (window._salesTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
       news: (window._newsTrends || []).slice(0, 5).map(t => ({ n: t.name, c: t.count })),
       climate: window._climateTrend ? { dev: window._climateTrend.deviation,
                  t16: window._climateTrend.trend16 ? window._climateTrend.trend16.delta : null } : null,
@@ -955,26 +1011,37 @@ function renderTrendFlow() {
       <div class="fl-legend">${legend}</div>
     </div>`;
 
-  /* ── 2) 트렌드 모멘텀 (검색 상승률 + 뉴스 언급) ── */
-  const dl = (window._dlTrends || []).slice(0, 5);
+  /* ── 2) 트렌드 모멘텀 (구매 쇼핑클릭 + 검색 상승률 + 뉴스 언급) ── */
+  const sales = (window._salesTrends || []).slice(0, 4);
+  const dl = (window._dlTrends || []).slice(0, 4);
   const news = (window._newsTrends || []).slice(0, 3);
-  const maxDelta = Math.max(20, ...dl.map(t => Math.abs(t.delta)));
-  const dlBars = dl.length ? dl.map(t => {
-    const w = Math.min(100, Math.abs(t.delta) / maxDelta * 100);
-    const up = t.delta >= 0;
-    return `<div class="fl-bar-row">
+  const bars = (list, mark) => {
+    const mx = Math.max(20, ...list.map(t => Math.abs(t.delta)));
+    return list.map(t => {
+      const w = Math.min(100, Math.abs(t.delta) / mx * 100);
+      const up = t.delta >= 0;
+      return `<div class="fl-bar-row">
         <span class="fl-bar-lb">${escHtml(t.name)}</span>
-        <span class="fl-bar-track"><span class="fl-bar-fill ${up ? 'up' : 'dn'}" style="width:${w}%"></span></span>
+        <span class="fl-bar-track"><span class="fl-bar-fill ${up ? 'up' : 'dn'}${mark ? ' buy' : ''}" style="width:${w}%"></span></span>
         <span class="fl-bar-val ${up ? 'up' : 'dn'}">${up ? '+' : ''}${t.delta}%</span>
       </div>`;
-  }).join('') : '<div class="fl-empty">검색트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>';
+    }).join('');
+  };
+  /* 구매(쇼핑클릭)는 판매 선행 신호 — 있으면 최상단에 강조 */
+  const salesBlock = sales.length
+    ? `<div class="fl-seg">구매 모멘텀 <span class="fl-tag-lead">LEAD · 네이버쇼핑 클릭</span></div>${bars(sales, true)}`
+    : '';
+  const searchBlock = dl.length
+    ? `<div class="fl-seg">검색 모멘텀 <span class="fl-sub">네이버 검색트렌드</span></div>${bars(dl, false)}`
+    : (sales.length ? '' : '<div class="fl-empty">검색·구매 트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>');
   const newsChips = news.length
     ? `<div class="fl-news">최다 언급 · ${news.map(n => `<span class="fl-nchip">${escHtml(n.name)} <b>${n.count}</b></span>`).join('')}</div>`
     : '';
   const momentum = `
     <div class="fl-card fl-grow">
-      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">검색 상승률 · 뉴스 언급</span></div>
-      ${dlBars}
+      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">구매·검색·뉴스</span></div>
+      ${salesBlock}
+      ${searchBlock}
       ${newsChips}
     </div>`;
 
@@ -1134,6 +1201,11 @@ async function runGeminiPrediction(period) {
     ? `\n[뷰티 뉴스·미디어 최다 언급 키워드 — 실측]\n`
       + window._newsTrends.map(t => `${t.name}(${t.count}건)`).join(' · ')
     : '';
+  const salesDetail = (window._salesTrends && window._salesTrends.length)
+    ? `\n[네이버쇼핑 클릭 트렌드 — 구매의도 실측 · 선행지표(LEAD) · 검색보다 판매에 근접]\n`
+      + window._salesTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
+      + `\n※ 이 구매의도 신호의 급상승 품목을 예측 가중에 우선 반영할 것`
+    : '';
   const ct = window._climateTrend;
   const climateDetail = ct
     ? `\n[기후 추세 — Open-Meteo 실측]\n`
@@ -1146,7 +1218,7 @@ async function runGeminiPrediction(period) {
 아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
 
 [4대 신호 현황]
-${sigSummary}${dlDetail}${newsDetail}${climateDetail}
+${sigSummary}${salesDetail}${dlDetail}${newsDetail}${climateDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -1791,6 +1863,11 @@ function genReport() {
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) lines.push(`  ${k}: ${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} — ${v.interpret}`);
   });
+  if (window._salesTrends && window._salesTrends.length) {
+    lines.push('');
+    lines.push('▶ 네이버쇼핑 클릭 트렌드 — 구매의도/판매 선행지표 (최근 3개월)');
+    window._salesTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
   if (window._dlTrends && window._dlTrends.length) {
     lines.push('');
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
@@ -2210,6 +2287,9 @@ function showCollectedData() {
   }
   const rss = window._rssText ? `[RSS] 수집됨 (${window._rssText.length}자)` : '[RSS] 미수집';
   lines.push(rss);
+  if (window._salesTrends && window._salesTrends.length) {
+    lines.push(`[구매 모멘텀·쇼핑클릭] ` + window._salesTrends.map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
+  }
   if (window._newsTrends && window._newsTrends.length) {
     lines.push(`[뉴스 최다언급] ` + window._newsTrends.map(t => `${t.name}(${t.count})`).join(' · '));
   }
