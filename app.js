@@ -1816,15 +1816,40 @@ function saveCapa(code, type, val) {
 }
 
 /* ════ 전체 수집 실행 ════ */
+/* ── 사전수집 데이터 (GitHub Actions 서버사이드 수집) ──────────────
+   .github/workflows/collect-trends.yml이 6시간마다 서버에서 4대 신호를
+   수집해 data/trends.json으로 커밋 → 프론트는 same-origin 정적 파일만
+   읽으므로 내부망에서 외부 CORS 프록시가 차단돼도 실데이터 표시 가능 */
+const PRECOLLECT_MAX_AGE_H = 48;   /* 이보다 오래된 사전수집본은 무시하고 라이브 수집 */
+async function loadPrecollected() {
+  try {
+    const r = await fetch(`data/trends.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !j.sig || !j.collectedAt) return null;
+    const ageH = (Date.now() - new Date(j.collectedAt).getTime()) / 36e5;
+    if (isNaN(ageH) || ageH > PRECOLLECT_MAX_AGE_H) return null;
+    /* 전 신호가 샘플뿐이면(서버에 Secrets 미등록 등) 라이브 수집이 나을 수 있음 */
+    const hasReal = Object.values(j.sig).some(v => v && !v._sample);
+    return hasReal ? j : null;
+  } catch { return null; }
+}
+function applyPrecollected(pre) {
+  SIG_DATA = { climate: null, society: null, economy: null, culture: null, ...pre.sig };
+  window._dlTrends = pre.dlTrends || null;
+  window._dlErr = pre.dlErr ?? null;
+  window._salesTrends = pre.salesTrends || null;
+  window._salesErr = pre.salesErr ?? null;
+  window._newsTrends = pre.newsTrends || null;
+  window._rssText = pre.rssText || '';
+  window._climateTrend = pre.climateTrend || null;
+  /* 서버 수집 시점의 소스 연결 상태 재생 */
+  Object.entries(pre.sdots || {}).forEach(([id, state]) => setSdot(id, state));
+}
+
 async function collectAll() {
   const btn = document.getElementById('btnCollect');
   btn.classList.add('running'); btn.disabled = true;
-
-  /* API 키 현황 확인 */
-  const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
-  if (!hasAnyKey) {
-    showToast('API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
-  }
 
   /* 캐시 초기화 */
   PREDICTIONS_CACHE['6m'] = null;
@@ -1840,17 +1865,33 @@ async function collectAll() {
     if (sm) sm.textContent = pct;
   };
 
-  setStep('① 기후 수집 중...', '수집 1/4');
-  await collectClimate(); renderZ0();
+  /* 1순위: 서버 사전수집 데이터 (프록시 불필요 — 내부망에서도 동작) */
+  setStep('사전수집 데이터 확인 중...', '확인 중');
+  const pre = await loadPrecollected();
+  if (pre) {
+    applyPrecollected(pre);
+    renderZ0();
+    const ageH = Math.max(0, Math.round((Date.now() - new Date(pre.collectedAt).getTime()) / 36e5));
+    showToast(`서버 사전수집 데이터 로드 (${ageH}시간 전 수집) — 프록시 미사용`);
+  } else {
+    /* 2순위: 브라우저에서 직접 라이브 수집 (외부 프록시 경유) */
+    const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
+    if (!hasAnyKey) {
+      showToast('API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
+    }
 
-  setStep('② 사회 수집 중...', '수집 2/4');
-  await collectSociety(); renderZ0();
+    setStep('① 기후 수집 중...', '수집 1/4');
+    await collectClimate(); renderZ0();
 
-  setStep('③ 경제 수집 중...', '수집 3/4');
-  await collectEconomy(); renderZ0();
+    setStep('② 사회 수집 중...', '수집 2/4');
+    await collectSociety(); renderZ0();
 
-  setStep('④ 문화 수집 중...', '수집 4/4');
-  await collectCulture(); renderZ0();
+    setStep('③ 경제 수집 중...', '수집 3/4');
+    await collectEconomy(); renderZ0();
+
+    setStep('④ 문화 수집 중...', '수집 4/4');
+    await collectCulture(); renderZ0();
+  }
 
   updateStatusSummary();
 
