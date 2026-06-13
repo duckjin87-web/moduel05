@@ -723,7 +723,7 @@ const NAVER_ERR_MSG = {
 };
 /* 관세청 수출입무역통계 호출 실패 사유 */
 const EXPORT_ERR_MSG = {
-  auth: '관세청 무역통계 권한 없음 — data.go.kr 공공키에 "관세청_수출입무역통계" 활용신청 필요',
+  auth: '관세청 무역통계 권한 없음 — data.go.kr에서 "관세청_품목별 국가별 수출입실적(GW)" API 활용신청·승인 필요 (※ "관세청_수출입총괄"과는 별개 API)',
   network: '관세청 무역통계 응답 없음 — 프록시/네트워크 상태 확인 필요',
   empty: '해당 기간 수출 데이터 없음',
 };
@@ -839,7 +839,10 @@ async function collectSalesTrend(nid, nsec) {
    "판매 실적" 그 자체 → 가장 강한 실판매 신호이자 K뷰티 수출 목표에 직결.
    HS 4단위는 색조·향수·두발·면도 등 거시 카테고리를 그대로 커버해
    성별·카테고리 편중 없이 전 영역을 본다.
-   ※ data.go.kr 공공키(PUBLIC_KEY)에 "관세청_수출입무역통계" 활용신청 필요.
+   ※ data.go.kr 공공키(PUBLIC_KEY)에 "관세청_품목별 국가별 수출입실적(GW)"
+     (서비스 1220000/nitemtrade, hsSgn=HS코드) 활용신청·승인 필요.
+     "관세청_수출입총괄(GW)"은 품목 구분 없는 국가 전체 합계만 제공하는
+     별개 API로, hsSgn 등 품목별 조회를 지원하지 않아 본 신호에는 사용 불가.
      응답은 XML — 정규식으로 expDlr 추출(구조 변동에 강건). */
 const EXPORT_HS = [
   { hs: '3303', name: '향수·화장수' },
@@ -859,8 +862,10 @@ async function collectExportTrend(pubKey) {
     + `&strtYymm=${ym(s)}&endYymm=${ym(e)}&hsSgn=${hs}`;
   const sumExp = (txt) => {
     if (!txt) return null;
-    /* 인증·서비스 오류 식별 */
-    if (/SERVICE[_ ]?KEY|등록되지 않은|인증키|LIMITED_NUMBER|service key/i.test(txt)) return 'auth';
+    /* 인증·서비스 오류 식별 — "수출입총괄"만 승인된 키로 nitemtrade(품목별)를
+       호출하면 SERVICE_ACCESS_DENIED_ERROR/NO_OPENAPI_SERVICE_ERROR 등
+       returnAuthMsg 응답이 오므로 함께 매칭 */
+    if (/SERVICE[_ ]?KEY|등록되지 않은|인증키|LIMITED_NUMBER|service key|returnAuthMsg|SERVICE_ACCESS_DENIED|NO_OPENAPI_SERVICE/i.test(txt)) return 'auth';
     const ms = [...txt.matchAll(/<expDlr>\s*([\d.\-]+)\s*<\/expDlr>/g)];
     if (!ms.length) return null;
     return ms.reduce((s, m) => s + (parseFloat(m[1]) || 0), 0);
