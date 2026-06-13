@@ -110,7 +110,7 @@ await sandbox.collectCulture();
 
 /* 수집 상태 점(sdot) 결과 캡처 — 클라이언트에서 그대로 재생 */
 const sdots = {};
-for (const id of ['sd-climate', 'sd-air', 'sd-ecos', 'sd-datalab', 'sd-news', 'sd-kosis']) {
+for (const id of ['sd-climate', 'sd-air', 'sd-ecos', 'sd-datalab', 'sd-news', 'sd-kosis', 'sd-export']) {
   sdots[id] = els[id] ? (els[id].className.replace('sdot', '').trim() || 'off') : 'off';
 }
 
@@ -122,6 +122,8 @@ const out = {
   dlErr: sandbox.window._dlErr ?? null,
   salesTrends: sandbox.window._salesTrends || null,
   salesErr: sandbox.window._salesErr ?? null,
+  exportTrends: sandbox.window._exportTrends || null,
+  exportErr: sandbox.window._exportErr ?? null,
   newsTrends: sandbox.window._newsTrends || null,
   rssText: sandbox.window._rssText || '',
   climateTrend: sandbox.window._climateTrend || null,
@@ -139,3 +141,5 @@ if (out.salesTrends) console.log(` · 구매 모멘텀 ${out.salesTrends.length}
 else console.log(` · 구매 모멘텀 없음 (${out.salesErr ?? '-'})`);
 if (out.dlTrends) console.log(` · 검색 모멘텀 ${out.dlTrends.length}건`);
 else console.log(` · 검색 모멘텀 없음 (${out.dlErr ?? '-'})`);
+if (out.exportTrends) console.log(` · 수출 모멘텀 ${out.exportTrends.length}건`);
+else console.log(` · 수출 모멘텀 없음 (${out.exportErr ?? '-'})`);

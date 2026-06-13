@@ -721,6 +721,12 @@ const NAVER_ERR_MSG = {
   format: '네이버 API 응답 형식 오류',
   empty: '해당 기간 데이터 없음',
 };
+/* 관세청 수출입무역통계 호출 실패 사유 */
+const EXPORT_ERR_MSG = {
+  auth: '관세청 무역통계 권한 없음 — data.go.kr 공공키에 "관세청_수출입무역통계" 활용신청 필요',
+  network: '관세청 무역통계 응답 없음 — 프록시/네트워크 상태 확인 필요',
+  empty: '해당 기간 수출 데이터 없음',
+};
 
 /* 뷰티 섹터 뉴스 — 단일 키워드(에어리스) 고정 대신 전체 유형 스펙트럼 검색 후
    언급빈도 분석으로 "자주 언급/급상승" 트렌드 키워드 도출 */
@@ -827,13 +833,77 @@ async function collectSalesTrend(nid, nsec) {
   return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
 }
 
+/* ── 수출 모멘텀 신호 — 관세청 수출입무역통계 (data.go.kr 공공키) ──────────
+   화장품 HS부호별 월간 수출금액(expDlr, 천달러)의 최근 3개월 vs 직전 3개월
+   증감률. 검색·클릭은 "관심"의 선행지표지만, 수출액은 실제 출하·결제된
+   "판매 실적" 그 자체 → 가장 강한 실판매 신호이자 K뷰티 수출 목표에 직결.
+   HS 4단위는 색조·향수·두발·면도 등 거시 카테고리를 그대로 커버해
+   성별·카테고리 편중 없이 전 영역을 본다.
+   ※ data.go.kr 공공키(PUBLIC_KEY)에 "관세청_수출입무역통계" 활용신청 필요.
+     응답은 XML — 정규식으로 expDlr 추출(구조 변동에 강건). */
+const EXPORT_HS = [
+  { hs: '3303', name: '향수·화장수' },
+  { hs: '3304', name: '색조·기초화장품' },
+  { hs: '3305', name: '두발용 제품' },
+  { hs: '3307', name: '면도·데오·목욕용' },
+];
+async function collectExportTrend(pubKey) {
+  const ym = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+  /* 무역통계 공표 지연(약 1~2개월) 고려해 기준월을 2개월 전으로 */
+  const base = new Date(); base.setDate(1); base.setMonth(base.getMonth() - 2);
+  const mk = (back) => { const d = new Date(base); d.setMonth(d.getMonth() - back); return d; };
+  const recentEnd = base, recentStart = mk(2);          /* 최근 3개월 */
+  const priorEnd = mk(3), priorStart = mk(5);           /* 직전 3개월 */
+  const url = (hs, s, e) =>
+    `https://apis.data.go.kr/1220000/nitemtrade/getNitemtradeList?serviceKey=${encodeURIComponent(pubKey)}`
+    + `&strtYymm=${ym(s)}&endYymm=${ym(e)}&hsSgn=${hs}`;
+  const sumExp = (txt) => {
+    if (!txt) return null;
+    /* 인증·서비스 오류 식별 */
+    if (/SERVICE[_ ]?KEY|등록되지 않은|인증키|LIMITED_NUMBER|service key/i.test(txt)) return 'auth';
+    const ms = [...txt.matchAll(/<expDlr>\s*([\d.\-]+)\s*<\/expDlr>/g)];
+    if (!ms.length) return null;
+    return ms.reduce((s, m) => s + (parseFloat(m[1]) || 0), 0);
+  };
+  const results = await Promise.all(EXPORT_HS.map(async ({ hs, name }) => {
+    const [rTxt, pTxt] = await Promise.all([
+      fetchProxy(url(hs, recentStart, recentEnd), 12000),
+      fetchProxy(url(hs, priorStart, priorEnd), 12000),
+    ]);
+    const recent = sumExp(rTxt), prior = sumExp(pTxt);
+    if (recent === 'auth' || prior === 'auth') return { name, _auth: true };
+    if (recent === null || prior === null) return { name, _fail: true };
+    const delta = prior > 0 ? Math.round((recent - prior) / prior * 100) : 0;
+    return { name, delta, recent };
+  }));
+  let err = null;
+  const trends = [];
+  for (const r of results) {
+    if (r._auth) { err = 'auth'; continue; }
+    if (r._fail) { if (err !== 'auth') err = 'network'; continue; }
+    trends.push({ name: r.name, delta: r.delta });
+  }
+  trends.sort((a, b) => b.delta - a.delta);
+  return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
+}
+
 async function collectCulture() {
   setSdot('sd-datalab', 'warn');
   setSdot('sd-news', 'warn');
+  /* 수출 모멘텀(관세청)은 data.go.kr 공공키만 있으면 네이버 키와 무관하게 수집 */
+  const pub = K.public();
+  setSdot('sd-export', pub ? 'warn' : 'off');
+  const exportPromise = pub ? collectExportTrend(pub) : Promise.resolve({ trends: null, err: null });
+  const applyExport = (r) => {
+    window._exportTrends = r.trends;
+    window._exportErr = r.err;
+    setSdot('sd-export', r.trends ? 'ok' : (pub ? 'warn' : 'off'));
+  };
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid) {
     /* RSS는 키 없이도 수집 가능 — 실데이터 우선 */
-    const rssData = await collectBeautyRSS();
+    const [exportResult, rssData] = await Promise.all([exportPromise, collectBeautyRSS()]);
+    applyExport(exportResult);
     window._rssText = rssData.text || '';
     window._salesTrends = null;   /* 쇼핑인사이트는 네이버 키 필요 */
     window._dlTrends = null;
@@ -856,13 +926,15 @@ async function collectCulture() {
     }
     return;
   }
-  /* 뉴스·DataLab(검색)·쇼핑인사이트(구매의도)·RSS 병렬 수집 */
-  const [newsTrends, dlResult, salesResult, rssData] = await Promise.all([
+  /* 뉴스·DataLab(검색)·쇼핑인사이트(구매의도)·수출(관세청)·RSS 병렬 수집 */
+  const [newsTrends, dlResult, salesResult, exportResult, rssData] = await Promise.all([
     collectNewsTrends(nid, nsec),
     collectDataLab(nid, nsec),
     collectSalesTrend(nid, nsec),
+    exportPromise,
     collectBeautyRSS(),
   ]);
+  applyExport(exportResult);
   window._rssText = rssData.text || '';
   window._dlTrends = dlResult.trends;   /* Gemini 프롬프트·보고서·트렌드 모멘텀에서 활용 */
   window._dlErr = dlResult.err;
@@ -881,22 +953,26 @@ async function collectCulture() {
   const totalNews = (newsTrends.total || 0) + rssData.count;
   const top = dlResult.trends?.[0];
   const sTop = salesResult.trends?.[0];
+  const xTop = exportResult.trends?.[0];
   const dlChip = top ? `검색 ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
   const salesChip = sTop ? `구매 ${sTop.name} ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : null;
+  const exportChip = xTop ? `수출 ${xTop.name} ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : null;
   const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]})` : null;
   let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
   if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
-  /* 구매의도(쇼핑클릭) 급등은 가장 강한 선행 신호 — 추가 가산 */
+  /* 구매의도(쇼핑클릭)·수출(실판매) 급등은 가장 강한 선행 신호 — 추가 가산 */
   if (sTop && sTop.delta >= 20) score = Math.min(5, score + 0.3);
+  if (xTop && xTop.delta >= 15) score = Math.min(5, score + 0.3);
   SIG_DATA.culture = {
     score,
     interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
       + (topMentioned.length ? ` · 최다 언급 "${topMentioned.map(([n])=>n).join('·')}"` : '')
       + (top ? ` · 검색 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
       + (sTop ? ` · 구매(쇼핑클릭) 급상승 "${sTop.name}" ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : '')
+      + (xTop ? ` · 수출(실판매) 급상승 "${xTop.name}" ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : '')
       + ' — 전체 유형 트렌드 종합',
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
-    _sample: totalNews === 0 && !top
+    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(exportChip ? [exportChip] : []), ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
+    _sample: totalNews === 0 && !top && !xTop
   };
 }
 
@@ -980,6 +1056,7 @@ function recordTrendFlow() {
       sig,
       dl: (window._dlTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
       sales: (window._salesTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
+      exports: (window._exportTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
       news: (window._newsTrends || []).slice(0, 5).map(t => ({ n: t.name, c: t.count })),
       climate: window._climateTrend ? { dev: window._climateTrend.deviation,
                  t16: window._climateTrend.trend16 ? window._climateTrend.trend16.delta : null } : null,
@@ -1043,7 +1120,8 @@ function renderTrendFlow() {
       <div class="fl-legend">${legend}</div>
     </div>`;
 
-  /* ── 2) 트렌드 모멘텀 (구매 쇼핑클릭 + 검색 상승률 + 뉴스 언급) ── */
+  /* ── 2) 트렌드 모멘텀 (수출 실판매 + 구매 쇼핑클릭 + 검색 상승률 + 뉴스 언급) ── */
+  const exp = (window._exportTrends || []).slice(0, 4);
   const sales = (window._salesTrends || []).slice(0, 4);
   const dl = (window._dlTrends || []).slice(0, 4);
   const news = (window._newsTrends || []).slice(0, 3);
@@ -1059,26 +1137,31 @@ function renderTrendFlow() {
       </div>`;
     }).join('');
   };
-  /* 구매(쇼핑클릭)는 판매 선행 신호 — 있으면 최상단에 강조
-     데이터가 없을 때는 NAVER_ERR_MSG로 실패 사유(키 인증/권한/네트워크)를 구분 표시 */
+  /* 수출(실제 출하·결제된 판매 실적)이 가장 강한 신호 — 있으면 최상단에 강조
+     이어서 구매(쇼핑클릭) → 검색 → 뉴스. 데이터 없을 때는 실패 사유를 구분 표시 */
+  const exportBlock = exp.length
+    ? `<div class="fl-seg">수출 모멘텀 <span class="fl-tag-lead">REAL · 관세청 실판매</span></div>${bars(exp, true)}`
+    : (window._exportErr ? `<div class="fl-empty">수출 모멘텀 — ${EXPORT_ERR_MSG[window._exportErr] || '데이터 없음'}</div>` : '');
   const salesBlock = sales.length
     ? `<div class="fl-seg">구매 모멘텀 <span class="fl-tag-lead">LEAD · 네이버쇼핑 클릭</span></div>${bars(sales, true)}`
     : (window._salesErr ? `<div class="fl-empty">구매 모멘텀 — ${NAVER_ERR_MSG[window._salesErr] || '데이터 없음'}</div>` : '');
   const searchBlock = dl.length
     ? `<div class="fl-seg">검색 모멘텀 <span class="fl-sub">네이버 검색트렌드</span></div>${bars(dl, false)}`
     : (window._dlErr ? `<div class="fl-empty">검색 모멘텀 — ${NAVER_ERR_MSG[window._dlErr] || '데이터 없음'}</div>` : '');
-  const noNaverBlock = (!sales.length && !dl.length && !window._salesErr && !window._dlErr)
-    ? '<div class="fl-empty">검색·구매 트렌드 데이터 없음 (네이버 키 입력 시 표시)</div>'
+  const noDataBlock = (!exp.length && !sales.length && !dl.length
+      && !window._exportErr && !window._salesErr && !window._dlErr)
+    ? '<div class="fl-empty">수출·검색·구매 트렌드 데이터 없음 (공공데이터·네이버 키 입력 시 표시)</div>'
     : '';
   const newsChips = news.length
     ? `<div class="fl-news">최다 언급 · ${news.map(n => `<span class="fl-nchip">${escHtml(n.name)} <b>${n.count}</b></span>`).join('')}</div>`
     : '';
   const momentum = `
     <div class="fl-card fl-grow">
-      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">구매·검색·뉴스</span></div>
+      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">수출·구매·검색·뉴스</span></div>
+      ${exportBlock}
       ${salesBlock}
       ${searchBlock}
-      ${noNaverBlock}
+      ${noDataBlock}
       ${newsChips}
     </div>`;
 
@@ -1243,6 +1326,11 @@ async function runGeminiPrediction(period) {
       + window._salesTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
       + `\n※ 이 구매의도 신호의 급상승 품목을 예측 가중에 우선 반영할 것`
     : '';
+  const exportDetail = (window._exportTrends && window._exportTrends.length)
+    ? `\n[관세청 화장품 수출 실적 — HS부호별 최근 3개월 vs 직전 3개월 수출액 증감 (실판매 실측)]\n`
+      + window._exportTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
+      + `\n※ 검색·클릭은 "관심", 수출액은 실제 출하·결제된 "판매 실적"이다. K뷰티 수출 목표상 가장 강한 신호이므로 최우선 가중할 것`
+    : '';
   const ct = window._climateTrend;
   const climateDetail = ct
     ? `\n[기후 추세 — Open-Meteo 실측]\n`
@@ -1255,7 +1343,7 @@ async function runGeminiPrediction(period) {
 아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
 
 [4대 신호 현황]
-${sigSummary}${salesDetail}${dlDetail}${newsDetail}${climateDetail}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${climateDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -1840,6 +1928,8 @@ function applyPrecollected(pre) {
   window._dlErr = pre.dlErr ?? null;
   window._salesTrends = pre.salesTrends || null;
   window._salesErr = pre.salesErr ?? null;
+  window._exportTrends = pre.exportTrends || null;
+  window._exportErr = pre.exportErr ?? null;
   window._newsTrends = pre.newsTrends || null;
   window._rssText = pre.rssText || '';
   window._climateTrend = pre.climateTrend || null;
@@ -1913,7 +2003,7 @@ async function collectAll() {
 }
 
 function updateStatusSummary() {
-  const dotIds = ['sd-climate', 'sd-air', 'sd-ecos', 'sd-datalab', 'sd-news', 'sd-kosis'];
+  const dotIds = ['sd-climate', 'sd-air', 'sd-ecos', 'sd-datalab', 'sd-news', 'sd-kosis', 'sd-export'];
   const ok = dotIds.filter(id => {
     const el = document.getElementById(id);
     return el && el.classList.contains('ok');
@@ -1942,6 +2032,11 @@ function genReport() {
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) lines.push(`  ${k}: ${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} — ${v.interpret}`);
   });
+  if (window._exportTrends && window._exportTrends.length) {
+    lines.push('');
+    lines.push('▶ 관세청 화장품 수출 실적 — 실판매 실측 (최근 3개월 vs 직전 3개월)');
+    window._exportTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
   if (window._salesTrends && window._salesTrends.length) {
     lines.push('');
     lines.push('▶ 네이버쇼핑 클릭 트렌드 — 구매의도/판매 선행지표 (최근 3개월)');
@@ -2366,6 +2461,11 @@ function showCollectedData() {
   }
   const rss = window._rssText ? `[RSS] 수집됨 (${window._rssText.length}자)` : '[RSS] 미수집';
   lines.push(rss);
+  if (window._exportTrends && window._exportTrends.length) {
+    lines.push(`[수출 모멘텀·관세청 실판매] ` + window._exportTrends.map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
+  } else if (window._exportErr) {
+    lines.push(`[수출 모멘텀] ${EXPORT_ERR_MSG[window._exportErr] || window._exportErr}`);
+  }
   if (window._salesTrends && window._salesTrends.length) {
     lines.push(`[구매 모멘텀·쇼핑클릭] ` + window._salesTrends.map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
   } else if (window._salesErr) {
