@@ -20,6 +20,7 @@
     <span class="hd-period" id="hdPeriod">기준: 로딩 중...</span>
   </div>
   <div class="hd-right">
+    <button class="btn-hd btn-guide" id="btnGuide">이용 가이드</button>
     <div class="api-wrap">
       <button class="btn-hd btn-api-set" id="btnApiSet">API 설정</button>
       <div class="api-panel" id="apiPanel">
@@ -165,6 +166,96 @@
 
 </div><!-- /page -->
 <div id="toast"></div>
+
+<!-- ── 이용 가이드 모달 ── -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-modal">
+    <div class="gm-hd">
+      <span class="gm-title">CosmeDB TAB05 이용 가이드</span>
+      <button class="gm-close" id="btnGuideClose">×</button>
+    </div>
+    <div class="gm-body">
+
+      <section class="gm-sec">
+        <h3 class="gm-h3">1. 사용방법 — 8단계로 끝내기</h3>
+        <ol class="gm-steps">
+          <li><b>(선택) API 설정</b> — 우측 상단 [API 설정]에서 Gemini · 공공데이터 · 네이버 · ECOS 키를 등록하면 실시간 수집이 가능합니다. 키가 없어도 GitHub Actions가 6시간마다 자동 수집한 데이터로 분석할 수 있습니다.</li>
+          <li><b>[전체 수집 실행]</b> 클릭 — 기후·사회·경제·문화 4대 신호와 수출·구매·검색·뉴스 모멘텀을 한 번에 수집합니다. 화면 상단 상태바의 점(●) 색으로 진행상황을 확인하세요. (회색=대기 · 노란색=수집중 · 초록=완료 · 빨강=오류)</li>
+          <li><b>ZONE 0 — 4대 신호</b> 카드에서 기후·사회·경제·문화 4개 영역의 점수(5점 만점)와 해설을 확인합니다.</li>
+          <li><b>ZONE F — 트렌드 플로우 분석표</b>에서 수출·구매·검색·뉴스 모멘텀을 막대그래프로, 최근 대비 증감률(%)을 한눈에 확인합니다.</li>
+          <li><b>ZONE 1 — 예측 TOP5</b>: Gemini가 위 데이터를 종합 분석해 도출한 "앞으로 뜰 화장품 유형 TOP5"가 표시됩니다. 상단 탭으로 6개월 / 1년 예측을 전환할 수 있습니다.</li>
+          <li>TOP5 항목을 <b>클릭</b>하면 <b>ZONE 2 — 제조사 매칭</b>에 TRACK A(기등록 업체) · TRACK B(신규처 후보)가 자동으로 표시됩니다.</li>
+          <li><b>ZONE 3 — 법령·규제</b>에서 최신 화장품 관련 법령·고시 변경사항을 시행일 기준 긴급도별로 확인합니다.</li>
+          <li><b>[BM 보고서] → [보고서 생성]</b>을 클릭하면 지금까지의 분석 결과가 텍스트로 정리됩니다. [복사]로 보고서·회의자료에 바로 활용하세요.</li>
+        </ol>
+      </section>
+
+      <section class="gm-sec">
+        <h3 class="gm-h3">2. 분석방법 — 예측은 어떻게 만들어지나요?</h3>
+
+        <div class="gm-block">
+          <div class="gm-block-title">4대 신호 (ZONE 0) — 시장 전체에 공통 적용되는 매크로 지표, 각 5점 만점</div>
+          <ul class="gm-list">
+            <li><b>기후·환경</b> — 기상청 기온·UV지수 + 에어코리아 대기질. 계절·환경 변화가 쿨링·자외선차단·보습 수요에 미치는 영향을 봅니다.</li>
+            <li><b>사회·인구</b> — KOSIS 1인가구·고령화 통계. 인구구조 변화가 만드는 새 수요(맨즈뷰티, 안티에이징 등)를 봅니다.</li>
+            <li><b>경제·리테일</b> — ECOS 소비자물가(CPI)·원자재가 + 관세청 화장품 HS코드별 수출실적. 원가 부담과 실제 판매 실적을 봅니다.</li>
+            <li><b>문화·팝트렌드</b> — 네이버 검색·뉴스 + 뷰티 RSS. 신제품·트렌드 키워드의 화제성을 봅니다.</li>
+          </ul>
+        </div>
+
+        <div class="gm-block">
+          <div class="gm-block-title">모멘텀 4종 (ZONE F) — 카테고리별 "최근 vs 직전 기간" 증감률(%)</div>
+          <ul class="gm-list">
+            <li><span class="gm-tag gm-tag-real">REAL</span><b>수출 모멘텀</b> — 관세청 HS코드별 실제 수출액. 가장 신뢰도 높은 "실판매" 신호로 Gemini 예측에서 최우선 가중됩니다.</li>
+            <li><b>구매 모멘텀</b> — 네이버쇼핑인사이트 화장품 카테고리 클릭량 추이. "구매 의도"를 나타냅니다.</li>
+            <li><b>검색 모멘텀</b> — 네이버데이터랩 검색량 추이. "관심도"를 나타냅니다.</li>
+            <li><b>뉴스 모멘텀</b> — 뷰티 트렌드 키워드의 뉴스·RSS 언급빈도입니다.</li>
+          </ul>
+        </div>
+
+        <div class="gm-block">
+          <div class="gm-block-title">Gemini 예측 (ZONE 1)</div>
+          <p class="gm-p">위 4대 신호와 모멘텀 데이터를 하나의 프롬프트로 전달하면, Gemini가 <b>대형 3사(한국콜마·코스맥스·코스메카코리아)는 언급하지 않고</b> 다른 OEM/ODM이 진입 가능한 화장품 유형 TOP5를 신뢰도(%) · 권장 패키징 · 출시 적기(계절)와 함께 도출합니다. 각 항목의 "근거 신호" 칩은 4대 신호 중 어떤 요인이 가장 크게 작용했는지를 보여줍니다.</p>
+        </div>
+
+        <div class="gm-block">
+          <div class="gm-block-title">제조사 매칭 (ZONE 2)</div>
+          <ul class="gm-list">
+            <li><b>TRACK A — 기등록 업체</b>: 내부 DB에서 예측 카테고리·인증과 일치하는 업체를 즉시 조회합니다. (바로 컨택 가능)</li>
+            <li><b>TRACK B — 신규처 후보</b>: KIPRIS 특허·네이버뉴스·식약처 데이터를 Gemini가 분석해 "생산했던 / 생산하는 / 생산가능" 후보를 탐색합니다.</li>
+          </ul>
+        </div>
+
+        <div class="gm-block">
+          <div class="gm-block-title">법령·규제 모니터링 (ZONE 3)</div>
+          <p class="gm-p">화장품 관련 최신 법령·고시·가이드라인을 자동 수집해 시행일 기준 긴급도(D-day)에 따라 색상으로 구분 표시합니다.</p>
+        </div>
+      </section>
+
+      <section class="gm-sec">
+        <h3 class="gm-h3">3. 카테고리별 취합 정보</h3>
+        <p class="gm-p">아래 6개 대카테고리는 모멘텀 4종(검색·구매·수출·뉴스) 수집 시 공통으로 사용되는 분류입니다. 스킨케어 위주가 아니라 색조·향수·맨즈그루밍·바디케어·헤어까지 전 카테고리·전 성별을 균형 있게 수집해 편중을 방지합니다.</p>
+        <div class="gm-table-wrap">
+          <table class="gm-table">
+            <thead>
+              <tr><th>대카테고리</th><th>대표 키워드</th><th>검색·구매 모멘텀</th><th>수출 모멘텀 (관세청 HS코드)</th><th>뉴스·RSS</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>스킨케어·기능성</td><td>선케어·시카·레티놀·PDRN·비건·토너패드·앰플</td><td>O</td><td>3304 색조·기초화장품</td><td>O</td></tr>
+              <tr><td>색조·메이크업</td><td>쿠션·틴트·립밤</td><td>O</td><td>3304 색조·기초화장품</td><td>O</td></tr>
+              <tr><td>향수·퍼퓸</td><td>향수·미스트</td><td>O</td><td>3303 향수·화장수</td><td>O</td></tr>
+              <tr><td>맨즈그루밍</td><td>쉐이빙·면도크림·남성 화장품</td><td>O</td><td>3307 면도·데오·목욕용</td><td>O</td></tr>
+              <tr><td>바디케어</td><td>바디로션·바디워시</td><td>O</td><td>3307 면도·데오·목욕용</td><td>O</td></tr>
+              <tr><td>헤어·두피케어</td><td>헤어왁스·헤어에센스·두피케어</td><td>O</td><td>3305 두발용 제품</td><td>O</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="gm-p gm-note">※ 4대 신호(기후·사회·경제·문화)는 카테고리 구분 없이 시장 전체에 공통 적용되는 매크로 지표이며, 위 카테고리별 모멘텀과 함께 Gemini 예측의 입력값으로 사용됩니다.</p>
+      </section>
+
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

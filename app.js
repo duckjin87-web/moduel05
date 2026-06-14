@@ -209,6 +209,9 @@ function toggleRepPanel() {
   document.getElementById('repPanel').classList.toggle('open');
   document.getElementById('apiPanel').classList.remove('open');
 }
+function toggleGuidePanel() {
+  document.getElementById('guideOverlay').classList.toggle('open');
+}
 
 /* ════ ZONE 3 법령 렌더 ════ */
 function renderZ3() {
@@ -2508,6 +2511,8 @@ function init() {
   document.getElementById('btnApiSet').addEventListener('click', toggleApiPanel);
   document.getElementById('btnRepPanel').addEventListener('click', toggleRepPanel);
   document.getElementById('btnRepClose').addEventListener('click', toggleRepPanel);
+  document.getElementById('btnGuide').addEventListener('click', toggleGuidePanel);
+  document.getElementById('btnGuideClose').addEventListener('click', toggleGuidePanel);
   document.getElementById('btnCollect').addEventListener('click', collectAll);
   document.getElementById('btnSaveGemini').addEventListener('click', () => saveKey('gemini'));
   document.getElementById('btnTestGemini').addEventListener('click', testGemini);
@@ -2532,6 +2537,11 @@ function init() {
   document.addEventListener('click', e => {
     if (!e.target.closest('.api-wrap')) document.getElementById('apiPanel').classList.remove('open');
     if (!e.target.closest('.rep-wrap')) document.getElementById('repPanel').classList.remove('open');
+  });
+
+  /* 가이드 모달 — 배경 클릭 시 닫기 */
+  document.getElementById('guideOverlay').addEventListener('click', e => {
+    if (e.target.id === 'guideOverlay') toggleGuidePanel();
   });
 
   /* 24시간 캐시 로드 */
