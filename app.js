@@ -119,22 +119,22 @@ const REGS = [
    date:'2026.07.01',auth:'식약처',
    detail:'레티놀 0.5% 이하, 레티닐팔미테이트 10% 이하. 기능성 화장품 전 품목.',
    action:'세럼·앰플 전성분 즉시 검토. 규격 초과 시 리포뮬레이션 착수.',
-   url:'https://www.mfds.go.kr'},
+   url:'https://www.mfds.go.kr', srcLabel:'식품의약품안전처 공식 홈페이지'},
   {level:'critical',tag:'수출영향',title:'EU 미세플라스틱 사용 금지 (5μm 이하)',
    date:'2027.01.01',auth:'EU SCCS',
    detail:'마이크로비드 포함 미세플라스틱 전 품목 금지. EU 수출 제품 성분 재검토.',
    action:'EU 수출 품목 PE·PP 원료 함유 여부 전수 점검. 클렌징·스크럽 우선.',
-   url:''},
+   url:'https://eur-lex.europa.eu', srcLabel:'EU 입법 데이터베이스(EUR-Lex)'},
   {level:'upcoming',tag:'미국수출',title:'MoCRA — FDA 시설·제품 등록 의무화',
    date:'2026.12.31',auth:'FDA',
    detail:'미국 수출 화장품 제조사 FDA 시설 등록 및 제품 목록 제출 의무.',
    action:'미국 수출 거래처 FDA 등록 현황 확인. 미등록 시 절차 즉시 착수.',
-   url:''},
+   url:'https://www.fda.gov', srcLabel:'美 FDA 공식 홈페이지'},
   {level:'upcoming',tag:'중동수출',title:'할랄 인증 기준 강화 — 원료 추적성 요구',
    date:'2026.12',auth:'KMF',
    detail:'할랄 원료 공급망 추적성 문서 강화. 중동 수출 제품 영향.',
    action:'할랄 인증 업체 원료 공급망 문서 점검. 추적성 미비 시 재인증 필요.',
-   url:''},
+   url:'https://www.kmf.or.kr', srcLabel:'한국이슬람교 할랄위원회(KMF)'},
 ];
 
 /* ════ STATE ════ */
@@ -212,6 +212,9 @@ function toggleRepPanel() {
 function toggleGuidePanel() {
   document.getElementById('guideOverlay').classList.toggle('open');
 }
+function closeSigDetail() {
+  document.getElementById('sigOverlay').classList.remove('open');
+}
 
 /* ════ ZONE 3 법령 렌더 ════ */
 function renderZ3() {
@@ -238,7 +241,7 @@ function renderZ3() {
       <div class="reg-body">
         <div class="reg-meta">${escHtml(r.auth)} · ${escHtml(r.date)}</div>
         <div class="reg-detail">${escHtml(r.detail)}</div>
-        <div class="reg-action">${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">바로가기</a>` : ''}</div>
+        <div class="reg-action">${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(r.srcLabel || '근거 자료 바로가기')} →</a>` : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -268,7 +271,7 @@ function renderZ0() {
          <div class="sig-interp">${escHtml(data.interpret)}</div>
          <div class="sig-chips">${(data.chips || []).map(c => `<span class="schip">${escHtml(c)}</span>`).join('')}</div>`
       : `<div class="sig-loading">수집 중...</div>`;
-    return `<div class="sig ${d.cls}">
+    return `<div class="sig ${d.cls}" onclick="openSigDetail('${d.key}')" title="클릭하면 분석 근거 자료를 확인할 수 있습니다">
       <div class="sig-top">
         <div>
           <div class="sig-name"><span class="sig-ico ${colKey}"></span>${d.name}</div>
@@ -276,13 +279,112 @@ function renderZ0() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           ${autoTag}
-          <button class="btn-refresh-sig" onclick="refreshSignal('${d.key}', this)" title="이 신호만 재수집">↻</button>
+          <button class="btn-refresh-sig" onclick="event.stopPropagation();refreshSignal('${d.key}', this)" title="이 신호만 재수집">↻</button>
         </div>
       </div>
       ${content}
-      <div class="sig-src">${escHtml(d.src)}</div>
+      <div class="sig-src">${escHtml(d.src)} <span class="sig-detail-hint">· 클릭: 분석 근거 자료 →</span></div>
     </div>`;
   }).join('');
+}
+
+/* ════ ZONE 0 카드 클릭 → 분석 근거 자료 모달 ════ */
+const SIG_SOURCE_LINKS = {
+  climate: [
+    {label:'기상청 공공데이터(data.go.kr)', url:'https://www.data.go.kr'},
+    {label:'Open-Meteo(16일예보·평년대비)', url:'https://open-meteo.com'},
+    {label:'에어코리아(대기질)', url:'https://www.airkorea.or.kr'},
+  ],
+  society: [
+    {label:'KOSIS 국가통계포털', url:'https://kosis.kr'},
+    {label:'한국은행 ECOS(소비자심리지수)', url:'https://ecos.bok.or.kr'},
+  ],
+  economy: [
+    {label:'한국은행 ECOS(물가·CPI)', url:'https://ecos.bok.or.kr'},
+    {label:'관세청 수출입무역통계(공공데이터포털)', url:'https://www.data.go.kr'},
+  ],
+  culture: [
+    {label:'네이버 데이터랩(검색·쇼핑인사이트)', url:'https://datalab.naver.com'},
+    {label:'네이버 뉴스 검색', url:'https://search.naver.com/search.naver?where=news'},
+    {label:'뷰티 전문지 RSS(코스인코리아·장업신문·코스모닝·뷰티누리)', url:'https://www.cosinkorea.com'},
+  ],
+};
+const SIG_NAME_KO = {climate:'기후·환경', society:'사회·인구', economy:'경제·리테일', culture:'문화·팝트렌드'};
+function sourceLinksHtml(key) {
+  const links = SIG_SOURCE_LINKS[key] || [];
+  if (!links.length) return '';
+  return `<div class="gm-block">
+    <div class="gm-block-title">데이터 출처</div>
+    <ul class="gm-list">${links.map(l => `<li><a class="gm-link" href="${escHtml(l.url)}" target="_blank">${escHtml(l.label)} →</a></li>`).join('')}</ul>
+  </div>`;
+}
+function chipsHtml(chips) {
+  if (!chips || !chips.length) return '<div class="gm-p">수집된 근거 칩이 없습니다.</div>';
+  return `<div class="gm-block">
+    <div class="gm-block-title">수집된 원시 지표(칩)</div>
+    <ul class="gm-list">${chips.map(c => `<li>${escHtml(c)}</li>`).join('')}</ul>
+  </div>`;
+}
+function trendListHtml(title, list, unit) {
+  if (!list || !list.length) return '';
+  return `<div class="gm-block">
+    <div class="gm-block-title">${escHtml(title)}</div>
+    <ul class="gm-list">${list.slice(0, 6).map(t => {
+      const v = unit === 'count' ? `${t.count}건` : `${t.delta >= 0 ? '+' : ''}${t.delta}%`;
+      return `<li>${escHtml(t.name)} — <b>${v}</b></li>`;
+    }).join('')}</ul>
+  </div>`;
+}
+function articleListHtml(title, list) {
+  if (!list || !list.length) return '';
+  return `<div class="gm-block">
+    <div class="gm-block-title">${escHtml(title)}</div>
+    <ul class="gm-list">${list.slice(0, 10).map(a =>
+      a.link
+        ? `<li><a class="gm-link" href="${escHtml(a.link)}" target="_blank">${escHtml(a.source ? '[' + a.source + '] ' : '')}${escHtml(a.title)} →</a></li>`
+        : `<li>${escHtml(a.source ? '[' + a.source + '] ' : '')}${escHtml(a.title)}</li>`
+    ).join('')}</ul>
+  </div>`;
+}
+function buildSigDetailHtml(key) {
+  const data = SIG_DATA[key];
+  if (!data) {
+    return `<div class="gm-p">아직 수집된 데이터가 없습니다. [전체 수집 실행] 또는 ZONE 0 카드의 ↻ 버튼으로 먼저 수집하세요.</div>`;
+  }
+  let body = `<div class="gm-block">
+    <div class="gm-block-title">종합 해석</div>
+    <div class="gm-p">${escHtml(data.interpret || '')}</div>
+    ${data._sample ? '<div class="gm-note">⚠ 실데이터 수집 실패 또는 키 미설정 — 샘플/추정값이 포함되어 있습니다.</div>' : ''}
+  </div>`;
+  body += chipsHtml(data.chips);
+
+  if (key === 'climate') {
+    if (window._climateTrend) {
+      const ct = window._climateTrend;
+      const parts = [];
+      if (ct.deviation !== null && ct.deviation !== undefined) parts.push(`평년(작년 동기간 ±3일) 대비 오늘 최고기온 편차: <b>${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃</b>`);
+      if (ct.trend16) parts.push(`16일 예보 전반(1~8일) 평균 ${ct.trend16.week1}℃ → 후반(9~16일) 평균 ${ct.trend16.week2}℃ (변화 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃)`);
+      if (parts.length) body += `<div class="gm-block"><div class="gm-block-title">기온 추세 근거</div><ul class="gm-list">${parts.map(p=>`<li>${p}</li>`).join('')}</ul></div>`;
+    }
+  }
+  if (key === 'economy') {
+    body += trendListHtml('관세청 수출 모멘텀 (HS코드별 최근 3개월 vs 직전 3개월)', window._exportTrends);
+    if (window._exportErr) body += `<div class="gm-note">수출 모멘텀 미수집: ${escHtml(EXPORT_ERR_MSG[window._exportErr] || window._exportErr)}</div>`;
+  }
+  if (key === 'culture') {
+    body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
+    body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
+    body += trendListHtml('뉴스·RSS 최다 언급 키워드', window._newsTrends, 'count');
+    body += articleListHtml('네이버 뉴스 분석 근거 기사', window._newsArticles);
+    body += articleListHtml('뷰티 전문지 RSS 분석 근거 기사', window._rssArticles);
+  }
+  body += sourceLinksHtml(key);
+  return body;
+}
+function openSigDetail(key) {
+  document.getElementById('sigModalTitle').textContent = `${SIG_NAME_KO[key] || key} — 분석 근거 자료`;
+  document.getElementById('sigModalBody').innerHTML = buildSigDetailHtml(key);
+  document.getElementById('sigOverlay').classList.add('open');
 }
 
 async function refreshSignal(key, btn) {
@@ -741,16 +843,19 @@ async function collectNewsTrends(nid, nsec) {
   }));
   let total = 0, ok = false;
   const kwMap = {};
+  const articles = [];   /* ZONE 0 문화 카드 클릭 시 "분석 근거 자료"로 노출할 기사 제목+링크 */
   resps.forEach(j => {
     if (!j || j._error) return;
     ok = true;
     total += j.total || 0;
     (j.items || []).forEach(it => {
-      const text = `${it.title} ${it.description}`.replace(/<[^>]+>/g, '');
+      const title = (it.title || '').replace(/<[^>]+>/g, '');
+      const text = `${title} ${it.description}`.replace(/<[^>]+>/g, '');
       TREND_KEYWORDS.forEach(kw => { if (text.includes(kw)) kwMap[kw] = (kwMap[kw]||0) + 1; });
+      if (it.link && articles.length < 20) articles.push({ title, link: it.link, source: '네이버뉴스' });
     });
   });
-  return { total, kwMap, ok };
+  return { total, kwMap, ok, articles };
 }
 
 async function collectDataLab(nid, nsec) {
@@ -913,6 +1018,8 @@ async function collectCulture() {
     const [exportResult, rssData] = await Promise.all([exportPromise, collectBeautyRSS()]);
     applyExport(exportResult);
     window._rssText = rssData.text || '';
+    window._rssArticles = rssData.articles || [];
+    window._newsArticles = null;   /* 네이버뉴스는 키 필요 */
     window._salesTrends = null;   /* 쇼핑인사이트는 네이버 키 필요 */
     window._dlTrends = null;
     window._salesErr = null;
@@ -944,6 +1051,8 @@ async function collectCulture() {
   ]);
   applyExport(exportResult);
   window._rssText = rssData.text || '';
+  window._rssArticles = rssData.articles || [];
+  window._newsArticles = newsTrends.articles || [];
   window._dlTrends = dlResult.trends;   /* Gemini 프롬프트·보고서·트렌드 모멘텀에서 활용 */
   window._dlErr = dlResult.err;
   window._salesTrends = salesResult.trends;   /* 실판매(구매의도) 모멘텀 — 실데이터 없으면 null */
@@ -1044,195 +1153,23 @@ function getRankChanges(predictions, period) {
   } catch { return {}; }
 }
 
-/* ════════════════════════════════════════════════════════════
-   트렌드 플로우 — "흐름"을 누적·분석하는 시계열(빅데이터) 구조
-   ────────────────────────────────────────────────────────────
-   매 수집마다 4대 신호 점수 + 검색트렌드 + 뉴스 키워드 + 기후추세 + 예측 TOP을
-   타임스탬프 스냅샷으로 localStorage에 누적(최근 40회). 단일 시점이 아니라
-   "시간에 따른 트렌드 이동(궤적)"을 분석·시각화하기 위한 토대.
-   ※ 클라이언트 누적은 단일 브라우저 한정 — 다기기·대규모 집계는 향후
-     백엔드(예: 일배치 적재 → 카테고리별 모멘텀 집계)로 확장 가능. */
-const TREND_FLOW_KEY = 'm5_trendflow';
-const TREND_FLOW_MAX = 40;
-function recordTrendFlow() {
-  try {
-    const sig = {};
-    Object.entries(SIG_DATA).forEach(([k, v]) => { if (v) sig[k] = +(v.score || 0).toFixed(2); });
-    if (!Object.keys(sig).length) return;
-    const snap = {
-      ts: Date.now(),
-      sig,
-      dl: (window._dlTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
-      sales: (window._salesTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
-      exports: (window._exportTrends || []).slice(0, 5).map(t => ({ n: t.name, d: t.delta })),
-      news: (window._newsTrends || []).slice(0, 5).map(t => ({ n: t.name, c: t.count })),
-      climate: window._climateTrend ? { dev: window._climateTrend.deviation,
-                 t16: window._climateTrend.trend16 ? window._climateTrend.trend16.delta : null } : null,
-      top: (PREDICTIONS || []).slice(0, 3).map(p => p.type),
-    };
-    const arr = JSON.parse(ls(TREND_FLOW_KEY) || '[]');
-    arr.unshift(snap);
-    ls(TREND_FLOW_KEY, JSON.stringify(arr.slice(0, TREND_FLOW_MAX)));
-  } catch {}
-}
-function getTrendFlow() {
-  try { return JSON.parse(ls(TREND_FLOW_KEY) || '[]'); } catch { return []; }
-}
-
-/* 손그림 느낌 SVG 헬퍼 — feTurbulence로 선을 살짝 흔들어 아날로그 질감 부여 */
-const SIG_COLOR = { climate:'#4a72a8', society:'#4a8874', economy:'#b89020', culture:'#bf7b42' };
-const SIG_KO = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
-function ringArc(cx, cy, rO, rI, a0, a1) {
-  const pt = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-  const large = (a1 - a0) > Math.PI ? 1 : 0;
-  const [x1, y1] = pt(rO, a0), [x2, y2] = pt(rO, a1);
-  const [x3, y3] = pt(rI, a1), [x4, y4] = pt(rI, a0);
-  return `M${x1.toFixed(1)} ${y1.toFixed(1)} A${rO} ${rO} 0 ${large} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} `
-       + `L${x3.toFixed(1)} ${y3.toFixed(1)} A${rI} ${rI} 0 ${large} 0 ${x4.toFixed(1)} ${y4.toFixed(1)} Z`;
-}
-
-function renderTrendFlow() {
-  const el = document.getElementById('zFlow');
-  if (!el) return;
-  const hasSig = Object.values(SIG_DATA).some(v => v);
-  if (!hasSig) { el.hidden = true; return; }
-  el.hidden = false;
-
-  /* ── 1) 신호 구성 도넛 (점수 비중) ── */
-  const entries = Object.entries(SIG_DATA).filter(([, v]) => v);
-  const total = entries.reduce((s, [, v]) => s + (v.score || 0), 0) || 1;
-  let ang = -Math.PI / 2;
-  const cx = 70, cy = 70, rO = 58, rI = 33;
-  const arcs = entries.map(([k, v]) => {
-    const frac = (v.score || 0) / total;
-    const a0 = ang, a1 = ang + frac * Math.PI * 2;
-    ang = a1;
-    return `<path d="${ringArc(cx, cy, rO, rI, a0, a1 - 0.02)}" fill="${SIG_COLOR[k]}" opacity="0.82"/>`;
-  }).join('');
-  const dom = entries.slice().sort((a, b) => (b[1].score || 0) - (a[1].score || 0))[0];
-  const legend = entries.map(([k, v]) =>
-    `<div class="fl-leg"><span class="fl-dot" style="background:${SIG_COLOR[k]}"></span>${SIG_KO[k]} <b>${(v.score || 0).toFixed(1)}</b></div>`
-  ).join('');
-  const donut = `
-    <div class="fl-card">
-      <div class="fl-cap">신호 구성</div>
-      <div class="fl-donut-wrap">
-        <svg viewBox="0 0 140 140" class="sketch">
-          <g filter="url(#flRough)">${arcs}</g>
-        </svg>
-        <div class="fl-donut-mid">
-          <div class="fl-mid-k">${SIG_KO[dom[0]]}</div>
-          <div class="fl-mid-s">우세</div>
-        </div>
-      </div>
-      <div class="fl-legend">${legend}</div>
-    </div>`;
-
-  /* ── 2) 트렌드 모멘텀 (수출 실판매 + 구매 쇼핑클릭 + 검색 상승률 + 뉴스 언급) ── */
-  const exp = (window._exportTrends || []).slice(0, 4);
-  const sales = (window._salesTrends || []).slice(0, 4);
-  const dl = (window._dlTrends || []).slice(0, 4);
-  const news = (window._newsTrends || []).slice(0, 3);
-  const bars = (list, mark) => {
-    const mx = Math.max(20, ...list.map(t => Math.abs(t.delta)));
-    return list.map(t => {
-      const w = Math.min(100, Math.abs(t.delta) / mx * 100);
-      const up = t.delta >= 0;
-      return `<div class="fl-bar-row">
-        <span class="fl-bar-lb">${escHtml(t.name)}</span>
-        <span class="fl-bar-track"><span class="fl-bar-fill ${up ? 'up' : 'dn'}${mark ? ' buy' : ''}" style="width:${w}%"></span></span>
-        <span class="fl-bar-val ${up ? 'up' : 'dn'}">${up ? '+' : ''}${t.delta}%</span>
-      </div>`;
-    }).join('');
-  };
-  /* 수출(실제 출하·결제된 판매 실적)이 가장 강한 신호 — 있으면 최상단에 강조
-     이어서 구매(쇼핑클릭) → 검색 → 뉴스. 데이터 없을 때는 실패 사유를 구분 표시 */
-  const exportBlock = exp.length
-    ? `<div class="fl-seg">수출 모멘텀 <span class="fl-tag-lead">REAL · 관세청 실판매</span></div>${bars(exp, true)}`
-    : (window._exportErr ? `<div class="fl-empty">수출 모멘텀 — ${EXPORT_ERR_MSG[window._exportErr] || '데이터 없음'}</div>` : '');
-  const salesBlock = sales.length
-    ? `<div class="fl-seg">구매 모멘텀 <span class="fl-tag-lead">LEAD · 네이버쇼핑 클릭</span></div>${bars(sales, true)}`
-    : (window._salesErr ? `<div class="fl-empty">구매 모멘텀 — ${NAVER_ERR_MSG[window._salesErr] || '데이터 없음'}</div>` : '');
-  const searchBlock = dl.length
-    ? `<div class="fl-seg">검색 모멘텀 <span class="fl-sub">네이버 검색트렌드</span></div>${bars(dl, false)}`
-    : (window._dlErr ? `<div class="fl-empty">검색 모멘텀 — ${NAVER_ERR_MSG[window._dlErr] || '데이터 없음'}</div>` : '');
-  const noDataBlock = (!exp.length && !sales.length && !dl.length
-      && !window._exportErr && !window._salesErr && !window._dlErr)
-    ? '<div class="fl-empty">수출·검색·구매 트렌드 데이터 없음 (공공데이터·네이버 키 입력 시 표시)</div>'
-    : '';
-  const newsChips = news.length
-    ? `<div class="fl-news">최다 언급 · ${news.map(n => `<span class="fl-nchip">${escHtml(n.name)} <b>${n.count}</b></span>`).join('')}</div>`
-    : '';
-  const momentum = `
-    <div class="fl-card fl-grow">
-      <div class="fl-cap">트렌드 모멘텀 <span class="fl-sub">수출·구매·검색·뉴스</span></div>
-      ${exportBlock}
-      ${salesBlock}
-      ${searchBlock}
-      ${noDataBlock}
-      ${newsChips}
-    </div>`;
-
-  /* ── 3) 시계열 플로우 (누적 스냅샷으로 본 흐름) ── */
-  const flow = getTrendFlow();
-  let traj;
-  if (flow.length < 2) {
-    traj = `<div class="fl-card">
-        <div class="fl-cap">시계열 플로우 <span class="fl-sub">흐름 누적</span></div>
-        <div class="fl-empty">누적 ${flow.length}회 — 수집을 반복할수록<br>트렌드 이동 궤적이 그려집니다.</div>
-      </div>`;
-  } else {
-    /* 최근→과거 저장이므로 시간순으로 뒤집어 우세 신호 점수 추이 그리기 */
-    const series = flow.slice(0, 12).reverse();
-    const domKey = dom[0];
-    const vals = series.map(s => (s.sig && s.sig[domKey] != null) ? s.sig[domKey] : 0);
-    const w = 230, h = 86, pad = 8;
-    const xs = (i) => pad + i * (w - pad * 2) / (vals.length - 1);
-    const ys = (v) => h - pad - (v / 5) * (h - pad * 2);
-    const line = vals.map((v, i) => `${i ? 'L' : 'M'}${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`).join(' ');
-    const dots = vals.map((v, i) => `<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="2.4" fill="${SIG_COLOR[domKey]}"/>`).join('');
-    const first = vals[0], last = vals[vals.length - 1];
-    const arrow = last > first ? '상승' : last < first ? '하강' : '보합';
-    traj = `<div class="fl-card">
-        <div class="fl-cap">시계열 플로우 <span class="fl-sub">${SIG_KO[domKey]} 신호 · 최근 ${vals.length}회</span></div>
-        <svg viewBox="0 0 ${w} ${h}" class="sketch fl-traj">
-          <g filter="url(#flRough)">
-            <path d="${line}" fill="none" stroke="${SIG_COLOR[domKey]}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            ${dots}
-          </g>
-        </svg>
-        <div class="fl-flow-note">흐름: <b style="color:${SIG_COLOR[domKey]}">${arrow}</b> · 누적 ${flow.length}회</div>
-      </div>`;
-  }
-
-  el.innerHTML = `
-    <div class="zflow-hd">
-      <span class="zflow-title">트렌드 플로우 분석</span>
-      <span class="zflow-sub">4대 신호·검색·뉴스의 흐름을 누적 분석</span>
-    </div>
-    <svg width="0" height="0" style="position:absolute"><defs>
-      <filter id="flRough"><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="n"/>
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/></filter>
-    </defs></svg>
-    <div class="zflow-grid">${donut}${momentum}${traj}</div>`;
-}
-
 async function collectBeautyRSS() {
   /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
   const feeds = [
-    'https://www.cosinkorea.com/rss/allArticle.xml',   /* 코스인코리아 */
-    'https://www.jangup.com/rss/allArticle.xml',       /* 장업신문(화장품) */
-    'https://www.cosmorning.com/rss/allArticle.xml',   /* 코스모닝 */
-    'https://www.beautynury.com/rss',                  /* 뷰티누리 */
+    { url:'https://www.cosinkorea.com/rss/allArticle.xml', name:'코스인코리아' },
+    { url:'https://www.jangup.com/rss/allArticle.xml',     name:'장업신문' },
+    { url:'https://www.cosmorning.com/rss/allArticle.xml', name:'코스모닝' },
+    { url:'https://www.beautynury.com/rss',                name:'뷰티누리' },
   ];
   let count = 0;
   const keywords = [];
   const kwMap = {};
   const companyMentions = [];   /* TRACK B 연동용 업체명 언급 텍스트 */
+  const articles = [];          /* ZONE 0 문화 카드 클릭 시 "RSS 분석 근거 자료"로 노출할 기사 제목+링크 */
   /* 병렬 수집 — 순차 수집 시 프록시 체인 누적 지연(피드당 최대 ~40초) 방지 */
-  const texts = await Promise.all(feeds.map(u => fetchProxy(u, 7000).catch(() => null)));
-  for (const t of texts) {
-    if (!t || !t.includes('<')) continue;
+  const texts = await Promise.all(feeds.map(f => fetchProxy(f.url, 7000).catch(() => null)));
+  texts.forEach((t, fi) => {
+    if (!t || !t.includes('<')) return;
     try {
       /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
       const titles = [
@@ -1251,11 +1188,18 @@ async function collectBeautyRSS() {
           if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
         });
       });
+      /* <item> 단위로 제목+링크를 짝지어 근거 기사 목록 구성 */
+      const itemBlocks = [...t.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => m[1]);
+      itemBlocks.slice(0, 6).forEach(blk => {
+        const tm = blk.match(/<title>(?:<!\[CDATA\[)?([^<\]]+)/);
+        const lm = blk.match(/<link>([^<]+)<\/link>/);
+        if (tm && lm) articles.push({ title: tm[1].trim(), link: lm[1].trim(), source: feeds[fi].name });
+      });
     } catch {}
-  }
+  });
   const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
   sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
-  return { count, keywords, kwMap, text: companyMentions.join(' ').slice(0, 4000) };
+  return { count, keywords, kwMap, articles, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
 async function collectMFDSFunc() {
@@ -1609,7 +1553,15 @@ async function findNewManufacturers(productType, tech) {
     : Promise.resolve(null);
   /* 제조업 등록목록은 제품과 무관하게 동일 → 세션 1회 수집 후 캐시 */
   const gmpPromise = (pubKey && !window._gmpCache) ? collectMFDSGMP() : Promise.resolve(window._gmpCache || []);
-  const [mfdsT, gmpList, ...naverResults] = await Promise.all([mfdsPromise, gmpPromise, ...naverPromises]);
+  /* 블로그내용 추적 — 추측성 후보의 근거 보강용 텍스트 소스 추가 */
+  const blogPromise = (nid && nsec)
+    ? fetchNaverAPI(`https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(kw + ' OEM 제조')}&display=15&sort=sim`, nid, nsec, 9000)
+    : Promise.resolve(null);
+  /* 판매 제품 제조원 역추적 — 실제 판매 중인 제품의 제조사(maker) 필드를 직접 확인 */
+  const shopPromise = (nid && nsec)
+    ? fetchNaverAPI(`https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(kw)}&display=30&sort=sim`, nid, nsec, 9000)
+    : Promise.resolve(null);
+  const [mfdsT, gmpList, blogJ, shopJ, ...naverResults] = await Promise.all([mfdsPromise, gmpPromise, blogPromise, shopPromise, ...naverPromises]);
   if (gmpList.length) window._gmpCache = gmpList;
 
   let newsTexts = '';
@@ -1630,8 +1582,31 @@ async function findNewManufacturers(productType, tech) {
       mfdsTexts = arr.map(i => i.MFR_STE_NM || i.ENTP_NAME || i.BSSH_NM || '').filter(Boolean).join(' ');
     } catch {}
   }
+  /* 블로그내용 추적 텍스트 — Gemini 추출 corpus에 합류 (근거 등급은 blog로 별도 표기) */
+  let blogTexts = '';
+  if (blogJ && !blogJ._error) {
+    blogTexts = (blogJ.items || []).map(i => `${i.title} ${i.description}`.replace(/<[^>]+>/g, '')).join(' ');
+  }
+  /* 판매 제품 제조원 역추적 — 네이버쇼핑 검색결과의 maker(제조사) 필드를 직접 추출해 확정 근거로 사용 */
+  const shopMakerResults = [];
+  if (shopJ && !shopJ._error) {
+    const seenMaker = new Set();
+    (shopJ.items || []).forEach(it => {
+      const maker = (it.maker || '').replace(/<[^>]+>/g, '').trim();
+      if (!maker) return;
+      const cn = normCompanyName(maker);
+      if (!cn || seenMaker.has(cn)) return;
+      seenMaker.add(cn);
+      const product = (it.title || '').replace(/<[^>]+>/g, '');
+      shopMakerResults.push({
+        name: maker, evidence_type: 'product', production: '생산중',
+        evidence_detail: `네이버쇼핑 판매 제품 "${product.slice(0, 40)}"의 제조사(maker) 정보로 확인 — 실제 판매 중인 제품에서 제조원 역추적`,
+        region: '', sourceLink: it.link || ''
+      });
+    });
+  }
   const rssText = window._rssText || '';
-  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText).slice(0, 6000);
+  const allText = (newsTexts + ' ' + mfdsTexts + ' ' + rssText + ' ' + blogTexts).slice(0, 6000);
 
   /* ── ② 추출: Gemini 우선 → 실패·키없음 시 업체명 패턴 추출 폴백 ── */
   if (gkey && allText.trim()) {
@@ -1639,7 +1614,7 @@ async function findNewManufacturers(productType, tech) {
 패키징·충진 설비 관점(${currentPkgType || '특수 패키징'})을 핵심 기준으로 삼으세요.
 추측되는 업체도 반드시 포함하되, 확인된 업체와 근거를 명확히 구분하세요.
 
-[검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS 통합]
+[검색 텍스트 — 네이버뉴스+식약처+뷰티미디어RSS+네이버블로그 통합]
 ${allText}
 
 [3관점 분류 — production 필드]
@@ -1650,6 +1625,7 @@ ${allText}
 [근거 등급 — evidence_type 필드]
 - "mfds" : 식약처/제조업 등록 등 공적 근거가 텍스트에 있음
 - "news" : 뉴스·RSS에 생산/수주 정황이 직접 언급됨
+- "blog" : 블로그 리뷰·체험기 등에서 제조사/OEM 정황이 언급됨 (텍스트 중 블로그 출처 문단)
 - "inferred" : 추측(생산가능). 이 경우 evidence_detail을 반드시 "추측: …(추측근거) …이므로 생산 가능"으로 작성
 
 [규칙]
@@ -1659,7 +1635,7 @@ ${allText}
 - evidence_detail에는 텍스트의 어떤 내용이 근거인지 구체적으로 기재
 
 JSON만 출력:
-{"companies":[{"name":"업체명","evidence_type":"mfds|news|inferred","production":"생산중|생산이력|생산가능(추측)","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
+{"companies":[{"name":"업체명","evidence_type":"mfds|news|blog|inferred","production":"생산중|생산이력|생산가능(추측)","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 15000);
@@ -1683,6 +1659,8 @@ JSON만 출력:
         evidence_detail: '추측: "' + kw + '" OEM·제조 관련 뉴스/RSS 텍스트에서 업체명이 감지됨 — 생산품목 직접 확인 필요', region: '' });
     });
   }
+  /* 판매 제품 제조원 역추적 결과 합류 — maker 필드는 확정 근거이므로 항상 포함 */
+  results.push(...shopMakerResults);
 
   /* ── ③ 식약처 화장품제조업 등록 교차검증 ──
      등록 확인 시: 업체 실재·제조업 등록은 격상(mfds)하되, "이 제품 생산 여부"는 별개이므로
@@ -1717,15 +1695,41 @@ JSON만 출력:
     });
     return !inDB;
   });
-  /* 근거 신뢰도 우선 정렬 — 확인(mfds>news) 업체가 추측에 밀려나지 않도록.
+  /* 근거 신뢰도 우선 정렬 — 확인(mfds>product>news>blog) 업체가 추측에 밀려나지 않도록.
      동급이면 생산중 > 생산이력 > 생산가능(추측) 순 */
-  const evRank = { mfds: 0, news: 1, inferred: 2 };
+  const evRank = { mfds: 0, product: 1, news: 2, blog: 3, inferred: 4 };
   const prodRank = { '생산중': 0, '생산이력': 1, '생산가능(추측)': 2 };
   filtered.sort((a, b) =>
-    (evRank[a.evidence_type] ?? 3) - (evRank[b.evidence_type] ?? 3)
+    (evRank[a.evidence_type] ?? 5) - (evRank[b.evidence_type] ?? 5)
     || (prodRank[a.production] ?? 3) - (prodRank[b.production] ?? 3)
   );
-  return filtered.slice(0, 10);
+  const top = filtered.slice(0, 10);
+
+  /* ── ⑤ 홈페이지 탐색 — 추측(inferred) 근거 보강: 공식 홈페이지 확인 시 evidence_detail에 링크 추가 ── */
+  if (nid && nsec) {
+    const toLookup = top.filter(c => c.evidence_type === 'inferred' && !c.homepage).slice(0, 5);
+    const hps = await Promise.all(toLookup.map(c => lookupCompanyHomepage(c.name, nid, nsec)));
+    toLookup.forEach((c, i) => {
+      if (hps[i]) {
+        c.homepage = hps[i];
+        c.evidence_detail += ` · 공식 홈페이지 확인됨: ${hps[i]}`;
+      }
+    });
+  }
+  return top;
+}
+
+/* 홈페이지 탐색 — 네이버 웹문서 검색으로 업체 공식 홈페이지 URL 추정(추측 근거 보강용) */
+async function lookupCompanyHomepage(name, nid, nsec) {
+  if (!name) return '';
+  try {
+    const j = await fetchNaverAPI(`https://openapi.naver.com/v1/search/webkr.json?query=${encodeURIComponent(name + ' 공식 홈페이지')}&display=3`, nid, nsec, 6000);
+    if (j && !j._error && Array.isArray(j.items) && j.items.length) {
+      const hit = j.items.find(i => /\.co\.kr|\.com|\.kr$/.test((i.link || '').replace(/\/$/, ''))) || j.items[0];
+      return hit.link || '';
+    }
+  } catch {}
+  return '';
 }
 
 /* ════ 패키징 적합도 점수 ════ */
@@ -1840,14 +1844,20 @@ function newCardHtml(c, idx) {
   const evTypeCls = c.evidence_type === 'patent'   ? 'ev-patent'   :
                    c.evidence_type === 'news'     ? 'ev-news'     :
                    c.evidence_type === 'mfds'     ? 'ev-mfds'     :
+                   c.evidence_type === 'product'  ? 'ev-product'  :
+                   c.evidence_type === 'blog'     ? 'ev-blog'     :
                    c.evidence_type === 'inferred' ? 'ev-inferred' : 'ev-search';
-  const evLabel = { patent:'특허 근거', news:'뉴스 근거', mfds:'식약처 근거',
-                    inferred:'추측 근거', search:'검색 근거' }[c.evidence_type] || '근거';
+  const evLabel = { patent:'특허 근거', news:'뉴스 근거', mfds:'식약처 근거', product:'판매제품 제조원 근거',
+                    blog:'블로그 근거', inferred:'추측 근거', search:'검색 근거' }[c.evidence_type] || '근거';
   /* 생산 관점 배지 — 생산중/생산이력/생산가능(추측) */
   const prod = c.production || (c.evidence_type === 'inferred' ? '생산가능(추측)' : '생산중');
   const prodCls = prod === '생산중' ? 'prod-now' : prod === '생산이력' ? 'prod-past' : 'prod-maybe';
   const isInfer = c.evidence_type === 'inferred';
   const evalAdded = isInEvalList(c.name);
+  const evLink = c.sourceLink || c.homepage || '';
+  const detailBtn = evLink
+    ? `<button class="btn-mc btn-detail" onclick="window.open('${escJs(evLink)}','_blank')">근거 자료 열기 →</button>`
+    : `<button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>`;
   return `<div class="mcard${isInfer ? ' mcard-infer' : ''}">
     <div class="mc-head">
       <div class="mc-name">${escHtml(c.name)}</div>
@@ -1862,7 +1872,7 @@ function newCardHtml(c, idx) {
       <div class="ev-txt">${escHtml(c.evidence_detail || '근거 상세 없음')}</div>
     </div>
     <div class="mc-actions">
-      <button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>
+      ${detailBtn}
       <button class="btn-mc btn-eval ${evalAdded ? 'added' : ''}" id="eval-btn-${idx}"
         onclick="addToEvalList(${idx})">${evalAdded ? '추가됨' : '+ 등록평가 추가'}</button>
     </div>
@@ -1880,7 +1890,10 @@ function noTrackBHtml() {
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">자동 탐색 경로 (재시도 시)</div>
       <span class="skw">"${kw} OEM"(생산중) / "${kw} 제조사 출시"(생산이력)</span><br>
       <span class="skw">패키징 키워드 + "충진 OEM"</span> 생산가능(설비) 관점 추측 탐색<br>
-      <span class="skw">식약처 품목정보 + 제조업 등록목록</span> 교차검증·지역 보강
+      <span class="skw">식약처 품목정보 + 제조업 등록목록</span> 교차검증·지역 보강<br>
+      <span class="skw">네이버쇼핑 "${kw}" 검색결과 제조사(maker) 필드</span> 판매 제품 제조원 역추적<br>
+      <span class="skw">네이버블로그 "${kw} OEM 제조"</span> 블로그 후기·체험기 근거 추적<br>
+      <span class="skw">추측 후보 업체명 + "공식 홈페이지"</span> 웹문서 검색으로 홈페이지 확인
     </div>
     <div class="search-hint" style="margin-top:6px">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">수동 탐색 기준</div>
@@ -2005,7 +2018,6 @@ async function collectAll() {
   /* IMP-04: 보고서 자동 생성 */
   genReport();
 
-  recordTrendFlow(); renderTrendFlow();
   btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
   showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
@@ -2544,6 +2556,12 @@ function init() {
     if (e.target.id === 'guideOverlay') toggleGuidePanel();
   });
 
+  /* 분석 근거 자료 모달 — 닫기 버튼·배경 클릭 시 닫기 */
+  document.getElementById('btnSigClose').addEventListener('click', closeSigDetail);
+  document.getElementById('sigOverlay').addEventListener('click', e => {
+    if (e.target.id === 'sigOverlay') closeSigDetail();
+  });
+
   /* 24시간 캐시 로드 */
   const cached = ls('m5_cache');
   if (cached) {
@@ -2560,11 +2578,9 @@ function init() {
           PREDICTIONS = p;
           renderZ0();
           renderZ1();
-          renderTrendFlow();
           showToast('캐시 데이터 로드됨 (24시간 이내)');
         } else {
           renderZ0();
-          renderTrendFlow();
         }
       }
     } catch {}

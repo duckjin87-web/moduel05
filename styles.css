@@ -165,8 +165,10 @@ button { font-family: inherit; cursor: pointer; }
   box-shadow: var(--s1);
   position: relative;
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .15s;
 }
+.sig:hover { box-shadow: var(--s2); transform: translateY(-1px); }
 .sig::after {
   content: '';
   position: absolute;
@@ -204,6 +206,7 @@ button { font-family: inherit; cursor: pointer; }
 .sig-chips  { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 5px; }
 .schip { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg2); color: var(--ink2); border: .5px solid var(--bg3); }
 .sig-src  { font-size: 9px; color: var(--ink3); }
+.sig-detail-hint { color: var(--blue2); }
 .sig-loading {
   display: flex; align-items: center; gap: 5px;
   font-size: 10px; color: var(--ink3); padding: 8px 0;
@@ -218,76 +221,6 @@ button { font-family: inherit; cursor: pointer; }
   flex-shrink: 0;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ═══════════════════════════════════════
-   ZONE F: 트렌드 플로우 분석 (손그림 분석표)
-═══════════════════════════════════════ */
-.zflow {
-  background: var(--w);
-  border: .5px solid var(--bg3);
-  border-radius: var(--r2);
-  box-shadow: var(--s1);
-  padding: 12px 14px 14px;
-  margin-bottom: 10px;
-  position: relative;
-}
-.zflow-hd { display: flex; align-items: baseline; gap: 9px; margin-bottom: 10px; }
-.zflow-title {
-  font-family: 'Nanum Pen Script', cursive;
-  font-size: 24px; line-height: 1; color: var(--ink);
-  letter-spacing: .01em;
-}
-.zflow-sub { font-size: 10px; color: var(--ink3); }
-.zflow-grid { display: grid; grid-template-columns: 168px 1fr 264px; gap: 12px; align-items: stretch; }
-@media(max-width:900px){ .zflow-grid { grid-template-columns: 1fr; } }
-
-.fl-card {
-  border: 1px dashed var(--bg3);
-  border-radius: 14px 12px 13px 11px;   /* 살짝 불균형한 모서리 = 손그림 느낌 */
-  padding: 9px 11px 10px;
-  background: linear-gradient(180deg, rgba(243,237,228,.35), rgba(255,255,255,0));
-}
-.fl-grow { display: flex; flex-direction: column; }
-.fl-cap { font-family: 'Nanum Pen Script', cursive; font-size: 17px; color: var(--ink2); margin-bottom: 6px; }
-.fl-sub { font-family: inherit; font-size: 9px; color: var(--ink3); margin-left: 4px; }
-.fl-empty { font-size: 10px; color: var(--ink3); line-height: 1.6; padding: 14px 4px; text-align: center; }
-
-/* 손그림 SVG 공통 — 선/면을 부드럽게 */
-.sketch { display: block; width: 100%; height: auto; overflow: visible; }
-.sketch path, .sketch circle { stroke-linejoin: round; }
-
-/* 도넛 */
-.fl-donut-wrap { position: relative; width: 140px; margin: 0 auto 6px; }
-.fl-donut-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.fl-mid-k { font-family: 'Nanum Pen Script', cursive; font-size: 22px; color: var(--ink); line-height: 1; }
-.fl-mid-s { font-size: 9px; color: var(--ink3); }
-.fl-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
-.fl-leg { font-size: 10px; color: var(--ink2); display: flex; align-items: center; gap: 4px; }
-.fl-leg b { color: var(--ink); }
-.fl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-/* 모멘텀 막대 */
-.fl-seg { font-size: 10px; font-weight: 700; color: var(--ink2); margin: 2px 0 5px; display: flex; align-items: center; gap: 5px; }
-.fl-seg:not(:first-child) { margin-top: 9px; }
-.fl-tag-lead { font-size: 8px; font-weight: 700; letter-spacing: .04em; color: #fff; background: var(--grn); padding: 1px 5px; border-radius: 3px; }
-.fl-bar-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-.fl-bar-lb { font-size: 10px; color: var(--ink2); width: 84px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fl-bar-track { flex: 1; height: 9px; background: var(--bg2); border-radius: 5px; overflow: hidden; }
-.fl-bar-fill { display: block; height: 100%; border-radius: 5px; }
-.fl-bar-fill.up { background: var(--teal2); }
-.fl-bar-fill.dn { background: var(--acc2); }
-.fl-bar-fill.buy.up { background: var(--grn); }
-.fl-bar-fill.buy.dn { background: var(--acc); }
-.fl-bar-val { font-size: 10px; font-weight: 700; width: 42px; text-align: right; flex-shrink: 0; }
-.fl-bar-val.up { color: var(--teal); }
-.fl-bar-val.dn { color: var(--acc); }
-.fl-news { font-size: 9px; color: var(--ink3); margin-top: 4px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.fl-nchip { background: var(--bg2); border: .5px solid var(--bg3); border-radius: 3px; padding: 1px 5px; color: var(--ink2); }
-.fl-nchip b { color: var(--acc); }
-
-/* 시계열 */
-.fl-traj { margin: 2px 0 4px; }
-.fl-flow-note { font-size: 10px; color: var(--ink3); text-align: center; }
 
 /* ═══════════════════════════════════════
    ZONE 1: 예측 TOP5
@@ -437,6 +370,8 @@ button { font-family: inherit; cursor: pointer; }
 .ev-type { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
 .ev-patent { color: var(--blue); }
 .ev-news   { color: var(--acc); }
+.ev-product { color: var(--grn); }
+.ev-blog   { color: var(--pur); }
 .ev-mfds   { color: var(--teal); }
 .ev-inferred { color: var(--yel); }
 .ev-search { color: var(--ink3); }
@@ -693,6 +628,8 @@ button { font-family: inherit; cursor: pointer; }
 .gm-table th, .gm-table td { border: .5px solid var(--bg3); padding: 6px 8px; text-align: left; }
 .gm-table th { background: var(--bg2); color: var(--ink2); font-weight: 700; white-space: nowrap; }
 .gm-table td { color: var(--ink2); }
+.gm-link { color: var(--blue2); text-decoration: none; }
+.gm-link:hover { text-decoration: underline; }
 
 /* ═══════════════════════════════════════
    Toast
