@@ -1716,7 +1716,88 @@ JSON만 출력:
       }
     });
   }
+
+  /* ── ⑥ 사업장 실재성 확인 — 사업자등록번호 진위확인 API는 등록번호 입력이 필수라
+     식약처/뉴스/블로그 어떤 소스에서도 확보 불가(등록번호 자체가 텍스트에 노출되지 않음).
+     실무적 대안으로 네이버 지역검색(local.json)으로 "주소·전화번호가 실재하는 사업장인지"를
+     확인 — 등록 진위 자체는 아니지만 유령 업체명 필터링에는 동일하게 유효 ── */
+  if (nid && nsec) {
+    const toVerify = top.slice(0, 6);
+    const locals = await Promise.all(toVerify.map(c => lookupCompanyLocal(c.name, nid, nsec)));
+    toVerify.forEach((c, i) => {
+      if (locals[i]) {
+        c.localVerified = true;
+        c.localAddr = locals[i].address;
+        c.localTel = locals[i].tel;
+        c.evidence_detail += ` · 사업장 실재 확인(네이버지역검색): ${locals[i].address}${locals[i].tel ? ' / ' + locals[i].tel : ''}`;
+      }
+    });
+  }
+
+  /* ── ⑦ 신뢰도 점수 산정 + 최종 정렬 ── */
+  top.forEach(c => { c.confidence = computeEvidenceScore(c); });
+  top.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+
+  /* ── ⑧ 사전수집 폴백 보강 — 라이브 탐색 결과가 빈약(3건 미만)할 때만,
+     GitHub Actions가 주기적으로 직접수집(non-CORS)한 data/trackb-fallback.json에서
+     동일 카테고리 후보를 보충. same-origin 정적 파일이라 CORS 프록시 불필요 ── */
+  if (top.length < 3) {
+    try {
+      const fb = await fetchTrackBFallback();
+      const cand = (fb && fb[kw]) ? fb[kw] : [];
+      const seenFb = new Set(top.map(c => normCompanyName(c.name)));
+      cand.forEach(c => {
+        const cn = normCompanyName(c.name);
+        if (!cn || seenFb.has(cn)) return;
+        seenFb.add(cn);
+        top.push({ ...c, _fallback: true, confidence: computeEvidenceScore(c) });
+      });
+    } catch {}
+  }
   return top;
+}
+
+/* 사업장 실재성 확인 — 네이버 지역검색으로 주소·전화 보유 여부 확인.
+   (참고) 사업자등록정보 진위확인 API는 사업자등록번호를 필수 입력값으로 요구하는데,
+   식약처 GMP·뉴스·블로그 어떤 수집 경로에서도 등록번호 자체는 확보되지 않아 적용 불가했음.
+   대신 실재하는 사업장인지(주소/전화 존재)를 확인하는 이 방식으로 유령 업체를 걸러낸다. */
+async function lookupCompanyLocal(name, nid, nsec) {
+  if (!name) return null;
+  try {
+    const j = await fetchNaverAPI(`https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(name)}&display=1`, nid, nsec, 6000);
+    if (j && !j._error && Array.isArray(j.items) && j.items.length) {
+      const it = j.items[0];
+      const addr = (it.address || it.roadAddress || '').replace(/<[^>]+>/g, '');
+      if (!addr) return null;
+      return { address: addr, tel: (it.telephone || '').trim() };
+    }
+  } catch {}
+  return null;
+}
+
+/* 신뢰도 점수(0~100) — 근거 등급 기본점 + 교차검증 보너스 누적.
+   mfds(공적 등록) > product(실판매 제품 maker 역추적) > news > blog > inferred(추측) 순으로 기본점을 두고,
+   식약처 등록확인·공식 홈페이지 확인·사업장 실재 확인이 추가될수록 가산한다. */
+function computeEvidenceScore(c) {
+  const base = { mfds: 55, product: 50, news: 35, blog: 25, inferred: 15 }[c.evidence_type] ?? 20;
+  let score = base;
+  if (c.gmpConfirmed) score += 20;
+  if (c.homepage) score += 10;
+  if (c.localVerified) score += 15;
+  if (c.production === '생산중') score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+/* TRACK B 사전수집 폴백 — GitHub Actions가 주기적으로 collect-data.mjs에서 직접 호출(non-CORS)해
+   생성하는 data/trackb-fallback.json을 same-origin으로 읽어온다. 라이브 탐색이 빈약할 때만 사용. */
+async function fetchTrackBFallback() {
+  if (window._trackBFallback) return window._trackBFallback;
+  try {
+    const r = await fetch('data/trackb-fallback.json', { cache: 'no-store' });
+    if (!r.ok) return null;
+    window._trackBFallback = await r.json();
+    return window._trackBFallback;
+  } catch { return null; }
 }
 
 /* 홈페이지 탐색 — 네이버 웹문서 검색으로 업체 공식 홈페이지 URL 추정(추측 근거 보강용) */
@@ -1858,6 +1939,8 @@ function newCardHtml(c, idx) {
   const detailBtn = evLink
     ? `<button class="btn-mc btn-detail" onclick="window.open('${escJs(evLink)}','_blank')">근거 자료 열기 →</button>`
     : `<button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>`;
+  const conf = c.confidence ?? computeEvidenceScore(c);
+  const confCls = conf >= 65 ? 'conf-hi' : conf >= 35 ? 'conf-mid' : 'conf-lo';
   return `<div class="mcard${isInfer ? ' mcard-infer' : ''}">
     <div class="mc-head">
       <div class="mc-name">${escHtml(c.name)}</div>
@@ -1865,7 +1948,8 @@ function newCardHtml(c, idx) {
     </div>
     <div class="mc-meta">
       <span class="prod-badge ${prodCls}">${escHtml(prod)}</span>
-      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 식약처 등록확인' : ''}
+      <span class="conf-badge ${confCls}">신뢰도 ${conf}</span>
+      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 식약처 등록확인' : ''}${c.localVerified ? ' · 사업장 실재확인' : ''}${c._fallback ? ' · 사전수집(주기적 갱신)' : ''}
     </div>
     <div class="evbox">
       <div class="ev-type ${evTypeCls}">${evLabel}</div>
@@ -1893,7 +1977,9 @@ function noTrackBHtml() {
       <span class="skw">식약처 품목정보 + 제조업 등록목록</span> 교차검증·지역 보강<br>
       <span class="skw">네이버쇼핑 "${kw}" 검색결과 제조사(maker) 필드</span> 판매 제품 제조원 역추적<br>
       <span class="skw">네이버블로그 "${kw} OEM 제조"</span> 블로그 후기·체험기 근거 추적<br>
-      <span class="skw">추측 후보 업체명 + "공식 홈페이지"</span> 웹문서 검색으로 홈페이지 확인
+      <span class="skw">추측 후보 업체명 + "공식 홈페이지"</span> 웹문서 검색으로 홈페이지 확인<br>
+      <span class="skw">업체명 네이버 지역검색</span> 사업장 주소·전화 실재성 확인 (신뢰도 가산)<br>
+      <span class="skw">data/trackb-fallback.json</span> 라이브 결과 빈약 시 GitHub Actions 사전수집 후보 보충
     </div>
     <div class="search-hint" style="margin-top:6px">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">수동 탐색 기준</div>

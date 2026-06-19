@@ -43,6 +43,7 @@ const lsStore = {
   naver_id: process.env.NAVER_CLIENT_ID || '',
   naver_sec: process.env.NAVER_CLIENT_SECRET || '',
   ecos_key: process.env.ECOS_KEY || '',
+  gemini_key: process.env.GEMINI_KEY || '',
 };
 
 async function directFetch(url, opts = {}, timeout = 15000) {
@@ -143,3 +144,49 @@ if (out.dlTrends) console.log(` · 검색 모멘텀 ${out.dlTrends.length}건`);
 else console.log(` · 검색 모멘텀 없음 (${out.dlErr ?? '-'})`);
 if (out.exportTrends) console.log(` · 수출 모멘텀 ${out.exportTrends.length}건`);
 else console.log(` · 수출 모멘텀 없음 (${out.exportErr ?? '-'})`);
+
+/* ════ TRACK B 사전수집 폴백 ════
+   브라우저 CORS 프록시 의존을 줄이기 위해, 대표 제품 카테고리에 대해 findNewManufacturers()를
+   러너에서 직접(non-CORS) 실행해 data/trackb-fallback.json을 생성한다.
+   클라이언트는 라이브 탐색 결과가 빈약할 때(3건 미만) same-origin으로 이 파일을 읽어 보충한다.
+   ※ CORS 프록시 의존을 "제거"하는 것은 아니다 — 브라우저에서의 실시간 탐색은 여전히 프록시를
+     경유하며, 이 파일은 그 결과가 빈약할 때를 대비한 주기적 갱신 백업일 뿐이다. */
+const TRACKB_CATEGORIES = [
+  { type: '에어리스 세럼 SPF50+ (선세럼)', packaging: '에어리스 펌프 30~50ml', tech: '고점도 선세럼 배합 + 에어리스 충진 동시 가능 설비' },
+  { type: '고체형 클렌징 바 (비건 인증)', packaging: '고형 성형 + 종이 슬리브 포장', tech: '고형 성형 + 비건 원료 배합 + 종이 패키징' },
+  { type: '소용량 앰플 (2ml×7ea 주간 루틴팩)', packaging: '소용량 앰플 2ml × 7ea 파우치', tech: '소용량(≤3ml) 자동 충진 + 파우치 포장 라인' },
+  { type: '리필 크림 (파우치+전용 용기)', packaging: '리필 파우치 50ml + 재사용 알루미늄 용기', tech: '리필 파우치 충진 + 재사용 알루미늄 용기 설계' },
+  { type: '쿨링 젤 선크림 (스틱+튜브)', packaging: '스틱 몰딩 15g 또는 저점도 튜브 75ml', tech: '스틱 몰딩 or 저점도 튜브 충진 + 쿨링 성분 배합' },
+  { type: '프리바이오틱스 스킨케어 라인 (마이크로바이옴)', packaging: '에어리스 포장 30~80ml (산화방지)', tech: '마이크로바이옴 활성 성분 에어리스 패키징 + 저온 충진' },
+  { type: '고기능성 UV 패드 (선패드)', packaging: '소용량 틱택 컨테이너 15ml + 패드팩', tech: '패드 자동 투입 + UV 에멀전 충진 동시 라인' },
+  { type: '생분해 포장재 스킨케어 (친환경 리뉴얼)', packaging: '퇴비화 가능 바이오 플라스틱 용기 50ml', tech: '바이오 PLA 용기 충진 + 무알코올 보존' },
+  { type: '다기능 세럼 스틱 (올인원 고형)', packaging: '스틱 몰딩 12g 회전식 용기', tech: '고형 세럼 스틱 몰딩 + 활성 성분 안정화' },
+  { type: '맞춤형 화장품 키트 (처방 배합)', packaging: '소분 앰플 2ml×5 + 베이스 크림 30ml 세트', tech: '소용량 다품종 혼합 충진 + 개인화 라벨링' },
+];
+
+const trackBFallback = {};
+if (lsStore.naver_id && lsStore.naver_sec) {
+  console.log('TRACK B 사전수집 시작 —', TRACKB_CATEGORIES.length, '개 대표 카테고리');
+  for (const cat of TRACKB_CATEGORIES) {
+    sandbox.currentPkgType = cat.packaging;
+    const kw = cat.type.split(' ')[0];
+    try {
+      const top = await sandbox.findNewManufacturers(cat.type, cat.tech);
+      trackBFallback[kw] = (top || []).map(c => ({
+        name: c.name, evidence_type: c.evidence_type, production: c.production,
+        evidence_detail: c.evidence_detail, region: c.region || '',
+        sourceLink: c.sourceLink || '', homepage: c.homepage || '',
+        gmpConfirmed: !!c.gmpConfirmed, localVerified: !!c.localVerified,
+        confidence: c.confidence ?? 0,
+      }));
+      console.log(` · ${kw}: ${trackBFallback[kw].length}곳`);
+    } catch (e) {
+      console.log(` · ${kw}: 수집 실패 (${e.message})`);
+    }
+    await new Promise(r => setTimeout(r, 1500)); /* 네이버 API 레이트리밋 보호 간격 */
+  }
+} else {
+  console.log('TRACK B 사전수집 스킵 — 네이버 API 키 미설정');
+}
+fs.writeFileSync(path.join(root, 'data', 'trackb-fallback.json'), JSON.stringify(trackBFallback, null, 2));
+console.log(`TRACK B 사전수집 완료 — ${Object.keys(trackBFallback).length}개 카테고리`);

@@ -359,6 +359,11 @@ button { font-family: inherit; cursor: pointer; }
 .prod-now   { background: #d4f0e0; color: #2a7a50; }
 .prod-past  { background: #e6ecf5; color: #3a5a8f; }
 .prod-maybe { background: #fbf0d2; color: #8a6a10; }
+/* 신뢰도 점수 배지 */
+.conf-badge { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; margin-right: 4px; }
+.conf-hi  { background: #d4f0e0; color: #2a7a50; }
+.conf-mid { background: #fbf0d2; color: #8a6a10; }
+.conf-lo  { background: #fbe0e0; color: #a32a2a; }
 .mc-certs { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; }
 .cert { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg2); color: var(--ink2); border: .5px solid var(--bg3); }
 .cert.cgmp  { background: #dbeafe; color: #2a4a9f; border-color: #bfdbfe; }
