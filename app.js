@@ -252,7 +252,7 @@ function renderZ0() {
   const z = document.getElementById('z0');
   const defs = [
     {key:'climate', cls:'sig-cl', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
-    {key:'society', cls:'sig-so', name:'사회·인구',  auto:true,  src:'KOSIS(정적참조)+ECOS(CCSI 실시간)'},
+    {key:'society', cls:'sig-so', name:'사회·인구',  auto:true,  src:'KOSIS(정적참조)+ECOS(CCSI·실업률·소매판매 실시간)'},
     {key:'economy', cls:'sig-ec', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
     {key:'culture', cls:'sig-cu', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
   ];
@@ -374,12 +374,13 @@ function buildSigDetailHtml(key) {
   if (key === 'society') {
     /* 투명성 고지 — "1인가구 35.5%/남성뷰티↑"는 매 수집마다 자동 호출되는 항목이 아니라
        통계청 KOSIS 정기 통계를 코드에 정적 반영한 참조값(연 1회 수준 갱신)이다.
-       이 카드에서 실시간 자동 수집되는 항목은 한국은행 ECOS 소비자심리지수(CCSI) 뿐이며,
-       KOSIS 자체 API 연동은 별도 인증키가 필요해 v1에는 포함하지 않았다 — 정확히 고지한다. */
+       실시간 자동 수집은 ECOS 100대 통계지표(소비자심리지수·실업률·소매판매·가계신용)에서
+       처리한다 — economy 신호와 같은 API 호출을 1회만 공유해 추가 호출 비용 없이 확장.
+       KOSIS 자체 API 연동(혼인율·고령화율 등)은 별도 인증키가 필요해 v1에는 포함하지 않았다. */
     body += `<div class="gm-block">
       <div class="gm-block-title">자동 수집 vs 정적 참조 구분</div>
       <ul class="gm-list">
-        <li><b>실시간 자동 수집</b>: 한국은행 ECOS 소비자심리지수(CCSI) — 매 수집 시 API 호출</li>
+        <li><b>실시간 자동 수집</b>: 한국은행 ECOS 100대 통계지표 — 소비자심리지수(CCSI)·실업률·소매판매액지수·가계신용(확인된 항목만 반영, 매 수집 시 API 호출)</li>
         <li><b>정적 참조값</b>: "1인가구 35.5%"·"남성뷰티 성장" — 통계청 KOSIS 정기 통계를 코드에 반영한 값(연 단위 갱신 필요). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요해 v1에는 포함하지 않았다.</li>
       </ul>
     </div>`;
@@ -1130,20 +1131,44 @@ async function fetchEcosKeyStats(ekey) {
 async function collectSociety() {
   setSdot('sd-kosis', 'warn');
   const ecosKey = K.ecos();
-  let ccsi = '—';
+  let ccsi = '—', unemploy = '—', retailVal = '—', retailName = '', creditVal = '—', creditName = '';
   if (ecosKey) {
-    /* 소비자심리지수(CCSI)로 소비 여력 판단 (100 이상 = 낙관) */
+    /* ECOS 100대 통계지표 1회 호출(economy 신호와 캐시 공유)에서 소비여력 관련 지표를 함께 추출
+       — 소비자심리지수(CCSI) 외에 실업률(고용 안정성)·소매판매(오프라인 구매력)·가계신용(소비 여력
+       제약)까지 같은 호출로 뽑아내 "사회" 신호를 CCSI 단일값 의존에서 벗어나게 보강 */
     const rows = await fetchEcosKeyStats(ecosKey);
-    const hit = rows.find(r => (r.KEYSTAT_NAME || '').includes('소비자심리'));
-    if (hit && hit.DATA_VALUE) ccsi = hit.DATA_VALUE;
+    const find = (...kws) => rows.find(r => kws.some(kw => (r.KEYSTAT_NAME || '').includes(kw)));
+    const ccsiHit = find('소비자심리');
+    if (ccsiHit && ccsiHit.DATA_VALUE) ccsi = ccsiHit.DATA_VALUE;
+    const unemployHit = find('실업률');
+    if (unemployHit && unemployHit.DATA_VALUE) unemploy = unemployHit.DATA_VALUE;
+    const retailHit = find('소매판매');
+    if (retailHit && retailHit.DATA_VALUE) { retailVal = retailHit.DATA_VALUE; retailName = retailHit.KEYSTAT_NAME; }
+    const creditHit = find('가계신용', '가계대출');
+    if (creditHit && creditHit.DATA_VALUE) { creditVal = creditHit.DATA_VALUE; creditName = creditHit.KEYSTAT_NAME; }
   }
   setSdot('sd-kosis', ccsi !== '—' ? 'ok' : (ecosKey ? 'warn' : 'off'));
-  const c = parseFloat(ccsi);
+  const c = parseFloat(ccsi), u = parseFloat(unemploy);
+  let score = !isNaN(c) ? (c >= 100 ? 4.0 : 3.6) : 3.8;
+  /* 실업률 낮음(고용 안정) → 구매력 양호로 소폭 가산, 높으면 가성비 수요 우위로 소폭 감산 */
+  if (!isNaN(u)) { if (u <= 2.8) score += 0.1; else if (u >= 4) score -= 0.1; }
+  score = Math.min(Math.max(score, 1), 5);
+
+  const parts = ['1인가구 35.5%(통계청 2023) · 남성뷰티 성장 → 소용량·편의형 패키징 수요 증가'];
+  if (ccsi !== '—') parts.push(`소비자심리지수 ${ccsi}${!isNaN(c) ? (c >= 100 ? ' (소비 낙관)' : ' (소비 신중)') : ''}`);
+  if (unemploy !== '—') parts.push(`실업률 ${unemploy}%${!isNaN(u) ? (u <= 2.8 ? ' (고용 안정 → 구매력 양호)' : u >= 4 ? ' (고용 둔화 → 가성비 수요 우위)' : '') : ''}`);
+  if (retailVal !== '—') parts.push(`${retailName || 'ECOS 소매판매 지표'} ${retailVal}`);
+  if (creditVal !== '—') parts.push(`${creditName || 'ECOS 가계신용 지표'} ${creditVal}`);
+
   SIG_DATA.society = {
-    score: !isNaN(c) ? (c >= 100 ? 4.0 : 3.6) : 3.8,
-    interpret: `1인가구 35.5%(통계청 2023) · 남성뷰티 성장 → 소용량·편의형 패키징 수요 증가`
-      + (ccsi !== '—' ? ` · 소비자심리지수 ${ccsi}${!isNaN(c) ? (c >= 100 ? ' (소비 낙관)' : ' (소비 신중)') : ''}` : ''),
-    chips: ['1인가구 35.5%', '남성뷰티↑', ccsi !== '—' ? `CCSI ${ccsi}` : 'ECOS 키 필요'],
+    score,
+    interpret: parts.join(' · '),
+    chips: [
+      '1인가구 35.5%', '남성뷰티↑',
+      ccsi !== '—' ? `CCSI ${ccsi}` : 'ECOS 키 필요',
+      unemploy !== '—' ? `실업률 ${unemploy}%` : '',
+      retailVal !== '—' ? `${retailName || '소매판매'} ${retailVal}` : '',
+    ].filter(Boolean).slice(0, 5),
     _sample: ccsi === '—'
   };
 }
