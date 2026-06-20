@@ -252,7 +252,7 @@ function renderZ0() {
   const z = document.getElementById('z0');
   const defs = [
     {key:'climate', cls:'sig-cl', name:'기후·환경',  auto:true,  src:'기상청+에어코리아+UV지수'},
-    {key:'society', cls:'sig-so', name:'사회·인구',  auto:true,  src:'KOSIS(1인가구·고령화)'},
+    {key:'society', cls:'sig-so', name:'사회·인구',  auto:true,  src:'KOSIS(정적참조)+ECOS(CCSI 실시간)'},
     {key:'economy', cls:'sig-ec', name:'경제·리테일', auto:true,  src:'ECOS+관세청 화장품수출'},
     {key:'culture', cls:'sig-cu', name:'문화·팝트렌드',auto:true, src:'네이버DataLab+뉴스+뷰티RSS'},
   ];
@@ -371,6 +371,19 @@ function buildSigDetailHtml(key) {
     body += trendListHtml('관세청 수출 모멘텀 (HS코드별 최근 3개월 vs 직전 3개월)', window._exportTrends);
     if (window._exportErr) body += `<div class="gm-note">수출 모멘텀 미수집: ${escHtml(EXPORT_ERR_MSG[window._exportErr] || window._exportErr)}</div>`;
   }
+  if (key === 'society') {
+    /* 투명성 고지 — "1인가구 35.5%/남성뷰티↑"는 매 수집마다 자동 호출되는 항목이 아니라
+       통계청 KOSIS 정기 통계를 코드에 정적 반영한 참조값(연 1회 수준 갱신)이다.
+       이 카드에서 실시간 자동 수집되는 항목은 한국은행 ECOS 소비자심리지수(CCSI) 뿐이며,
+       KOSIS 자체 API 연동은 별도 인증키가 필요해 v1에는 포함하지 않았다 — 정확히 고지한다. */
+    body += `<div class="gm-block">
+      <div class="gm-block-title">자동 수집 vs 정적 참조 구분</div>
+      <ul class="gm-list">
+        <li><b>실시간 자동 수집</b>: 한국은행 ECOS 소비자심리지수(CCSI) — 매 수집 시 API 호출</li>
+        <li><b>정적 참조값</b>: "1인가구 35.5%"·"남성뷰티 성장" — 통계청 KOSIS 정기 통계를 코드에 반영한 값(연 단위 갱신 필요). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요해 v1에는 포함하지 않았다.</li>
+      </ul>
+    </div>`;
+  }
   if (key === 'culture') {
     body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
     body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
@@ -401,8 +414,14 @@ async function refreshSignal(key, btn) {
 }
 
 /* 기상청 초단기실황 base_date/base_time 계산 (발표까지 ~40분 지연 고려, 1시간 전 사용) */
+/* 기상청·환경 API는 모두 한국시간(KST) 기준 파라미터를 요구하는데,
+   브라우저의 new Date()는 사용자 로컬 타임존을 따른다 — 해외 접속 시 base_date/time이
+   틀어져 조회 실패하는 버그가 있었음. KST로 고정 변환해 시간대 무관하게 정확히 동작하도록 함. */
+function nowKST() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+}
 function getWxBase() {
-  const now = new Date();
+  const now = nowKST();
   let h = now.getHours() - 1;
   const base = new Date(now);
   if (h < 0) { h = 23; base.setDate(base.getDate() - 1); }
@@ -413,7 +432,7 @@ function getWxBase() {
 }
 /* 기상청 중기예보 발표시각: 06시·18시, 접근 가능 시각 +1h 고려 */
 function getMidFcstTime() {
-  const now = new Date();
+  const now = nowKST();
   const h = now.getHours();
   const dt = new Date(now);
   let hhmm;
@@ -556,7 +575,7 @@ async function collectClimate() {
   const key = K.public();
   setSdot('sd-climate', 'warn');
   setSdot('sd-air', key ? 'warn' : 'off');
-  const today = new Date();
+  const today = nowKST();   /* KST 고정 — base_date/UV조회시각/중기예보 발표시각 정확도 보장 */
   const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
   const wxBase = getWxBase();
 
@@ -748,7 +767,8 @@ async function collectEconomy() {
     if (cpt) {
       try {
         const j = JSON.parse(cpt);
-        const rows = j?.StatisticSearch?.row || [];
+        /* TIME(YYYYMM) 오름차순 정렬 — API가 항상 시간순으로 응답한다고 단정하지 않고 방어적으로 정렬 */
+        const rows = (j?.StatisticSearch?.row || []).slice().sort((a, b) => (a.TIME || '').localeCompare(b.TIME || ''));
         if (rows.length) {
           cpi = rows[rows.length - 1].DATA_VALUE;
           const base = parseFloat(rows[0].DATA_VALUE), last = parseFloat(cpi);
