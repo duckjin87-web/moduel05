@@ -157,6 +157,7 @@ const K = {
   naverID: () => ls('naver_id')    || '',
   naverSec:() => ls('naver_sec')   || '',
   ecos:    () => ls('ecos_key')    || '',
+  kipris:  () => ls('kipris_key')  || '',
 };
 
 function saveKey(type) {
@@ -185,6 +186,10 @@ function saveKey(type) {
     const v = document.getElementById('k-ecos').value.trim();
     if (v) { ls('ecos_key', v); setStatus('st-ecos', '설정됨', true); showToast('ECOS 키 저장됨'); }
   }
+  if (type === 'kipris') {
+    const v = document.getElementById('k-kipris').value.trim();
+    if (v) { ls('kipris_key', v); setStatus('st-kipris', '설정됨', true); showToast('KIPRIS 키 저장됨'); }
+  }
 }
 
 function setStatus(id, txt, ok) {
@@ -197,6 +202,7 @@ function loadKeys() {
   if (K.public()) { setStatus('st-public', '설정됨', true); }
   if (K.naverID()) { setStatus('st-naver', '설정됨', true); }
   if (K.ecos())   { setStatus('st-ecos', '설정됨', true); }
+  if (K.kipris()) { setStatus('st-kipris', '설정됨', true); }
   const mSel = document.getElementById('gemini-model');
   if (mSel && K.model()) mSel.value = K.model();
 }
@@ -1046,8 +1052,11 @@ async function collectCulture() {
     window._salesErr = null;
     window._dlErr = null;
     setSdot('sd-news', 'off');
+    /* sd-datalab은 "네이버 DataLab" 전용 표시등 — 네이버 키가 없으면 DataLab은 호출 자체가
+       안 되므로 RSS 성공 여부와 무관하게 off로 고정한다(이전엔 RSS 성공만으로 'ok'가 떠
+       DataLab이 실제로 연결된 것처럼 보이는 오표시가 있었음) */
+    setSdot('sd-datalab', 'off');
     if (rssData.count > 0) {
-      setSdot('sd-datalab', 'ok');
       const ranked = Object.entries(rssData.kwMap || {}).sort((a,b)=>b[1]-a[1]);
       window._newsTrends = ranked.length ? ranked.slice(0,3).map(([name,count])=>({name,count})) : null;
       SIG_DATA.culture = {
@@ -1079,7 +1088,9 @@ async function collectCulture() {
   window._salesTrends = salesResult.trends;   /* 실판매(구매의도) 모멘텀 — 실데이터 없으면 null */
   window._salesErr = salesResult.err;
   setSdot('sd-news', newsTrends.ok ? 'ok' : 'warn');
-  setSdot('sd-datalab', (dlResult.trends || rssData.count > 0) ? 'ok' : 'warn');
+  /* DataLab 자체 결과만으로 판정 — RSS 성공을 더해 'ok'로 띄우면 DataLab 미연결인데도
+     연결된 것처럼 보이는 오표시가 발생한다 */
+  setSdot('sd-datalab', dlResult.trends ? 'ok' : 'warn');
 
   /* 뉴스 + RSS 키워드 언급빈도 합산 → "자주 언급" 트렌드 (단일 키워드 편향 제거) */
   const combinedKw = {};
@@ -1196,6 +1207,45 @@ function getRankChanges(predictions, period) {
     });
     return changes;
   } catch { return {}; }
+}
+
+/* ════ 예측 백테스트(사후 검증) ════
+   과거 예측이 실제로 맞았는지 확인할 표준 사후 데이터(카테고리별 실매출 등)는 없으므로,
+   "예측한 기간이 도래한 시점에 그 유형의 키워드가 실측 모멘텀 신호(수출액·구매클릭·검색량·
+   뉴스언급)에서 다시 상승세로 포착되는가"를 적중 여부의 대리 지표(proxy)로 사용한다.
+   완벽한 정확도 측정이 아니라 "신호 일치도"이며, 이 한계를 보고서에도 그대로 명시한다.
+   히스토리는 기간(6개월=182일/1년=365일)이 도래해야 검증되므로, 운영 누적 기간이 짧으면
+   당분간 검증 대상이 없는 것이 정상이다. */
+function periodMaturityMs(period) {
+  return period === '1y' ? 365 * 86400000 : 182 * 86400000;
+}
+
+function backtestPredictions() {
+  let hist;
+  try { hist = JSON.parse(ls('m5_history') || '[]'); } catch { return []; }
+  const now = Date.now();
+  const momentum = [
+    ...(window._dlTrends || []), ...(window._salesTrends || []),
+    ...(window._exportTrends || []), ...(window._newsTrends || []),
+  ];
+  let changed = false;
+  hist.forEach(entry => {
+    if (entry.backtested || !entry.predictions) return;
+    if (now - entry.ts < periodMaturityMs(entry.period)) return;   /* 기간 미도래 — 아직 검증 대상 아님 */
+    const details = entry.predictions.map(p => {
+      const kw = (p.type || '').split(' ')[0];
+      const hit = momentum.some(m => m.name && kw && (m.name.includes(kw) || kw.includes(m.name)) && ((m.delta ?? 0) > 0 || (m.count ?? 0) > 0));
+      return { type: p.type, hit };
+    });
+    entry.backtested = true;
+    entry.backtestAt = now;
+    entry.hits = details.filter(d => d.hit).length;
+    entry.total = details.length;
+    entry.details = details;
+    changed = true;
+  });
+  if (changed) { try { ls('m5_history', JSON.stringify(hist)); } catch {} }
+  return hist.filter(h => h.backtested);
 }
 
 async function collectBeautyRSS() {
@@ -1464,10 +1514,14 @@ function renderZ1() {
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
   const sigMap   = { climate:'chip-cl', society:'chip-so', economy:'chip-ec', culture:'chip-cu' };
   const sigLabel = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
+  const matured = backtestPredictions();
+  const btSummary = matured.length
+    ? ` · 과거 예측 백테스트(신호 일치도) ${matured.slice(0, 3).map(h => `${h.hits}/${h.total}`).join(', ')}`
+    : '';
   el.innerHTML = `
     <div style="padding:6px 12px 4px;background:var(--bg2);border-bottom:.5px solid var(--bg3);font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:6px">
       <span class="period-badge ${periodCls}">${periodLabel}</span>
-      예측 기준 데이터: ${Object.values(SIG_DATA).filter(v=>v).length}/4 신호 수집됨 · 항목 클릭 시 패키징 적합 업체 자동 조회
+      예측 기준 데이터: ${Object.values(SIG_DATA).filter(v=>v).length}/4 신호 수집됨 · 항목 클릭 시 패키징 적합 업체 자동 조회${btSummary}
     </div>
     <table class="ptable">
     <thead><tr>
@@ -1570,6 +1624,33 @@ function extractCompanyNames(text) {
   return [...out];
 }
 
+/* KIPRIS(특허정보원) 출원인 검색 — TRACK B 신규처 발굴에 "특허 출원" 근거를 추가하는 스캐폴드.
+   ※ 실제 KIPRIS Open API 키가 아직 없어(2026-06-22 기준 미보유) 라이브 응답으로 검증하지
+   못했다. 공개 문서 기준 특허/실용신안 키워드검색 서비스(patUtiModInfoSearchSevice/getWordSearch)
+   엔드포인트로 구현했으나, 키 발급 후 서비스명·파라미터명(ServiceKey vs accessKey 등)을
+   KIPRIS Plus 개발가이드로 재확인해야 한다. 실패 시(엔드포인트 불일치·인증 오류 등) 빈 배열을
+   반환해 TRACK B 나머지 경로(뉴스·식약처·블로그·네이버쇼핑)는 그대로 동작한다 — 다른 키 없는
+   신호들과 동일하게 "있으면 보강, 없으면 조용히 생략" 원칙을 따른다. */
+async function searchKiprisApplicants(keyword) {
+  const key = K.kipris();
+  if (!key) return [];
+  const url = `https://plus.kipris.or.kr/kipo-api/kipi/patUtiModInfoSearchSevice/getWordSearch`
+    + `?word=${encodeURIComponent(keyword + ' 화장품')}&ServiceKey=${encodeURIComponent(key)}&numOfRows=15`;
+  try {
+    const txt = await fetchProxy(url, 10000);
+    if (!txt) return [];
+    /* XML 응답 — 태그명 표기 변형(applicantName 등) 대응, 대소문자 무시 */
+    const re = /<applicantname>([^<]+)<\/applicantname>/gi;
+    const names = new Set();
+    let m;
+    while ((m = re.exec(txt))) {
+      const n = m[1].replace(/\|/g, ' ').trim();
+      if (n && n.length >= 2) names.add(n);
+    }
+    return [...names].slice(0, 8);
+  } catch { return []; }
+}
+
 async function findNewManufacturers(productType, tech) {
   let results = [];
   const nid = K.naverID(), nsec = K.naverSec(), gkey = K.gemini();
@@ -1602,11 +1683,14 @@ async function findNewManufacturers(productType, tech) {
   const blogPromise = (nid && nsec)
     ? fetchNaverAPI(`https://openapi.naver.com/v1/search/blog.json?query=${encodeURIComponent(kw + ' OEM 제조')}&display=15&sort=sim`, nid, nsec, 9000)
     : Promise.resolve(null);
+  /* KIPRIS 특허 출원인 — "${kw} 화장품" 관련 특허 출원 정황을 생산능력의 간접 근거로 활용
+     (evidence_type:'patent'로 분류 — 뉴스보다 신뢰도 높고 식약처 확정근거보다는 낮게 배치) */
+  const kiprisPromise = K.kipris() ? searchKiprisApplicants(kw) : Promise.resolve([]);
   /* 판매 제품 제조원 역추적 — 실제 판매 중인 제품의 제조사(maker) 필드를 직접 확인 */
   const shopPromise = (nid && nsec)
     ? fetchNaverAPI(`https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(kw)}&display=30&sort=sim`, nid, nsec, 9000)
     : Promise.resolve(null);
-  const [mfdsT, gmpList, blogJ, shopJ, ...naverResults] = await Promise.all([mfdsPromise, gmpPromise, blogPromise, shopPromise, ...naverPromises]);
+  const [mfdsT, gmpList, blogJ, shopJ, kiprisNames, ...naverResults] = await Promise.all([mfdsPromise, gmpPromise, blogPromise, shopPromise, kiprisPromise, ...naverPromises]);
   if (gmpList.length) window._gmpCache = gmpList;
 
   let newsTexts = '';
@@ -1706,6 +1790,12 @@ JSON만 출력:
   }
   /* 판매 제품 제조원 역추적 결과 합류 — maker 필드는 확정 근거이므로 항상 포함 */
   results.push(...shopMakerResults);
+  /* KIPRIS 특허 출원인 합류 — "이 제품 관련 기술을 출원"한 정황은 생산가능성의 간접 근거 */
+  (kiprisNames || []).forEach(name => {
+    results.push({ name, evidence_type: 'patent', production: '생산가능(추측)',
+      evidence_detail: `KIPRIS 특허 출원인 — "${kw} 화장품" 관련 키워드로 출원 확인(특허 출원은 생산 능력의 간접 근거이며 실제 생산 여부는 별도 확인 필요)`,
+      region: '' });
+  });
 
   /* ── ③ 식약처 화장품제조업 등록 교차검증 ──
      등록 확인 시: 업체 실재·제조업 등록은 격상(mfds)하되, "이 제품 생산 여부"는 별개이므로
@@ -1742,7 +1832,7 @@ JSON만 출력:
   });
   /* 근거 신뢰도 우선 정렬 — 확인(mfds>product>news>blog) 업체가 추측에 밀려나지 않도록.
      동급이면 생산중 > 생산이력 > 생산가능(추측) 순 */
-  const evRank = { mfds: 0, product: 1, news: 2, blog: 3, inferred: 4 };
+  const evRank = { mfds: 0, product: 1, patent: 2, news: 3, blog: 4, inferred: 5 };
   const prodRank = { '생산중': 0, '생산이력': 1, '생산가능(추측)': 2 };
   filtered.sort((a, b) =>
     (evRank[a.evidence_type] ?? 5) - (evRank[b.evidence_type] ?? 5)
@@ -1824,7 +1914,7 @@ async function lookupCompanyLocal(name, nid, nsec) {
    mfds(공적 등록) > product(실판매 제품 maker 역추적) > news > blog > inferred(추측) 순으로 기본점을 두고,
    식약처 등록확인·공식 홈페이지 확인·사업장 실재 확인이 추가될수록 가산한다. */
 function computeEvidenceScore(c) {
-  const base = { mfds: 55, product: 50, news: 35, blog: 25, inferred: 15 }[c.evidence_type] ?? 20;
+  const base = { mfds: 55, product: 50, patent: 45, news: 35, blog: 25, inferred: 15 }[c.evidence_type] ?? 20;
   let score = base;
   if (c.gmpConfirmed) score += 20;
   if (c.homepage) score += 10;
@@ -2024,11 +2114,12 @@ function noTrackBHtml() {
       <span class="skw">네이버블로그 "${kw} OEM 제조"</span> 블로그 후기·체험기 근거 추적<br>
       <span class="skw">추측 후보 업체명 + "공식 홈페이지"</span> 웹문서 검색으로 홈페이지 확인<br>
       <span class="skw">업체명 네이버 지역검색</span> 사업장 주소·전화 실재성 확인 (신뢰도 가산)<br>
+      ${K.kipris() ? `<span class="skw">"${kw} 화장품" KIPRIS 특허 출원인</span> 자동 탐색 (베타 — 실키 미검증)<br>` : ''}
       <span class="skw">data/trackb-fallback.json</span> 라이브 결과 빈약 시 GitHub Actions 사전수집 후보 보충
     </div>
     <div class="search-hint" style="margin-top:6px">
       <div style="font-size:9px;font-weight:700;color:var(--ink3);margin-bottom:4px">수동 탐색 기준</div>
-      <span class="skw">"${kw}" AND "화장품"</span> KIPRIS 특허 출원인 (plus.kipris.or.kr)<br>
+      ${!K.kipris() ? `<span class="skw">"${kw}" AND "화장품"</span> KIPRIS 특허 출원인 (API 설정에서 키 등록 시 자동화) (plus.kipris.or.kr)<br>` : ''}
       <span class="skw">제품명으로 제조업소명 추적</span> 식약처 의약품안전나라
     </div>
   </div>`;
@@ -2209,6 +2300,15 @@ function genReport() {
     lines.push('▶ 기후 추세 (Open-Meteo)');
     if (ct.deviation !== null) lines.push(`  • 평년(작년 동기) 대비: ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃`);
     if (ct.trend16) lines.push(`  • 16일 예보 추세: ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 ${ct.trend16.week1}℃ → 2주차 ${ct.trend16.week2}℃)`);
+  }
+  const matured = backtestPredictions();
+  if (matured.length) {
+    lines.push('');
+    lines.push('▶ 과거 예측 백테스트 (신호 일치도 — 실제 매출 검증 아님, 참고용)');
+    matured.slice(0, 5).forEach(h => {
+      const dateStr = new Date(h.ts).toLocaleDateString('ko-KR');
+      lines.push(`  • ${dateStr} ${h.period === '1y' ? '1년' : '6개월'} 예측: ${h.hits}/${h.total} 유형이 검증 시점 모멘텀 신호에서 재포착됨`);
+    });
   }
   lines.push('');
   lines.push('▶ 예측 화장품 유형 TOP5');
@@ -2591,6 +2691,27 @@ async function testEcos() {
   }
 }
 
+async function testKipris() {
+  const key = K.kipris();
+  if (!key) { showToast('KIPRIS 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-kipris');
+  el.textContent = 'KIPRIS 연결 테스트 중 ("선세럼 화장품" 출원인 검색)...'; el.style.color = 'var(--ink3)';
+  try {
+    const names = await searchKiprisApplicants('선세럼');
+    if (names.length) {
+      el.textContent = `KIPRIS 연결 성공 — 출원인 ${names.length}건 확인\n${names.slice(0, 5).map(n => '  · ' + n).join('\n')}`;
+      el.style.color = 'var(--grn)';
+      setStatus('st-kipris', '확인됨', true);
+    } else {
+      el.textContent = '응답은 받았으나 출원인 정보를 찾지 못했습니다.\n\n키 발급 직후라면: 엔드포인트(patUtiModInfoSearchSevice/getWordSearch)나\n파라미터명(ServiceKey)이 실제 KIPRIS Plus 문서와 다를 수 있습니다 —\nplus.kipris.or.kr 개발가이드에서 서비스명을 재확인하세요.';
+      el.style.color = 'var(--red)';
+    }
+  } catch (e) {
+    el.textContent = '오류: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
 function showCollectedData() {
   const el = document.getElementById('r-collected');
   const lines = [];
@@ -2666,6 +2787,8 @@ function init() {
   document.getElementById('btnTestNaver').addEventListener('click', testNaver);
   document.getElementById('btnSaveEcos').addEventListener('click', () => saveKey('ecos'));
   document.getElementById('btnTestEcos').addEventListener('click', testEcos);
+  document.getElementById('btnSaveKipris').addEventListener('click', () => saveKey('kipris'));
+  document.getElementById('btnTestKipris').addEventListener('click', testKipris);
   document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);

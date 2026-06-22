@@ -76,8 +76,14 @@
           <div id="r-ecos" class="ap-result"></div>
         </div>
         <div class="ap-sec">
-          <div class="ap-label">KIPRIS (특허청) <span class="ap-status" style="color:var(--ink3)">준비중</span></div>
-          <div class="ap-hint">특허기반 업체 탐색 · <a href="https://plus.kipris.or.kr" target="_blank">plus.kipris.or.kr</a></div>
+          <div class="ap-label">KIPRIS (특허청) <span class="ap-status" id="st-kipris">미설정</span></div>
+          <div class="ap-row">
+            <input type="text" class="ap-in" id="k-kipris" placeholder="ServiceKey">
+            <button class="ap-btn ap-save" id="btnSaveKipris">저장</button>
+            <button class="ap-btn ap-test" id="btnTestKipris">테스트</button>
+          </div>
+          <div class="ap-hint">특허기반 업체 탐색(TRACK B 보강) · 실키 미검증 상태 — 연동 베타 · <a href="https://plus.kipris.or.kr" target="_blank">plus.kipris.or.kr</a></div>
+          <div id="r-kipris" class="ap-result"></div>
         </div>
         <div class="ap-sec" style="border-top:.5px solid var(--bg3);padding-top:8px;margin-top:4px">
           <div class="ap-label" style="margin-bottom:6px">마지막 수집 결과 확인</div>
