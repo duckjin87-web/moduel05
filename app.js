@@ -138,29 +138,32 @@ const REGS = [
 ];
 
 /* ════ 박람회·전시회 일정 (정적 참조 — 연 단위 갱신 필요) ════
-   국내외 주요 화장품·뷰티 박람회를 트렌드 탐색 참고용으로 정리한 보기 전용 목록.
+   국내 화장품·뷰티 박람회(B2B) + 리테일 뷰티 기획전을 트렌드 탐색 참고용으로 정리한
+   보기 전용 목록 — 해외 행사는 제외(국내 신규처·국내 소비 트렌드 탐색 목적에 한정).
    해마다 정확한 일자가 매년 초 공지되므로 nextDate는 "통상 개최 시기" 기준 추정값이며,
-   실제 등록·참가 전에는 반드시 공식 홈페이지에서 확정 일정을 재확인해야 한다. */
+   [전체 수집 실행] 시 verifyExpoSchedules()가 뉴스 검색으로 확정 일정을 찾으면
+   화면에 "확정"으로 갱신한다(찾지 못하면 추정 상태 유지). */
 const EXPOS = [
-  {name:'in-cosmetics Korea', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.15',
-   location:'서울 코엑스', focus:'화장품 원료·성분 전문 박람회 — 신규 원료·포뮬레이션 트렌드 탐색',
-   url:'https://www.in-cosmetics.com/korea', srcLabel:'in-cosmetics Korea 공식 홈페이지'},
-  {name:'Cosmoprof North America', org:'Cosmoprof', month:'매년 7월', nextDate:'2026.07.21',
-   location:'미국 라스베가스', focus:'북미 시장 진출용 — 바이어·브랜드 네트워킹, 북미 트렌드 확인',
-   url:'https://www.cosmoprofnorthamerica.com', srcLabel:'Cosmoprof North America 공식 홈페이지'},
-  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', org:'대한화장품미용산업대전 사무국', month:'매년 10월경',
+  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', org:'대한화장품미용산업대전 사무국', month:'매년 10월경',
    nextDate:'2026.10.08', location:'서울 코엑스/킨텍스(매년 변동)',
    focus:'국내 최대 규모 화장품·뷰티 종합전 — OEM/ODM·소재사 부스 다수, 국내 신규처 탐색에 유용',
    url:'https://www.cosmobeauty.co.kr', srcLabel:'코스모뷰티 서울 공식 홈페이지'},
-  {name:'Cosmoprof Bologna', org:'Cosmoprof', month:'매년 3월', nextDate:'2027.03.20',
-   location:'이탈리아 볼로냐', focus:'세계 최대 화장품 박람회 — 유럽 시장 트렌드·신소재 확인',
-   url:'https://www.cosmoprof.com/en/bologna', srcLabel:'Cosmoprof Worldwide Bologna 공식 홈페이지'},
-  {name:'in-cosmetics Global', org:'Informa Markets', month:'매년 4월(개최도시 순환)', nextDate:'2027.04.06',
-   location:'유럽 주요도시(연도별 변동)', focus:'글로벌 원료·신소재 트렌드 — 유럽 R&D 동향 파악',
-   url:'https://www.in-cosmetics.com/global', srcLabel:'in-cosmetics Global 공식 홈페이지'},
-  {name:"NYSCC Suppliers' Day", org:'NYSCC', month:'매년 5월', nextDate:'2027.05.12',
-   location:'미국 뉴욕', focus:'미국 화장품 화학자 협회 주관 — 미국 원료·공급사 네트워킹',
-   url:'https://www.nyscc.org', srcLabel:'NYSCC Suppliers Day 공식 홈페이지'},
+  {name:'in-cosmetics Korea', type:'expo', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.15',
+   location:'서울 코엑스', focus:'화장품 원료·성분 전문 박람회(국내 개최) — 신규 원료·포뮬레이션 트렌드 탐색',
+   url:'https://www.in-cosmetics.com/korea', srcLabel:'in-cosmetics Korea 공식 홈페이지'},
+  {name:'K-BEAUTY EXPO KOREA', type:'expo', org:'KOTRA', month:'매년 5월경', nextDate:'2027.05.13',
+   location:'서울 코엑스', focus:'코트라 주관 수출상담회 성격 — 해외 바이어 매칭, 신규 수출처 발굴에 유용',
+   url:'https://www.kbeautyexpo.com', srcLabel:'K-BEAUTY EXPO KOREA 공식 홈페이지'},
+  {name:'부산국제화장품미용박람회(BICE)', type:'expo', org:'벡스코', month:'매년 9월경', nextDate:'2026.09.10',
+   location:'부산 벡스코', focus:'영남권 화장품·뷰티 종합전 — 지역 OEM/ODM·소재사 탐색',
+   url:'https://www.bexco.co.kr', srcLabel:'벡스코 전시일정 안내'},
+  {name:'대구국제뷰티박람회', type:'expo', org:'엑스코', month:'매년 9월경', nextDate:'2026.09.24',
+   location:'대구 엑스코', focus:'대구·경북권 뷰티 산업 박람회 — 지역 소재·뷰티기기 트렌드 확인',
+   url:'https://www.exco.co.kr', srcLabel:'엑스코 전시일정 안내'},
+  {name:'올리브영 뷰티 기획전(다이브인페스티벌 등 시즌 세일)', type:'retail', org:'CJ올리브영', month:'연 수회(2~3월/6~7월/10~11월)',
+   nextDate:'2026.10.22', location:'전국 매장·온라인',
+   focus:'국내 최대 뷰티 리테일러 시즌 기획전 — 큐레이션 카테고리로 소비 트렌드 선행 포착',
+   url:'https://www.oliveyoung.co.kr', srcLabel:'올리브영 공식 홈페이지'},
 ];
 
 /* ════ STATE ════ */
@@ -284,25 +287,62 @@ function renderZ4() {
   const el = document.getElementById('z4');
   if (!el) return;
   const now = new Date();
+  const verified = window._expoVerified || {};
   el.innerHTML = EXPOS.map(x => {
-    const parts = x.nextDate.split('.');
+    const v = verified[x.name];
+    const dateStr = v ? v.confirmedDate : x.nextDate;
+    const parts = dateStr.split('~')[0].trim().split('.');
     const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
     const daysLeft = isNaN(d) ? null : Math.ceil((d - now) / 86400000);
     const passed = daysLeft !== null && daysLeft < 0;
     const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
-    const badgeLabel = passed ? '종료(추정)' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
+    const badgeLabel = passed ? '종료' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
+    const typeTag = x.type === 'retail' ? '리테일 기획전' : 'B2B 박람회';
+    const confirmTag = v
+      ? `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정</span>`
+      : `<span style="font-size:9px;color:var(--ink3)">추정</span>`;
     return `<div class="reg-card${passed ? ' reg-passed' : ''}">
       <div class="reg-hd">
         <span class="${badgeCls}">${badgeLabel}</span>
         <div class="reg-name">${escHtml(x.name)}</div>
       </div>
       <div class="reg-body">
-        <div class="reg-meta">${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(x.month)}(${escHtml(x.nextDate)} 추정)</div>
+        <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(dateStr)} ${confirmTag}</div>
         <div class="reg-detail">${escHtml(x.focus)}</div>
-        <div class="reg-action">${x.url ? `<a href="${escHtml(x.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(x.srcLabel || '공식 홈페이지')} →</a>` : ''}</div>
+        <div class="reg-action">
+          ${x.url ? `<a href="${escHtml(x.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(x.srcLabel || '공식 홈페이지')} →</a>` : ''}
+          ${v?.link ? ` <a href="${escHtml(v.link)}" target="_blank" style="font-size:9px;color:var(--blue2)">확정 근거 기사 →</a>` : ''}
+        </div>
       </div>
     </div>`;
   }).join('');
+}
+
+/* 박람회 일정 확정 여부 확인 — 공식 API가 없어 네이버 뉴스 검색으로 구체적 날짜
+   표현("M월 D일", "M.D~M.D" 등)이 등장하는지 휴리스틱하게 탐지한다. 100% 정확을
+   보장하지 않으므로 결과는 "확정 근거 기사" 링크와 함께 제시해 사용자가 직접
+   검증할 수 있게 한다. 네이버 키가 없으면 모든 항목이 "추정" 상태로 유지된다. */
+async function verifyExpoSchedules() {
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (!nid || !nsec) return {};
+  const results = {};
+  await Promise.all(EXPOS.map(async (x) => {
+    const year = x.nextDate.split('.')[0];
+    const q = `${x.name} ${year} 일정`;
+    const j = await fetchNaverAPI(`https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=5&sort=date`, nid, nsec, 8000);
+    if (!j || j._error) return;
+    const items = j.items || [];
+    for (const item of items) {
+      const text = (item.title + ' ' + item.description).replace(/<[^>]+>/g, '');
+      const range = text.match(/(\d{1,2})\.(\d{1,2})\s*[~-]\s*(\d{1,2})\.(\d{1,2})/);
+      const single = text.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+      let confirmedDate = null;
+      if (range) confirmedDate = `${year}.${range[1].padStart(2,'0')}.${range[2].padStart(2,'0')} ~ ${year}.${range[3].padStart(2,'0')}.${range[4].padStart(2,'0')}`;
+      else if (single) confirmedDate = `${year}.${single[1].padStart(2,'0')}.${single[2].padStart(2,'0')}`;
+      if (confirmedDate) { results[x.name] = { confirmedDate, link: item.link }; break; }
+    }
+  }));
+  return results;
 }
 
 /* ════ ZONE 0 신호 렌더 ════ */
@@ -2280,8 +2320,12 @@ async function collectAll() {
 
   updateStatusSummary();
 
+  setStep('⑤ 박람회 일정 확인 중...', '일정 확인');
+  window._expoVerified = await verifyExpoSchedules();
+  renderZ4();
+
   const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
-  setStep(`⑤ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
+  setStep(`⑥ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
   await runGeminiPrediction(currentPeriod);
