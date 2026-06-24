@@ -10,7 +10,20 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="page">
+
+<!-- ── 접근 제어(비밀번호) ── 내부 직원용 간이 차단 장치, 진짜 보안 장치 아님(소스 공개·우회 가능) ── -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-box">
+    <div class="auth-title">CosmeDB TAB05 접근</div>
+    <div class="auth-sub">사내 공유용 비밀번호를 입력하세요</div>
+    <input type="password" id="authPwInput" class="auth-input" placeholder="비밀번호" autocomplete="off">
+    <button id="authSubmitBtn" class="auth-submit">접속</button>
+    <div class="auth-err" id="authErr" style="display:none">비밀번호가 일치하지 않습니다.</div>
+    <div class="auth-note">※ 사내 공유 전용 간이 차단 장치입니다. 소스코드에 노출되어 있어 실제 보안 수단이 아니며, 외부 공개·민감정보 보호 목적으로는 VPN/SSO 등 별도 접근 통제가 필요합니다.</div>
+  </div>
+</div>
+
+<div class="page" id="appPage" style="display:none">
 
 <!-- ── 헤더 ── -->
 <div class="hd">
@@ -106,6 +119,11 @@
             <button class="btn-copy" id="btnCopyReport">복사</button>
             <button class="btn-regen" id="btnClearReport">초기화</button>
           </div>
+          <div class="rp-actions" style="margin-top:6px">
+            <button class="btn-copy" id="btnExportPdf">PDF로 내보내기</button>
+            <button class="btn-copy" id="btnExportCsv">Excel로 내보내기(.csv)</button>
+          </div>
+          <div class="rp-export-note">※ PDF는 브라우저 인쇄 기능을 이용합니다. Excel 내보내기는 호환을 위해 CSV(쉼표분리텍스트) 형식으로 생성되며, 네이티브 .xlsx 파일이 아닙니다 — Excel에서 정상적으로 열립니다.</div>
         </div>
       </div>
     </div>
@@ -137,8 +155,10 @@
       <button class="pred-period-tab active" data-period="6m">6개월 예측</button>
       <button class="pred-period-tab" data-period="1y">1년 예측</button>
     </div>
+    <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">예측 정확도 대시보드</button>
     <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
   </div>
+  <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>
   <div id="z1body">
     <div class="z1-placeholder">
       [전체 수집 실행] 버튼을 클릭하면 4대 신호 수집 후 Gemini가 예측 TOP5를 자동 도출합니다.
@@ -279,6 +299,8 @@
     <div class="gm-body" id="sigModalBody"></div>
   </div>
 </div>
+
+<div class="print-report" id="printReport"></div>
 
 <script src="app.js"></script>
 </body>

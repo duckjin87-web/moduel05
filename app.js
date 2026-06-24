@@ -18,6 +18,36 @@ function ls(k, v) {
   if (v !== undefined) { localStorage.setItem(k, v); return v; }
   return localStorage.getItem(k) || '';
 }
+/* ════ 접근 제어(비밀번호) ════
+   사내 공유용 간이 차단 장치 — 소스코드에 해시가 노출되어 있어 진짜 보안 수단이 아님.
+   외부 공개·민감정보 보호가 필요하면 VPN/SSO 등 서버 측 접근 통제를 별도로 적용해야 함. */
+const ACCESS_PW_HASH = '119199096d39ab2eb88670c85efa83a2bcff6e34bed1a9b27effac6b7c2b6153'; /* 기본값: cosmedb2026 */
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function checkAuthGate() {
+  const gate = document.getElementById('authGate');
+  const input = document.getElementById('authPwInput');
+  const err = document.getElementById('authErr');
+  const submit = async () => {
+    const hash = await sha256Hex(input.value);
+    if (hash === ACCESS_PW_HASH) {
+      sessionStorage.setItem('cosmedb_auth', '1');
+      gate.style.display = 'none';
+      document.getElementById('appPage').style.display = '';
+      init();
+    } else {
+      err.style.display = '';
+      input.value = '';
+      input.focus();
+    }
+  };
+  document.getElementById('authSubmitBtn').addEventListener('click', submit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  input.focus();
+}
+
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.opacity = '1';
@@ -290,26 +320,82 @@ function renderZ3() {
   }).join('');
 }
 
-/* ════ ZONE 4 박람회·전시회 일정 렌더 (보기 전용) ════ */
+/* 담당자 수동 확인(C안) — 휴리스틱 자동 탐지의 한계를 사람이 보완하는 신뢰 계층.
+   자동 탐지(A안: 추정/유력/확정 3단계)와 별개로, 담당자가 공식 홈페이지에서 직접
+   확인하면 가장 신뢰도가 높은 "담당자 확인" 스탬프로 고정된다. 90일 후 재확인을
+   권고(다음 확인 예정일 표시)한다. 브라우저별 localStorage 저장이므로 직원 간
+   공유는 되지 않는다 — 공유가 필요하면 서버 저장소로 교체 필요. */
+function getExpoManualConfirm() {
+  try { return JSON.parse(ls('expo_manual_confirm') || '{}'); } catch { return {}; }
+}
+function setExpoManualConfirm(name, on) {
+  const map = getExpoManualConfirm();
+  if (on) {
+    const now = Date.now();
+    map[name] = { confirmedAt: now, nextCheckDue: now + 90 * 86400000 };
+  } else {
+    delete map[name];
+  }
+  ls('expo_manual_confirm', JSON.stringify(map));
+  return map;
+}
+function toggleExpoManualConfirm(name) {
+  const map = getExpoManualConfirm();
+  setExpoManualConfirm(name, !map[name]);
+  renderZ4();
+}
+
+/* ════ ZONE 4 박람회·전시회 일정 렌더 (보기 전용 + 담당자 확인 체크) ════ */
 function renderZ4() {
   const el = document.getElementById('z4');
   if (!el) return;
   const now = new Date();
   const verified = window._expoVerified || {};
-  el.innerHTML = EXPOS.map(x => {
-    const v = verified[x.name];
+  const manual = getExpoManualConfirm();
+  const fmtAgo = ts => {
+    const days = Math.floor((now - ts) / 86400000);
+    return days <= 0 ? '오늘' : `${days}일 전`;
+  };
+  const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' });
+
+  const rows = EXPOS.map(x => {
+    const v = manual[x.name] ? null : verified[x.name];  /* 담당자 확인이 있으면 자동탐지 결과보다 우선 */
     const dateStr = v ? v.confirmedDate : x.nextDate;
     const parts = dateStr.split('~')[0].trim().split('.');
     const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
     const daysLeft = isNaN(d) ? null : Math.ceil((d - now) / 86400000);
     const passed = daysLeft !== null && daysLeft < 0;
+    return { x, v, dateStr, daysLeft, passed };
+  });
+  /* A안 — 자동 정렬: 진행 예정(가까운 순) → 종료된 행사는 맨 뒤 */
+  rows.sort((a, b) => {
+    if (a.passed !== b.passed) return a.passed ? 1 : -1;
+    return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
+  });
+
+  el.innerHTML = rows.map(({ x, v, dateStr, daysLeft, passed }) => {
     const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
     const badgeLabel = passed ? '종료' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
     const typeTag = x.type === 'retail' ? '리테일 기획전' : x.type === 'equipment' ? '설비·패키징전' : 'B2B 박람회';
     const catLabel = x.type === 'retail' ? '리테일' : x.type === 'equipment' ? '설비' : '뷰티';
-    const confirmTag = v
-      ? `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정</span>`
-      : `<span style="font-size:9px;color:var(--ink3)">추정</span>`;
+    const m = manual[x.name];
+
+    /* A안 — 3단계 신뢰도: 담당자확인(최우선) > 확정(뉴스 날짜 매칭) > 유력(관련 기사 있으나 날짜 미매칭) > 추정(기본값) */
+    let confirmTag, lastChecked = '';
+    if (m) {
+      confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">✓ 담당자 확인</span>`;
+      lastChecked = `담당자 확인: ${fmtDate(m.confirmedAt)} · 재확인 권고: ${fmtDate(m.nextCheckDue)}`;
+    } else if (v?.status === 'confirmed') {
+      confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정(뉴스)</span>`;
+      lastChecked = `자동 확인: ${fmtAgo(v.checkedAt)}`;
+    } else if (v?.status === 'likely') {
+      confirmTag = `<span style="font-size:9px;font-weight:700;color:#92500e">유력</span>`;
+      lastChecked = `관련 기사 발견(날짜 미특정) · 자동 확인: ${fmtAgo(v.checkedAt)}`;
+    } else {
+      confirmTag = `<span style="font-size:9px;color:var(--ink3)">추정</span>`;
+      lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : '자동 확인 안 됨(네이버 키 필요)';
+    }
+
     return `<div class="reg-card${passed ? ' reg-passed' : ''}">
       <div class="reg-hd expo-hd">
         <span class="exp-cat">${escHtml(catLabel)}</span>
@@ -319,23 +405,27 @@ function renderZ4() {
       <div class="reg-body">
         <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(dateStr)} ${confirmTag}</div>
         <div class="reg-detail">${escHtml(x.focus)}</div>
+        <div class="reg-meta" style="margin-top:3px;color:var(--ink3)">${escHtml(lastChecked)}</div>
         <div class="reg-action">
           ${x.url ? `<a href="${escHtml(x.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(x.srcLabel || '공식 홈페이지')} →</a>` : ''}
-          ${v?.link ? ` <a href="${escHtml(v.link)}" target="_blank" style="font-size:9px;color:var(--blue2)">확정 근거 기사 →</a>` : ''}
+          ${v?.link ? ` <a href="${escHtml(v.link)}" target="_blank" style="font-size:9px;color:var(--blue2)">근거 기사 →</a>` : ''}
+          <button class="exp-confirm-btn" onclick="toggleExpoManualConfirm('${escJs(x.name)}')">${m ? '담당자 확인 취소' : '담당자 확인 처리'}</button>
         </div>
       </div>
     </div>`;
   }).join('');
 }
 
-/* 박람회 일정 확정 여부 확인 — 공식 API가 없어 네이버 뉴스 검색으로 구체적 날짜
-   표현("M월 D일", "M.D~M.D" 등)이 등장하는지 휴리스틱하게 탐지한다. 100% 정확을
-   보장하지 않으므로 결과는 "확정 근거 기사" 링크와 함께 제시해 사용자가 직접
-   검증할 수 있게 한다. 네이버 키가 없으면 모든 항목이 "추정" 상태로 유지된다. */
+/* 박람회 일정 확정 여부 확인(A안 — 3단계 신뢰도) — 공식 API가 없어 네이버 뉴스 검색으로
+   구체적 날짜 표현("M월 D일", "M.D~M.D" 등)이 등장하는지 휴리스틱하게 탐지한다.
+   날짜까지 특정되면 "확정", 관련 기사는 있으나 날짜가 안 잡히면 "유력", 아무 관련
+   기사도 없으면 "추정"으로 3단계 구분 — 어느 경우든 checkedAt(마지막 확인 시각)을
+   기록해 화면에 투명하게 노출한다. 네이버 키가 없으면 호출 자체를 생략(추정 유지). */
 async function verifyExpoSchedules() {
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid || !nsec) return {};
   const results = {};
+  const checkedAt = Date.now();
   await Promise.all(EXPOS.map(async (x) => {
     const year = x.nextDate.split('.')[0];
     const q = `${x.name} ${year} 일정`;
@@ -349,7 +439,12 @@ async function verifyExpoSchedules() {
       let confirmedDate = null;
       if (range) confirmedDate = `${year}.${range[1].padStart(2,'0')}.${range[2].padStart(2,'0')} ~ ${year}.${range[3].padStart(2,'0')}.${range[4].padStart(2,'0')}`;
       else if (single) confirmedDate = `${year}.${single[1].padStart(2,'0')}.${single[2].padStart(2,'0')}`;
-      if (confirmedDate) { results[x.name] = { confirmedDate, link: item.link }; break; }
+      if (confirmedDate) { results[x.name] = { status: 'confirmed', confirmedDate, link: item.link, checkedAt }; break; }
+    }
+    if (!results[x.name]) {
+      results[x.name] = items.length
+        ? { status: 'likely', confirmedDate: null, link: items[0].link, checkedAt }
+        : { status: 'estimated', confirmedDate: null, link: null, checkedAt };
     }
   }));
   return results;
@@ -1401,6 +1496,39 @@ function backtestPredictions() {
   return hist.filter(h => h.backtested);
 }
 
+/* 예측 정확도 대시보드 — 백테스트된(기간 도래) 예측들의 적중률(신호 일치도)을
+   요약 카드 + 막대그래프로 시각화. matured는 backtestPredictions()의 반환값(최신순). */
+function renderBacktestDashboard(matured) {
+  const panel = document.getElementById('btDashPanel');
+  if (!panel) return;
+  if (!matured.length) { panel.innerHTML = '<div class="bt-empty">아직 검증된(기간 도래) 예측이 없습니다.</div>'; return; }
+  const rates = matured.map(h => h.total ? h.hits / h.total : 0);
+  const avgRate = rates.reduce((s, x) => s + x, 0) / rates.length;
+  const totalHits = matured.reduce((s, h) => s + h.hits, 0);
+  const totalAll  = matured.reduce((s, h) => s + h.total, 0);
+  const barColor = r => r >= 0.6 ? '#15803d' : r >= 0.4 ? '#92500e' : '#991b1b';
+  panel.innerHTML = `
+    <div class="bt-cards">
+      <div class="bt-card"><div class="bt-card-num">${matured.length}</div><div class="bt-card-lbl">검증된 예측 회차</div></div>
+      <div class="bt-card"><div class="bt-card-num">${(avgRate * 100).toFixed(0)}%</div><div class="bt-card-lbl">평균 신호 일치율</div></div>
+      <div class="bt-card"><div class="bt-card-num">${totalHits}/${totalAll}</div><div class="bt-card-lbl">전체 적중/검증 항목</div></div>
+    </div>
+    <div class="bt-list">
+      ${matured.slice(0, 10).map(h => {
+        const r = h.total ? h.hits / h.total : 0;
+        const dateStr = new Date(h.ts).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' });
+        const periodLbl = h.period === '1y' ? '1년 예측' : '6개월 예측';
+        return `<div class="bt-row">
+          <div class="bt-row-meta">${dateStr} · ${periodLbl}</div>
+          <div class="bt-row-bar-wrap"><div class="bt-row-bar" style="width:${(r*100).toFixed(0)}%;background:${barColor(r)}"></div></div>
+          <div class="bt-row-pct">${h.hits}/${h.total}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="bt-note">※ "적중"은 실매출 데이터가 아니라, 예측 시점 키워드가 검증 시점 모멘텀 신호(수출·구매·검색·뉴스)에서 다시 포착되는지를 보는 신호 일치도 지표입니다 — 완전한 정확도 측정이 아닙니다.</div>
+  `;
+}
+
 async function collectBeautyRSS() {
   /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
   const feeds = [
@@ -1660,6 +1788,17 @@ function resetZ2() {
 /* ════ ZONE 1 렌더 ════ */
 function renderZ1() {
   const el = document.getElementById('z1body');
+  const matured = backtestPredictions();
+  const btBtn = document.getElementById('btnBtDash');
+  if (btBtn) {
+    btBtn.style.display = matured.length ? '' : 'none';
+    btBtn.onclick = () => {
+      const panel = document.getElementById('btDashPanel');
+      const show = panel.style.display === 'none';
+      panel.style.display = show ? '' : 'none';
+      if (show) renderBacktestDashboard(matured);
+    };
+  }
   if (!PREDICTIONS.length) {
     el.innerHTML = '<div class="z1-placeholder">예측 데이터 없음</div>';
     return;
@@ -1671,7 +1810,6 @@ function renderZ1() {
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
   const sigMap   = { climate:'chip-cl', society:'chip-so', economy:'chip-ec', culture:'chip-cu' };
   const sigLabel = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
-  const matured = backtestPredictions();
   const btSummary = matured.length
     ? ` · 과거 예측 백테스트(신호 일치도) ${matured.slice(0, 3).map(h => `${h.hits}/${h.total}`).join(', ')}`
     : '';
@@ -2504,6 +2642,41 @@ function copyReport() {
   navigator.clipboard.writeText(ta.value).then(() => showToast('보고서 복사 완료'));
 }
 
+/* PDF 내보내기 — 별도 라이브러리 없이 브라우저 인쇄(다른 이름으로 저장 → PDF)로 처리 */
+function exportReportPDF() {
+  const ta = document.getElementById('repText');
+  if (!ta.value) genReport();
+  document.getElementById('printReport').textContent = ta.value;
+  window.print();
+}
+
+/* Excel 내보내기 — 네이티브 .xlsx가 아닌 UTF-8 BOM CSV(쉼표분리텍스트) 생성, Excel에서 정상 호환 */
+function exportReportCSV() {
+  if (!document.getElementById('repText').value) genReport();
+  if (!PREDICTIONS.length) { showToast('먼저 [전체 수집 실행] 후 보고서를 생성하세요'); return; }
+  const rows = [['구분', '항목', '내용']];
+  Object.entries(SIG_DATA).forEach(([k, v]) => {
+    if (v) rows.push(['신호', k, `${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} - ${v.interpret}`]);
+  });
+  PREDICTIONS.forEach(p => rows.push(['예측 TOP5', `${p.rank}위 ${p.type}`, `신뢰도 ${p.confidence}% / 출시적기 ${p.season}`]));
+  const matured = backtestPredictions();
+  matured.slice(0, 5).forEach(h => {
+    const dateStr = new Date(h.ts).toLocaleDateString('ko-KR');
+    rows.push(['백테스트', dateStr, `${h.hits}/${h.total} 신호 일치 (${h.period === '1y' ? '1년' : '6개월'} 예측)`]);
+  });
+  REGS.filter(r => r.level === 'critical').forEach(r => rows.push(['긴급 법령·규제', r.tag, `${r.title} (${r.date})`]));
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  a.href = url;
+  a.download = `cosmedb_weekly_briefing_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV 파일 다운로드 완료');
+}
+
 /* ════ API 테스트 함수들 ════ */
 async function testGemini() {
   const key = K.gemini();
@@ -2932,6 +3105,7 @@ function showCollectedData() {
 function init() {
   loadKeys();
   renderZ0();
+  renderZ1();
   renderZ3();
   renderZ4();
 
@@ -2960,6 +3134,8 @@ function init() {
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);
   document.getElementById('btnClearReport').addEventListener('click', () => { document.getElementById('repText').value = ''; });
+  document.getElementById('btnExportPdf').addEventListener('click', exportReportPDF);
+  document.getElementById('btnExportCsv').addEventListener('click', exportReportCSV);
 
   /* 기간 탭 */
   document.querySelectorAll('.pred-period-tab').forEach(btn => {
@@ -3020,4 +3196,12 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('cosmedb_auth') === '1') {
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('appPage').style.display = '';
+    init();
+  } else {
+    checkAuthGate();
+  }
+});
