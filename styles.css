@@ -438,6 +438,20 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media(max-width:700px) { .z3 { grid-template-columns: 1fr; } }
 
+/* ═══════════════════════════════════════
+   ZONE 4: 박람회·전시회 일정
+═══════════════════════════════════════ */
+.z4-wrap {
+  background: var(--w);
+  border: .5px solid var(--bg3);
+  border-radius: var(--r2);
+  margin-bottom: 10px;
+  box-shadow: var(--s1);
+  overflow: hidden;
+}
+.z4-wrap #z4 { padding: 10px 13px 2px; margin-bottom: 0; }
+.z4-note { padding: 0 13px 10px; font-size: 9px; color: var(--ink3); line-height: 1.6; }
+
 .reg-card {
   background: var(--w);
   border: .5px solid var(--bg3);

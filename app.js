@@ -137,6 +137,32 @@ const REGS = [
    url:'https://www.kmf.or.kr', srcLabel:'한국이슬람교 할랄위원회(KMF)'},
 ];
 
+/* ════ 박람회·전시회 일정 (정적 참조 — 연 단위 갱신 필요) ════
+   국내외 주요 화장품·뷰티 박람회를 트렌드 탐색 참고용으로 정리한 보기 전용 목록.
+   해마다 정확한 일자가 매년 초 공지되므로 nextDate는 "통상 개최 시기" 기준 추정값이며,
+   실제 등록·참가 전에는 반드시 공식 홈페이지에서 확정 일정을 재확인해야 한다. */
+const EXPOS = [
+  {name:'in-cosmetics Korea', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.15',
+   location:'서울 코엑스', focus:'화장품 원료·성분 전문 박람회 — 신규 원료·포뮬레이션 트렌드 탐색',
+   url:'https://www.in-cosmetics.com/korea', srcLabel:'in-cosmetics Korea 공식 홈페이지'},
+  {name:'Cosmoprof North America', org:'Cosmoprof', month:'매년 7월', nextDate:'2026.07.21',
+   location:'미국 라스베가스', focus:'북미 시장 진출용 — 바이어·브랜드 네트워킹, 북미 트렌드 확인',
+   url:'https://www.cosmoprofnorthamerica.com', srcLabel:'Cosmoprof North America 공식 홈페이지'},
+  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', org:'대한화장품미용산업대전 사무국', month:'매년 10월경',
+   nextDate:'2026.10.08', location:'서울 코엑스/킨텍스(매년 변동)',
+   focus:'국내 최대 규모 화장품·뷰티 종합전 — OEM/ODM·소재사 부스 다수, 국내 신규처 탐색에 유용',
+   url:'https://www.cosmobeauty.co.kr', srcLabel:'코스모뷰티 서울 공식 홈페이지'},
+  {name:'Cosmoprof Bologna', org:'Cosmoprof', month:'매년 3월', nextDate:'2027.03.20',
+   location:'이탈리아 볼로냐', focus:'세계 최대 화장품 박람회 — 유럽 시장 트렌드·신소재 확인',
+   url:'https://www.cosmoprof.com/en/bologna', srcLabel:'Cosmoprof Worldwide Bologna 공식 홈페이지'},
+  {name:'in-cosmetics Global', org:'Informa Markets', month:'매년 4월(개최도시 순환)', nextDate:'2027.04.06',
+   location:'유럽 주요도시(연도별 변동)', focus:'글로벌 원료·신소재 트렌드 — 유럽 R&D 동향 파악',
+   url:'https://www.in-cosmetics.com/global', srcLabel:'in-cosmetics Global 공식 홈페이지'},
+  {name:"NYSCC Suppliers' Day", org:'NYSCC', month:'매년 5월', nextDate:'2027.05.12',
+   location:'미국 뉴욕', focus:'미국 화장품 화학자 협회 주관 — 미국 원료·공급사 네트워킹',
+   url:'https://www.nyscc.org', srcLabel:'NYSCC Suppliers Day 공식 홈페이지'},
+];
+
 /* ════ STATE ════ */
 let SIG_DATA = { climate: null, society: null, economy: null, culture: null };
 let PREDICTIONS = [];
@@ -248,6 +274,32 @@ function renderZ3() {
         <div class="reg-meta">${escHtml(r.auth)} · ${escHtml(r.date)}</div>
         <div class="reg-detail">${escHtml(r.detail)}</div>
         <div class="reg-action">${escHtml(r.action)}${r.url ? ` <a href="${escHtml(r.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(r.srcLabel || '근거 자료 바로가기')} →</a>` : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════ ZONE 4 박람회·전시회 일정 렌더 (보기 전용) ════ */
+function renderZ4() {
+  const el = document.getElementById('z4');
+  if (!el) return;
+  const now = new Date();
+  el.innerHTML = EXPOS.map(x => {
+    const parts = x.nextDate.split('.');
+    const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    const daysLeft = isNaN(d) ? null : Math.ceil((d - now) / 86400000);
+    const passed = daysLeft !== null && daysLeft < 0;
+    const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
+    const badgeLabel = passed ? '종료(추정)' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
+    return `<div class="reg-card${passed ? ' reg-passed' : ''}">
+      <div class="reg-hd">
+        <span class="${badgeCls}">${badgeLabel}</span>
+        <div class="reg-name">${escHtml(x.name)}</div>
+      </div>
+      <div class="reg-body">
+        <div class="reg-meta">${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(x.month)}(${escHtml(x.nextDate)} 추정)</div>
+        <div class="reg-detail">${escHtml(x.focus)}</div>
+        <div class="reg-action">${x.url ? `<a href="${escHtml(x.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(x.srcLabel || '공식 홈페이지')} →</a>` : ''}</div>
       </div>
     </div>`;
   }).join('');
@@ -2767,6 +2819,7 @@ function init() {
   loadKeys();
   renderZ0();
   renderZ3();
+  renderZ4();
 
   const now = new Date();
   document.getElementById('hdPeriod').textContent = `기준: ${now.getFullYear()}년 ${now.getMonth() + 1}월`;
