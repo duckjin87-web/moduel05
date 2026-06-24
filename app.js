@@ -471,7 +471,10 @@ function buildSigDetailHtml(key) {
       const ct = window._climateTrend;
       const parts = [];
       if (ct.deviation !== null && ct.deviation !== undefined) parts.push(`평년(작년 동기간 ±3일) 대비 오늘 최고기온 편차: <b>${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃</b>`);
-      if (ct.trend16) parts.push(`16일 예보 전반(1~8일) 평균 ${ct.trend16.week1}℃ → 후반(9~16일) 평균 ${ct.trend16.week2}℃ (변화 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃)`);
+      if (ct.trend16) parts.push(`16일 단기예보(참고용, 장기예측 아님) 전반(1~8일) 평균 ${ct.trend16.week1}℃ → 후반(9~16일) 평균 ${ct.trend16.week2}℃ (변화 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃)`);
+      if (window._seasonalOutlook && window._seasonalOutlook.length) {
+        parts.push('평년 기준 계절 전망(1·3·6개월 후, 과거 3년 동일 절기 평균): ' + window._seasonalOutlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) 평균최고 ${o.avgMaxTemp}℃`).join(' · '));
+      }
       if (parts.length) body += `<div class="gm-block"><div class="gm-block-title">기온 추세 근거</div><ul class="gm-list">${parts.map(p=>`<li>${p}</li>`).join('')}</ul></div>`;
     }
   }
@@ -480,8 +483,8 @@ function buildSigDetailHtml(key) {
     if (window._exportErr) body += `<div class="gm-note">수출 모멘텀 미수집: ${escHtml(EXPORT_ERR_MSG[window._exportErr] || window._exportErr)}</div>`;
   }
   if (key === 'society') {
-    /* 투명성 고지 — "1인가구 35.5%/남성뷰티↑"는 매 수집마다 자동 호출되는 항목이 아니라
-       통계청 KOSIS 정기 통계를 코드에 정적 반영한 참조값(연 1회 수준 갱신)이다.
+    /* 투명성 고지 — "1인가구 36.1%/그루밍 확산"은 매 수집마다 자동 호출되는 항목이 아니라
+       통계청 KOSIS 정기 통계(인구주택총조사)를 코드에 정적 반영한 참조값(연 1회 수준 갱신)이다.
        실시간 자동 수집은 ECOS 100대 통계지표(소비자심리지수·실업률·소매판매·가계신용)에서
        처리한다 — economy 신호와 같은 API 호출을 1회만 공유해 추가 호출 비용 없이 확장.
        KOSIS 자체 API 연동(혼인율·고령화율 등)은 별도 인증키가 필요해 v1에는 포함하지 않았다. */
@@ -489,7 +492,7 @@ function buildSigDetailHtml(key) {
       <div class="gm-block-title">자동 수집 vs 정적 참조 구분</div>
       <ul class="gm-list">
         <li><b>실시간 자동 수집</b>: 한국은행 ECOS 100대 통계지표 — 소비자심리지수(CCSI)·실업률·소매판매액지수·가계신용(확인된 항목만 반영, 매 수집 시 API 호출)</li>
-        <li><b>정적 참조값</b>: "1인가구 35.5%"·"남성뷰티 성장" — 통계청 KOSIS 정기 통계를 코드에 반영한 값(연 단위 갱신 필요). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요해 v1에는 포함하지 않았다.</li>
+        <li><b>정적 참조값</b>: "1인가구 36.1%(역대 최대)"·"전 연령·性 그루밍 수요 확산" — 통계청 2024 인구주택총조사를 코드에 반영한 값(연 단위 갱신 필요). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요해 v1에는 포함하지 않았다.</li>
       </ul>
     </div>`;
   }
@@ -792,6 +795,10 @@ async function collectClimate() {
   }
   window._climateTrend = (trend16 || deviation !== null) ? { trend16, deviation } : null;
 
+  /* ── 평년 기준 계절 전망(1·3·6개월 후) — 16일 예보가 닿지 못하는 구간을 보강 ── */
+  const seasonalOutlook = await fetchSeasonalOutlook(today);
+  window._seasonalOutlook = seasonalOutlook;
+
   /* ── 에어코리아 (PM10·PM25) ── CORS 허용, 직접 fetch 성공 (공공키 필요) */
   let pm10 = '—', pm25 = '—';
   if (key) {
@@ -822,10 +829,42 @@ async function collectClimate() {
       pm25 !== '—' ? `PM2.5 ${pm25}` : `습도 ${humid}`,
       uv !== '—' ? `UV ${uv}` : (midTempMax !== '—' ? `3일후최고 ${midTempMax}℃` : ''),
       deviation !== null ? `평년대비 ${deviation >= 0 ? '+' : ''}${deviation}℃` : '',
-      trend16 ? `16일추세 ${trend16.delta >= 0 ? '+' : ''}${trend16.delta}℃` : ''
+      trend16 ? `16일추세 ${trend16.delta >= 0 ? '+' : ''}${trend16.delta}℃` : '',
+      seasonalOutlook.length ? `평년전망 ${seasonalOutlook.map(o => `${o.monthsAhead}m ${o.avgMaxTemp}℃`).join('/')}` : ''
     ].filter(Boolean),
     _sample: temp === '—'
   };
+}
+
+/* ── 평년 기준 계절 전망(1·3·6개월 후) — Open-Meteo Archive(무료·키 불필요)로 과거 3년치
+   동일 절기(±3일) 평균 최고기온을 조회한다. "16일 예보"가 닿지 못하는 1~6개월 구간에서
+   실제 미래 기온을 예보하는 게 아니라 평년치 기준 계절 전환 시점을 가늠하는 보조 신호 —
+   현재 평년대비 편차(deviation)·16일 단기추세(trend16)와 결합해 해석한다. */
+async function fetchSeasonalOutlook(baseDate) {
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const horizons = [1, 3, 6];
+  const outlook = [];
+  for (const h of horizons) {
+    const target = new Date(baseDate); target.setMonth(target.getMonth() + h);
+    const yearSamples = await Promise.all([1, 2, 3].map(async y => {
+      const start = new Date(target); start.setFullYear(start.getFullYear() - y); start.setDate(start.getDate() - 3);
+      const end = new Date(target); end.setFullYear(end.getFullYear() - y); end.setDate(end.getDate() + 3);
+      try {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=37.5665&longitude=126.9780&start_date=${fmt(start)}&end_date=${fmt(end)}&daily=temperature_2m_max&timezone=Asia%2FSeoul`;
+        const txt = await fetchProxy(url, 8000);
+        if (!txt) return null;
+        const j = JSON.parse(txt);
+        const arr = (j?.daily?.temperature_2m_max || []).filter(v => v !== null && v !== undefined);
+        return arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null;
+      } catch { return null; }
+    }));
+    const valid = yearSamples.filter(v => v !== null);
+    if (valid.length) {
+      const avg = valid.reduce((s, x) => s + x, 0) / valid.length;
+      outlook.push({ monthsAhead: h, targetMonth: target.getMonth() + 1, avgMaxTemp: +avg.toFixed(1), sampleYears: valid.length });
+    }
+  }
+  return outlook;
 }
 
 function computeClimateScore(temp, pm10, deviation, trend16) {
@@ -845,16 +884,28 @@ function computeClimateScore(temp, pm10, deviation, trend16) {
 function buildClimateInterp(temp, pm10, deviation, trend16) {
   const t = parseFloat(temp);
   const parts = [];
-  if (!isNaN(t) && t > 25) parts.push('고온 지속 → 선케어·쿨링·에어리스 밀폐 패키징 수요 선행 증가');
-  else if (!isNaN(t) && t > 15) parts.push('봄철 기온 상승 → 선케어 시즌 진입, UV 차단 제품 수요 상승');
-  else parts.push('기온 데이터 기반 계절 선케어·보습 수요 분석');
+  /* 실제 계절(월)을 반영 — 기온대(15~25℃)는 봄·가을 모두 해당하므로 온도 단독 판단 시
+     상반기 내내 "봄철"로 잘못 표기되는 문제(예: 7월에도 "봄철 기온 상승")를 방지 */
+  const month = new Date().getMonth() + 1;
+  const season = (month >= 3 && month <= 5) ? '봄' : (month >= 6 && month <= 8) ? '여름' : (month >= 9 && month <= 11) ? '가을' : '겨울';
+  if (!isNaN(t) && t > 25) parts.push(`${season}철 고온(${t}℃) 지속 → 선케어·쿨링·에어리스 밀폐 패키징 수요 증가`);
+  else if (!isNaN(t) && t > 15) {
+    if (season === '봄') parts.push('봄철 기온 상승 → 선케어 시즌 진입, UV 차단 제품 수요 상승');
+    else if (season === '가을') parts.push('가을철 기온 하강 → 선케어 수요 둔화, 보습·리페어 라인 전환 수요 증가');
+    else parts.push(`${season}철 온화한 기온(${t}℃) → 선케어·보습 균형 수요`);
+  } else parts.push(`${season}철 저온 기조 → 보습·고영양 크림 수요 우위`);
   if (deviation !== null && !isNaN(deviation)) {
     if (deviation >= 2) parts.push(`평년 대비 +${deviation}℃ → 시즌 조기 진입 가능성`);
     else if (deviation <= -2) parts.push(`평년 대비 ${deviation}℃ → 시즌 지연 가능성`);
   }
   if (trend16) {
-    if (trend16.delta >= 2) parts.push(`16일 예보 상승추세(+${trend16.delta}℃) → 단기 수요 증가 신호`);
-    else if (trend16.delta <= -2) parts.push(`16일 예보 하강추세(${trend16.delta}℃) → 보습라인 전환 고려`);
+    if (trend16.delta >= 2) parts.push(`16일 단기예보 상승추세(+${trend16.delta}℃, 참고용) → 단기 수요 증가 신호`);
+    else if (trend16.delta <= -2) parts.push(`16일 단기예보 하강추세(${trend16.delta}℃, 참고용) → 보습라인 전환 고려`);
+  }
+  /* 16일 예보로는 닿지 못하는 1~6개월 구간 — 평년치 기준 계절 전환 시점 전망으로 보강 */
+  const outlook = window._seasonalOutlook;
+  if (outlook && outlook.length) {
+    parts.push('평년 기준 전망: ' + outlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) 평균최고 ${o.avgMaxTemp}℃`).join(' · '));
   }
   return parts.join(' · ');
 }
@@ -1267,7 +1318,7 @@ async function collectSociety() {
   if (!isNaN(u)) { if (u <= 2.8) score += 0.1; else if (u >= 4) score -= 0.1; }
   score = Math.min(Math.max(score, 1), 5);
 
-  const parts = ['1인가구 35.5%(통계청 2023) · 남성뷰티 성장 → 소용량·편의형 패키징 수요 증가'];
+  const parts = ['1인가구 36.1%(통계청 2024, 역대 최대) · 전 연령·性 그루밍 수요 확산 → 소용량·편의형 패키징 수요 증가'];
   if (ccsi !== '—') parts.push(`소비자심리지수 ${ccsi}${!isNaN(c) ? (c >= 100 ? ' (소비 낙관)' : ' (소비 신중)') : ''}`);
   if (unemploy !== '—') parts.push(`실업률 ${unemploy}%${!isNaN(u) ? (u <= 2.8 ? ' (고용 안정 → 구매력 양호)' : u >= 4 ? ' (고용 둔화 → 가성비 수요 우위)' : '') : ''}`);
   if (retailVal !== '—') parts.push(`${retailName || 'ECOS 소매판매 지표'} ${retailVal}`);
@@ -1277,7 +1328,7 @@ async function collectSociety() {
     score,
     interpret: parts.join(' · '),
     chips: [
-      '1인가구 35.5%', '남성뷰티↑',
+      '1인가구 36.1%', '그루밍 수요↑',
       ccsi !== '—' ? `CCSI ${ccsi}` : 'ECOS 키 필요',
       unemploy !== '—' ? `실업률 ${unemploy}%` : '',
       retailVal !== '—' ? `${retailName || '소매판매'} ${retailVal}` : '',
@@ -1481,11 +1532,15 @@ async function runGeminiPrediction(period) {
       + `\n※ 검색·클릭은 "관심", 수출액은 실제 출하·결제된 "판매 실적"이다. K뷰티 수출 목표상 가장 강한 신호이므로 최우선 가중할 것`
     : '';
   const ct = window._climateTrend;
+  const seasonalOutlook = window._seasonalOutlook;
   const climateDetail = ct
     ? `\n[기후 추세 — Open-Meteo 실측]\n`
       + [
           ct.deviation !== null ? `평년(작년 동기) 대비 ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃` : '',
-          ct.trend16 ? `16일 예보 추세 ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 평균 ${ct.trend16.week1}℃ → 2주차 평균 ${ct.trend16.week2}℃)` : ''
+          ct.trend16 ? `16일 단기예보 추세(참고용, 장기예측 아님) ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 평균 ${ct.trend16.week1}℃ → 2주차 평균 ${ct.trend16.week2}℃)` : '',
+          (seasonalOutlook && seasonalOutlook.length)
+            ? `※ ${period === '1y' ? '1년' : '6개월'} 예측 시 이 항목을 우선 참고 — 평년 기준 계절 전망: ` + seasonalOutlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) 평균최고 ${o.avgMaxTemp}℃`).join(' · ')
+            : ''
         ].filter(Boolean).join(' · ')
     : '';
   const prompt = `당신은 화장품 OEM/ODM 업계 전문 트렌드 분석가입니다.
@@ -1727,17 +1782,19 @@ function extractCompanyNames(text) {
 }
 
 /* KIPRIS(특허정보원) 출원인 검색 — TRACK B 신규처 발굴에 "특허 출원" 근거를 추가하는 스캐폴드.
-   ※ 실제 KIPRIS Open API 키가 아직 없어(2026-06-22 기준 미보유) 라이브 응답으로 검증하지
-   못했다. 공개 문서 기준 특허/실용신안 키워드검색 서비스(patUtiModInfoSearchSevice/getWordSearch)
-   엔드포인트로 구현했으나, 키 발급 후 서비스명·파라미터명(ServiceKey vs accessKey 등)을
-   KIPRIS Plus 개발가이드로 재확인해야 한다. 실패 시(엔드포인트 불일치·인증 오류 등) 빈 배열을
-   반환해 TRACK B 나머지 경로(뉴스·식약처·블로그·네이버쇼핑)는 그대로 동작한다 — 다른 키 없는
-   신호들과 동일하게 "있으면 보강, 없으면 조용히 생략" 원칙을 따른다. */
+   ※ 2026-06-24 재조사: "응답은 받았으나 출원인 정보를 찾지 못했습니다" 오류 원인은 (1) 호스트가
+   plus.kipris.or.kr이 아니라 특허정보원이 직접 운영하는 kipo-api.kipi.or.kr이고, (2) 인증
+   파라미터명이 ServiceKey가 아니라 accessKey인 것으로 데이터포털(data.go.kr 15058788)·KIPRIS
+   Plus 공개 안내에서 일관되게 확인됨 — 두 가지를 모두 수정. 다만 이 환경은 외부망 접근이
+   차단돼 있어(샌드박스 프록시) 실키로 라이브 호출까지는 검증 못 했다 — API 설정 패널의
+   "연결 테스트" 버튼으로 실키 등록 후 최종 확인 필요. 실패 시(엔드포인트 불일치·인증 오류 등)
+   빈 배열을 반환해 TRACK B 나머지 경로(뉴스·식약처·블로그·네이버쇼핑)는 그대로 동작한다 —
+   다른 키 없는 신호들과 동일하게 "있으면 보강, 없으면 조용히 생략" 원칙을 따른다. */
 async function searchKiprisApplicants(keyword) {
   const key = K.kipris();
   if (!key) return [];
-  const url = `https://plus.kipris.or.kr/kipo-api/kipi/patUtiModInfoSearchSevice/getWordSearch`
-    + `?word=${encodeURIComponent(keyword + ' 화장품')}&ServiceKey=${encodeURIComponent(key)}&numOfRows=15`;
+  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
+    + `?word=${encodeURIComponent(keyword + ' 화장품')}&accessKey=${encodeURIComponent(key)}&numOfRows=15`;
   try {
     const txt = await fetchProxy(url, 10000);
     if (!txt) return [];
@@ -2405,7 +2462,10 @@ function genReport() {
     lines.push('');
     lines.push('▶ 기후 추세 (Open-Meteo)');
     if (ct.deviation !== null) lines.push(`  • 평년(작년 동기) 대비: ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃`);
-    if (ct.trend16) lines.push(`  • 16일 예보 추세: ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 ${ct.trend16.week1}℃ → 2주차 ${ct.trend16.week2}℃)`);
+    if (ct.trend16) lines.push(`  • 16일 단기예보 추세(참고용): ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 ${ct.trend16.week1}℃ → 2주차 ${ct.trend16.week2}℃)`);
+    if (window._seasonalOutlook && window._seasonalOutlook.length) {
+      lines.push(`  • 평년 기준 계절 전망(1~6개월): ` + window._seasonalOutlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) ${o.avgMaxTemp}℃`).join(' · '));
+    }
   }
   const matured = backtestPredictions();
   if (matured.length) {
@@ -2809,7 +2869,7 @@ async function testKipris() {
       el.style.color = 'var(--grn)';
       setStatus('st-kipris', '확인됨', true);
     } else {
-      el.textContent = '응답은 받았으나 출원인 정보를 찾지 못했습니다.\n\n키 발급 직후라면: 엔드포인트(patUtiModInfoSearchSevice/getWordSearch)나\n파라미터명(ServiceKey)이 실제 KIPRIS Plus 문서와 다를 수 있습니다 —\nplus.kipris.or.kr 개발가이드에서 서비스명을 재확인하세요.';
+      el.textContent = '응답은 받았으나 출원인 정보를 찾지 못했습니다.\n\nkipo-api.kipi.or.kr/accessKey로 수정 반영됨(2026-06-24) — 그래도 안 되면\n검색어("선세럼 화장품")에 해당하는 출원 건이 실제로 없거나, 키 등급(개발/운영)\n제한일 수 있습니다 — plus.kipris.or.kr 개발가이드·API 상태 페이지를 확인하세요.';
       el.style.color = 'var(--red)';
     }
   } catch (e) {
