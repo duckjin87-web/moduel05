@@ -138,11 +138,11 @@ const REGS = [
 ];
 
 /* ════ 박람회·전시회 일정 (정적 참조 — 연 단위 갱신 필요) ════
-   국내 화장품·뷰티 박람회(B2B) + 리테일 뷰티 기획전을 트렌드 탐색 참고용으로 정리한
-   보기 전용 목록 — 해외 행사는 제외(국내 신규처·국내 소비 트렌드 탐색 목적에 한정).
-   해마다 정확한 일자가 매년 초 공지되므로 nextDate는 "통상 개최 시기" 기준 추정값이며,
-   [전체 수집 실행] 시 verifyExpoSchedules()가 뉴스 검색으로 확정 일정을 찾으면
-   화면에 "확정"으로 갱신한다(찾지 못하면 추정 상태 유지). */
+   국내 화장품·뷰티 박람회(B2B) + 리테일 뷰티 기획전 + 설비·패키징전을 트렌드 탐색
+   참고용으로 정리한 보기 전용 목록 — 해외 행사는 제외(국내 신규처·국내 소비 트렌드
+   탐색 목적에 한정). 해마다 정확한 일자가 매년 초 공지되므로 nextDate는 "통상 개최
+   시기" 기준 추정값이며, [전체 수집 실행] 시 verifyExpoSchedules()가 뉴스 검색으로
+   확정 일정을 찾으면 화면에 "확정"으로 갱신한다(찾지 못하면 추정 상태 유지). */
 const EXPOS = [
   {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', org:'대한화장품미용산업대전 사무국', month:'매년 10월경',
    nextDate:'2026.10.08', location:'서울 코엑스/킨텍스(매년 변동)',
@@ -164,6 +164,14 @@ const EXPOS = [
    nextDate:'2026.10.22', location:'전국 매장·온라인',
    focus:'국내 최대 뷰티 리테일러 시즌 기획전 — 큐레이션 카테고리로 소비 트렌드 선행 포착',
    url:'https://www.oliveyoung.co.kr', srcLabel:'올리브영 공식 홈페이지'},
+  {name:'코리아팩(KOREA PACK)', type:'equipment', org:'한국포장기계협회', month:'격년(짝수년) 3~4월',
+   nextDate:'2028.03.28', location:'경기 킨텍스',
+   focus:'국내 최대 충진·성형·자동화 설비전 — 2026년부터 ICPI WEEK(국제 제약·화장품위크)와 통합 개최되어 화장품 제조설비 신기술이 가장 먼저 공개되는 자리. 2026년판은 이미 종료(3.31~4.3) — 다음은 2028년 격년 개최',
+   url:'https://www.koreapack.org', srcLabel:'KOREA PACK 공식 홈페이지'},
+  {name:'한국포장전(H-PACK)', type:'equipment', org:'월간포장타임즈', month:'매년 10월',
+   nextDate:'2026.10.27', location:'경기 킨텍스',
+   focus:'포장기계·자재·용기·친환경 패키징 솔루션 전문전(식품·제약·화장품 공통) — 신규 패키징 소재·기술 트렌드 확인',
+   url:'http://hpack.org', srcLabel:'한국포장전(H-PACK) 공식 홈페이지'},
 ];
 
 /* ════ STATE ════ */
@@ -297,14 +305,16 @@ function renderZ4() {
     const passed = daysLeft !== null && daysLeft < 0;
     const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
     const badgeLabel = passed ? '종료' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
-    const typeTag = x.type === 'retail' ? '리테일 기획전' : 'B2B 박람회';
+    const typeTag = x.type === 'retail' ? '리테일 기획전' : x.type === 'equipment' ? '설비·패키징전' : 'B2B 박람회';
+    const catLabel = x.type === 'retail' ? '리테일' : x.type === 'equipment' ? '설비' : '뷰티';
     const confirmTag = v
       ? `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정</span>`
       : `<span style="font-size:9px;color:var(--ink3)">추정</span>`;
     return `<div class="reg-card${passed ? ' reg-passed' : ''}">
-      <div class="reg-hd">
+      <div class="reg-hd expo-hd">
+        <span class="exp-cat">${escHtml(catLabel)}</span>
         <span class="${badgeCls}">${badgeLabel}</span>
-        <div class="reg-name">${escHtml(x.name)}</div>
+        <span class="reg-name" style="margin-top:0">${escHtml(x.name)}</span>
       </div>
       <div class="reg-body">
         <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(dateStr)} ${confirmTag}</div>
