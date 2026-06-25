@@ -396,12 +396,13 @@ function renderZ4() {
       lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : '자동 확인 안 됨(네이버 키 필요)';
     }
 
-    return `<div class="reg-card${passed ? ' reg-passed' : ''}">
-      <div class="reg-hd expo-hd">
+    return `<details class="reg-card expo-card${passed ? ' reg-passed' : ''}">
+      <summary class="reg-hd expo-hd">
         <span class="exp-cat">${escHtml(catLabel)}</span>
         <span class="${badgeCls}">${badgeLabel}</span>
         <span class="reg-name" style="margin-top:0">${escHtml(x.name)}</span>
-      </div>
+        <span class="exp-chev">▾</span>
+      </summary>
       <div class="reg-body">
         <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(dateStr)} ${confirmTag}</div>
         <div class="reg-detail">${escHtml(x.focus)}</div>
@@ -412,7 +413,7 @@ function renderZ4() {
           <button class="exp-confirm-btn" onclick="toggleExpoManualConfirm('${escJs(x.name)}')">${m ? '담당자 확인 취소' : '담당자 확인 처리'}</button>
         </div>
       </div>
-    </div>`;
+    </details>`;
   }).join('');
 }
 
