@@ -173,34 +173,36 @@ const REGS = [
    탐색 목적에 한정). 해마다 정확한 일자가 매년 초 공지되므로 nextDate는 "통상 개최
    시기" 기준 추정값이며, [전체 수집 실행] 시 verifyExpoSchedules()가 뉴스 검색으로
    확정 일정을 찾으면 화면에 "확정"으로 갱신한다(찾지 못하면 추정 상태 유지). */
+/* confirmed: true → 주최측 공식 발표(홈페이지·보도)로 정확한 개최일이 이미 공개된 건
+   confirmed: false → 매년/격년 통상 개최 시기 패턴에 근거한 추정일(공식 발표 전) */
 const EXPOS = [
-  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', org:'대한화장품미용산업대전 사무국', month:'매년 10월경',
-   nextDate:'2026.10.08', location:'서울 코엑스/킨텍스(매년 변동)',
-   focus:'국내 최대 규모 화장품·뷰티 종합전 — OEM/ODM·소재사 부스 다수, 국내 신규처 탐색에 유용',
-   url:'https://www.cosmobeauty.co.kr', srcLabel:'코스모뷰티 서울 공식 홈페이지'},
-  {name:'in-cosmetics Korea', type:'expo', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.15',
-   location:'서울 코엑스', focus:'화장품 원료·성분 전문 박람회(국내 개최) — 신규 원료·포뮬레이션 트렌드 탐색',
+  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', org:'대한화장품미용산업대전 사무국', month:'매년 5월경',
+   nextDate:'2026.05.27~2026.05.29', confirmed:true, location:'서울 코엑스 A·B홀',
+   focus:'국내 최대 규모 화장품·뷰티 종합전 — OEM/ODM·소재사 부스 다수, 국내 신규처 탐색에 유용. 2026년판 820부스 역대 최대 규모로 개최(종료)',
+   url:'https://www.cosmobeautyseoul.com', srcLabel:'코스모뷰티 서울 공식 홈페이지'},
+  {name:'in-cosmetics Korea', type:'expo', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.01~2026.07.03',
+   confirmed:true, location:'서울 코엑스 C·D·E홀', focus:'화장품 원료·성분 전문 박람회(국내 개최) — 신규 원료·포뮬레이션 트렌드 탐색',
    url:'https://www.in-cosmetics.com/korea', srcLabel:'in-cosmetics Korea 공식 홈페이지'},
-  {name:'K-BEAUTY EXPO KOREA', type:'expo', org:'KOTRA', month:'매년 5월경', nextDate:'2027.05.13',
-   location:'서울 코엑스', focus:'코트라 주관 수출상담회 성격 — 해외 바이어 매칭, 신규 수출처 발굴에 유용',
+  {name:'K-BEAUTY EXPO KOREA', type:'expo', org:'KINTEX·KOTRA', month:'매년 10월', nextDate:'2026.10.15~2026.10.17',
+   confirmed:true, location:'경기 고양 킨텍스', focus:'코트라·킨텍스 공동 주관 수출상담회 성격 — 해외 바이어 매칭, 신규 수출처 발굴에 유용',
    url:'https://www.kbeautyexpo.com', srcLabel:'K-BEAUTY EXPO KOREA 공식 홈페이지'},
   {name:'부산국제화장품미용박람회(BICE)', type:'expo', org:'벡스코', month:'매년 9월경', nextDate:'2026.09.10',
-   location:'부산 벡스코', focus:'영남권 화장품·뷰티 종합전 — 지역 OEM/ODM·소재사 탐색',
+   confirmed:false, location:'부산 벡스코', focus:'영남권 화장품·뷰티 종합전 — 지역 OEM/ODM·소재사 탐색. 공식 발표 전(추정 일정)',
    url:'https://www.bexco.co.kr', srcLabel:'벡스코 전시일정 안내'},
-  {name:'대구국제뷰티박람회', type:'expo', org:'엑스코', month:'매년 9월경', nextDate:'2026.09.24',
-   location:'대구 엑스코', focus:'대구·경북권 뷰티 산업 박람회 — 지역 소재·뷰티기기 트렌드 확인',
-   url:'https://www.exco.co.kr', srcLabel:'엑스코 전시일정 안내'},
+  {name:'대구국제뷰티엑스포', type:'expo', org:'엑스코', month:'매년 6월경', nextDate:'2026.06.11',
+   confirmed:true, location:'대구 엑스코', focus:'대구·경북권 뷰티 산업 박람회 — 지역 소재·뷰티기기 트렌드 확인(종료)',
+   url:'https://www.beautyexpo.kr', srcLabel:'대구국제뷰티엑스포 공식 홈페이지'},
   {name:'올리브영 뷰티 기획전(다이브인페스티벌 등 시즌 세일)', type:'retail', org:'CJ올리브영', month:'연 수회(2~3월/6~7월/10~11월)',
-   nextDate:'2026.10.22', location:'전국 매장·온라인',
-   focus:'국내 최대 뷰티 리테일러 시즌 기획전 — 큐레이션 카테고리로 소비 트렌드 선행 포착',
+   nextDate:'2026.10.22', confirmed:false, location:'전국 매장·온라인',
+   focus:'국내 최대 뷰티 리테일러 시즌 기획전 — 큐레이션 카테고리로 소비 트렌드 선행 포착. 매회 구체 일정은 임박 시점에 공개',
    url:'https://www.oliveyoung.co.kr', srcLabel:'올리브영 공식 홈페이지'},
   {name:'코리아팩(KOREA PACK)', type:'equipment', org:'한국포장기계협회', month:'격년(짝수년) 3~4월',
-   nextDate:'2028.03.28', location:'경기 킨텍스',
-   focus:'국내 최대 충진·성형·자동화 설비전 — 2026년부터 ICPI WEEK(국제 제약·화장품위크)와 통합 개최되어 화장품 제조설비 신기술이 가장 먼저 공개되는 자리. 2026년판은 이미 종료(3.31~4.3) — 다음은 2028년 격년 개최',
+   nextDate:'2028.03.28', confirmed:false, location:'경기 킨텍스',
+   focus:'국내 최대 충진·성형·자동화 설비전 — 2026년부터 ICPI WEEK(국제 제약·화장품위크)와 통합 개최되어 화장품 제조설비 신기술이 가장 먼저 공개되는 자리. 2026년판은 이미 종료(3.31~4.3) — 다음은 2028년 격년 개최(정확한 일정 미발표)',
    url:'https://www.koreapack.org', srcLabel:'KOREA PACK 공식 홈페이지'},
   {name:'한국포장전(H-PACK)', type:'equipment', org:'월간포장타임즈', month:'매년 10월',
-   nextDate:'2026.10.27', location:'경기 킨텍스',
-   focus:'포장기계·자재·용기·친환경 패키징 솔루션 전문전(식품·제약·화장품 공통) — 신규 패키징 소재·기술 트렌드 확인',
+   nextDate:'2026.10.27', confirmed:false, location:'경기 킨텍스',
+   focus:'포장기계·자재·용기·친환경 패키징 솔루션 전문전(식품·제약·화장품 공통) — 신규 패키징 소재·기술 트렌드 확인. 2025년판은 10.28~31 개최, 2026년판 정확한 일정 미발표(추정)',
    url:'http://hpack.org', srcLabel:'한국포장전(H-PACK) 공식 홈페이지'},
 ];
 
@@ -375,7 +377,7 @@ function renderZ4() {
 
   el.innerHTML = rows.map(({ x, v, dateStr, daysLeft, passed }) => {
     const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
-    const badgeLabel = passed ? '종료' : daysLeft <= 30 ? `D-${daysLeft}` : '예정';
+    const badgeLabel = passed ? '종료' : daysLeft !== null ? `D-${daysLeft}` : '미정';
     const typeTag = x.type === 'retail' ? '리테일 기획전' : x.type === 'equipment' ? '설비·패키징전' : 'B2B 박람회';
     const catLabel = x.type === 'retail' ? '리테일' : x.type === 'equipment' ? '설비' : '뷰티';
     const m = manual[x.name];
@@ -396,11 +398,19 @@ function renderZ4() {
       lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : '자동 확인 안 됨(네이버 키 필요)';
     }
 
+    /* 제목에 항상 노출되는 일정 확정여부 — 공식 발표된 정확한 날짜(x.confirmed)이거나
+       담당자 확인/뉴스 검색으로 확정된 경우 "확정", 그 외엔 통상 개최시기 기준 추정이므로 "예정" */
+    const dateConfirmed = !!m || v?.status === 'confirmed' || !!x.confirmed;
+    const titleTag = dateConfirmed
+      ? `<span class="exp-confirmed">확정</span>`
+      : `<span class="exp-tentative">예정</span>`;
+
     return `<details class="reg-card expo-card${passed ? ' reg-passed' : ''}">
       <summary class="reg-hd expo-hd">
         <span class="exp-cat">${escHtml(catLabel)}</span>
         <span class="${badgeCls}">${badgeLabel}</span>
         <span class="reg-name" style="margin-top:0">${escHtml(x.name)}</span>
+        ${titleTag}
         <span class="exp-chev">▾</span>
       </summary>
       <div class="reg-body">

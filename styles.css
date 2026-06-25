@@ -498,6 +498,12 @@ button { font-family: inherit; cursor: pointer; }
 .expo-hd { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; cursor: pointer; list-style: none; }
 .expo-hd::-webkit-details-marker { display: none; }
 .expo-hd .reg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.exp-confirmed, .exp-tentative {
+  flex-shrink: 0;
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+}
+.exp-confirmed  { background: #dcfce7; color: #15803d; }
+.exp-tentative  { background: var(--bg3); color: var(--ink3); }
 .exp-chev { flex-shrink: 0; font-size: 9px; color: var(--ink3); transition: transform .15s; }
 .expo-card[open] .exp-chev { transform: rotate(180deg); }
 .expo-card .reg-body { cursor: default; }
