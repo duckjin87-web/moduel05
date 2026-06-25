@@ -1903,6 +1903,23 @@ function normCompanyName(n) {
   return String(n || '').replace(/주식회사|\(주\)|㈜|\s/g, '').trim();
 }
 
+/* 예측 품목 → 검색 키워드 추출 — 괄호 패키징 표기("(스틱+튜브)")는 제거하되
+   첫 단어만 남기지 않고 핵심 명사구 전체를 사용 (예: "쿨링 젤 선크림 (스틱+튜브)" → "쿨링 젤 선크림")
+   첫 단어만 쓰면 "쿨링"처럼 지나치게 일반적인 단어가 되어 전혀 다른 제품으로 검색 결과가 새는 문제가 있었음 */
+function extractSearchKw(productType) {
+  const cleaned = String(productType || '').replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  return cleaned || String(productType || '').trim();
+}
+
+/* 후보 업체의 실제 판매 제품명이 예측 품목과 무관한지 판별 — 검색어 중 의미있는 토큰(2자 이상)
+   중 하나라도 제품명에 포함돼야 관련 후보로 인정 (네이버쇼핑 maker 역추적의 무필터 매칭 방지) */
+function isRelevantToProductType(text, kw) {
+  const tokens = String(kw || '').split(' ').filter(t => t.length >= 2);
+  if (!tokens.length) return true;
+  const t = String(text || '');
+  return tokens.some(tok => t.includes(tok));
+}
+
 /* 텍스트에서 화장품 업체명 패턴 추출 — Gemini 키 없거나 실패 시 폴백 */
 function extractCompanyNames(text) {
   const out = new Set();
@@ -1952,7 +1969,7 @@ async function findNewManufacturers(productType, tech) {
   let results = [];
   const nid = K.naverID(), nsec = K.naverSec(), gkey = K.gemini();
   const pubKey = K.public();
-  const kw = productType.split(' ')[0];
+  const kw = extractSearchKw(productType);
   /* 패키징 키워드 — 충진·성형 설비 관점 검색어로 탐색 폭 확대 */
   const pkgKw = (currentPkgType.match(/에어리스|스틱|튜브|파우치|앰플|패드|쿠션|펌프/) || [])[0] || '';
 
@@ -2024,6 +2041,9 @@ async function findNewManufacturers(productType, tech) {
       if (!cn || seenMaker.has(cn)) return;
       seenMaker.add(cn);
       const product = (it.title || '').replace(/<[^>]+>/g, '');
+      /* 검색어가 일반어라 무관한 제품이 섞여 나올 수 있어, 실제 판매 제품명에 예측 품목의
+         핵심 단어가 포함되는지 확인 — 무관한 제품의 제조사가 후보로 잘못 연결되는 것을 방지 */
+      if (!isRelevantToProductType(product, kw)) return;
       shopMakerResults.push({
         name: maker, evidence_type: 'product', production: '생산중',
         evidence_detail: `네이버쇼핑 판매 제품 "${product.slice(0, 40)}"의 제조사(maker) 정보로 확인 — 실제 판매 중인 제품에서 제조원 역추적`,
@@ -2397,7 +2417,7 @@ function newCardHtml(c, idx) {
 
 function noTrackBHtml() {
   const pred = PREDICTIONS[SEL_IDX];
-  const kw = pred ? escHtml(pred.type.split(' ')[0]) : '화장품 제조';
+  const kw = pred ? escHtml(extractSearchKw(pred.type)) : '화장품 제조';
   return `<div class="mcard">
     <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">
       ${!K.naverID() ? '네이버 API 키 미설정 — 키 설정 후 수집 실행하면 자동 탐색됩니다' : '뉴스·식약처 데이터에서 신규처 업체명을 확인하지 못했습니다'}
