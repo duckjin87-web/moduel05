@@ -362,8 +362,10 @@ function renderZ4() {
 
   const rows = EXPOS.map(x => {
     const v = manual[x.name] ? null : verified[x.name];  /* 담당자 확인이 있으면 자동탐지 결과보다 우선 */
-    const dateStr = v ? v.confirmedDate : x.nextDate;
-    const parts = dateStr.split('~')[0].trim().split('.');
+    /* v가 likely/estimated이면 confirmedDate가 null이므로 기본 nextDate로 폴백
+       (null.split 크래시 방지 — 이 크래시는 collectAll 전체를 중단시켜 예측 미실행 유발) */
+    const dateStr = (v && v.confirmedDate) ? v.confirmedDate : x.nextDate;
+    const parts = String(dateStr || '').split('~')[0].trim().split('.');
     const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
     const daysLeft = isNaN(d) ? null : Math.ceil((d - now) / 86400000);
     const passed = daysLeft !== null && daysLeft < 0;
@@ -1122,6 +1124,16 @@ const EXPORT_ERR_MSG = {
 /* 뷰티 섹터 뉴스 — 단일 키워드(에어리스) 고정 대신 전체 유형 스펙트럼 검색 후
    언급빈도 분석으로 "자주 언급/급상승" 트렌드 키워드 도출 */
 const NEWS_TREND_QUERIES = ['화장품 신제품', '뷰티 트렌드', '더마 코스메틱', 'K뷰티 수출'];
+
+/* 해외 뷰티·패키징 박람회 — 참석 목적이 아니라 "거기서 공개된 성분·제형·패키징"을
+   국내보다 6~12개월 앞선 선행 트렌드로 활용. 박람회 사이트는 API·CORS가 없어 직접
+   수집 불가하므로, 박람회를 다룬 최근 보도(네이버뉴스 최신순)를 검색해 키워드를 추출.
+   비수기엔 박람회 직접 보도가 적어 마지막 쿼리(글로벌 일반 트렌드)로 자연 폴백된다. */
+const GLOBAL_EXPO_QUERIES = [
+  'Cosmoprof 화장품', '코스모프로프 뷰티', 'in-cosmetics 트렌드',
+  'Cosmopack 패키징', '글로벌 화장품 트렌드',
+];
+const GLOBAL_EXPO_RECENT_DAYS = 60;   /* 최근 N일 이내 보도만 선행신호로 채택 */
 async function collectNewsTrends(nid, nsec) {
   const resps = await Promise.all(NEWS_TREND_QUERIES.map(q => {
     const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=30&sort=date`;
@@ -1705,6 +1717,52 @@ async function collectMFDSSupply() {
   } catch { window._supplyErr = '수집 실패'; }
 }
 
+/* 해외 박람회 선행 트렌드 — 최근 보도에서 성분·제형·패키징 키워드 추출.
+   네이버뉴스 최신순 검색 후 기사 발행일(pubDate)을 파싱해 최근 N일 이내 기사만 채택. */
+async function collectGlobalExpoTrends() {
+  window._expoTrends = null;
+  window._expoArticles = null;
+  window._expoErr = null;
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (!nid || !nsec) { window._expoErr = '네이버 API 키 미설정'; return; }
+  try {
+    const resps = await Promise.all(GLOBAL_EXPO_QUERIES.map(q => {
+      const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=20&sort=date`;
+      return fetchNaverAPI(url, nid, nsec, 9000);
+    }));
+    const now = Date.now();
+    const maxAge = GLOBAL_EXPO_RECENT_DAYS * 86400000;
+    const kwMap = {};
+    const articles = [];
+    const seenLink = new Set();
+    let anyOk = false, recentCount = 0;
+    resps.forEach(j => {
+      if (!j || j._error) return;
+      anyOk = true;
+      (j.items || []).forEach(it => {
+        /* 최근성 필터 — pubDate(RFC822) 파싱 실패 시 보수적으로 제외 */
+        const ts = it.pubDate ? new Date(it.pubDate).getTime() : NaN;
+        if (isNaN(ts) || (now - ts) > maxAge || (now - ts) < 0) return;
+        recentCount++;
+        const title = (it.title || '').replace(/<[^>]+>/g, '');
+        const text = `${title} ${it.description || ''}`.replace(/<[^>]+>/g, '');
+        TREND_KEYWORDS.forEach(kw => { if (text.includes(kw)) kwMap[kw] = (kwMap[kw] || 0) + 1; });
+        if (it.link && !seenLink.has(it.link) && articles.length < 8) {
+          seenLink.add(it.link);
+          articles.push({ title, link: it.link });
+        }
+      });
+    });
+    if (!anyOk) { window._expoErr = '뉴스 응답 없음'; return; }
+    if (!recentCount) { window._expoErr = `최근 ${GLOBAL_EXPO_RECENT_DAYS}일 내 관련 보도 없음`; return; }
+    const ranked = Object.entries(kwMap).sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([name, count]) => ({ name, count }));
+    window._expoTrends = ranked.length ? ranked : null;
+    window._expoArticles = articles.length ? articles : null;
+    if (!ranked.length) window._expoErr = `최근 보도 ${recentCount}건 — 트렌드 키워드 미검출`;
+  } catch { window._expoErr = '수집 실패'; }
+}
+
 /* ════ Gemini 예측 분석 ════ */
 async function runGeminiPrediction(period) {
   period = period || currentPeriod;
@@ -1757,6 +1815,14 @@ async function runGeminiPrediction(period) {
       + within.map(({ r, months }) => `${r.date} (${months <= 0 ? '시행중/임박' : 'D-' + months + '개월'}) [${r.tag}] ${r.title} → ${r.action}`).join('\n')
       + `\n※ 규제는 예측이 아니라 확정된 일정이다. 위 규제가 강제하는 패키징·성분 변화(예: 모노머티리얼·리필 전환, 미세플라스틱·특정성분 대체, 농도상한 리포뮬레이션, 해외 등록 의무)에 직접 해당하는 화장품 유형은 결정론적으로 가중하라.`;
   })();
+  const expoDetail = (window._expoTrends && window._expoTrends.length)
+    ? `\n[해외 박람회 선행 트렌드 — 최근 ${GLOBAL_EXPO_RECENT_DAYS}일 글로벌 뷰티·패키징 박람회(Cosmoprof·in-cosmetics·Cosmopack 등) 관련 보도 키워드]\n`
+      + window._expoTrends.map(t => `${t.name}(${t.count})`).join(' · ')
+      + ((window._expoArticles && window._expoArticles.length)
+          ? `\n최근 보도 헤드라인: ` + window._expoArticles.slice(0, 5).map(a => `"${a.title}"`).join(' / ')
+          : '')
+      + `\n※ 해외 선도 박람회에서 공개된 신규 성분·제형·패키징은 국내 출시보다 6~12개월 앞서는 선행 트렌드다. 단 박람회 원본이 아닌 보도 기반 간접 신호이므로, 수요·공급 신호와 교차 검증해 가중하라.`
+    : '';
   const ct = window._climateTrend;
   const seasonalOutlook = window._seasonalOutlook;
   const climateDetail = ct
@@ -1774,7 +1840,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${climateDetail}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${climateDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -2645,8 +2711,8 @@ async function collectAll() {
 
   updateStatusSummary();
 
-  setStep('⑤ 식약처 공급 선행신호 수집 중...', '공급 신호');
-  await collectMFDSSupply();
+  setStep('⑤ 공급(식약처)·해외 박람회 선행신호 수집 중...', '선행신호');
+  await Promise.all([collectMFDSSupply(), collectGlobalExpoTrends()]);
 
   setStep('⑥ 박람회 일정 확인 중...', '일정 확인');
   window._expoVerified = await verifyExpoSchedules();
@@ -2717,6 +2783,11 @@ function genReport() {
     lines.push('');
     lines.push('▶ 식약처 기능성화장품 보고품목 — 제형 분포 (공급 선행신호)');
     window._supplyTrends.slice(0, 10).forEach(t => lines.push(`  • ${t.name}: ${t.count}건${t.recent ? ` (최근6개월 신규 ${t.recent}건)` : ''}`));
+  }
+  if (window._expoTrends && window._expoTrends.length) {
+    lines.push('');
+    lines.push(`▶ 해외 박람회 선행 트렌드 — 최근 ${GLOBAL_EXPO_RECENT_DAYS}일 글로벌 박람회 보도 키워드 (선행신호)`);
+    window._expoTrends.slice(0, 10).forEach(t => lines.push(`  • ${t.name}: ${t.count}건 언급`));
   }
   if (window._newsTrends && window._newsTrends.length) {
     lines.push('');
@@ -3232,6 +3303,11 @@ function showCollectedData() {
     lines.push(`[공급 선행·식약처 보고품목] ` + window._supplyTrends.slice(0, 10).map(t => `${t.name}(${t.count}${t.recent ? `/신규${t.recent}` : ''})`).join(' · '));
   } else if (window._supplyErr) {
     lines.push(`[공급 선행·식약처 보고품목] ${window._supplyErr}`);
+  }
+  if (window._expoTrends && window._expoTrends.length) {
+    lines.push(`[해외 박람회 선행·최근${GLOBAL_EXPO_RECENT_DAYS}일] ` + window._expoTrends.slice(0, 10).map(t => `${t.name}(${t.count})`).join(' · '));
+  } else if (window._expoErr) {
+    lines.push(`[해외 박람회 선행] ${window._expoErr}`);
   }
   if (window._climateTrend) {
     const ct = window._climateTrend;
