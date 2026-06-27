@@ -1638,6 +1638,73 @@ async function collectMFDSGMP() {
   } catch { return []; }
 }
 
+/* 식약처 기능성화장품 보고품목 → 제형(생산유형) 분포를 공급단 선행신호로 집계.
+   제조사가 식약처에 '보고'한 시점 = 그 제형을 만들 설비·공정을 갖췄다는 공식 증거.
+   수요(소비자 검색·클릭)보다 앞서는 신호이며, 보고일이 파싱되면 최근 6개월 신규
+   보고 비중(신규 진입 모멘텀 근사)도 함께 산출한다. */
+const SUPPLY_FORMS = [
+  {name:'앰플',         re:/앰플|ampoule/i},
+  {name:'세럼',         re:/세럼|serum/i},
+  {name:'에센스',       re:/에센스|essence/i},
+  {name:'크림',         re:/크림|cream/i},
+  {name:'로션·에멀전',  re:/로션|lotion|에멀젼|에멀전|emulsion/i},
+  {name:'토너·스킨',    re:/토너|toner|스킨로션|스킨토너/i},
+  {name:'미스트·스프레이', re:/미스트|mist|스프레이|spray|분무/i},
+  {name:'쿠션',         re:/쿠션|cushion/i},
+  {name:'스틱',         re:/스틱|stick/i},
+  {name:'밤',           re:/밤|balm/i},
+  {name:'젤',           re:/젤|gel/i},
+  {name:'패드',         re:/패드|pad/i},
+  {name:'마스크·팩·시트', re:/마스크|mask|시트팩|시트 마스크/i},
+  {name:'클렌징',       re:/클렌징|cleansing|클렌저|cleanser|폼클|클렌즈/i},
+  {name:'선·자외선차단', re:/선크림|선스크린|선세럼|선스틱|선밤|선블록|자외선|sunscreen|sun block|spf|uv차단/i},
+  {name:'파운데이션·색조', re:/파운데이션|foundation|컨실러|concealer|비비|bb크림|틴트|tint|메이크업베이스/i},
+  {name:'패치·니들',    re:/패치|patch|마이크로니들|니들/i},
+  {name:'오일',         re:/오일|oil/i},
+  {name:'폼·무스',      re:/무스|mousse|폼클렌|foam/i},
+];
+
+async function collectMFDSSupply() {
+  window._supplyTrends = null;
+  window._supplyErr = null;
+  const key = K.public();
+  if (!key) { window._supplyErr = '식약처(공공데이터) 키 미설정'; return; }
+  try {
+    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=100&type=json`;
+    const t = await fetchProxy(url, 12000);
+    if (!t) { window._supplyErr = '응답 없음'; return; }
+    let j;
+    try { j = JSON.parse(t); } catch { window._supplyErr = '응답 형식 오류'; return; }
+    const rc = j?.response?.header?.resultCode || j?.header?.resultCode;
+    if (rc && rc !== '00') { window._supplyErr = `API코드 ${rc}`; return; }
+    const items = j?.response?.body?.items?.item || j?.body?.items?.item
+                || j?.response?.body?.items || j?.body?.items || [];
+    const arr = Array.isArray(items) ? items : (items ? [items] : []);
+    if (!arr.length) { window._supplyErr = '데이터 0건'; return; }
+    const now = Date.now();
+    const SIXMO = 183 * 86400000;
+    const buckets = {};
+    SUPPLY_FORMS.forEach(f => { buckets[f.name] = { name: f.name, count: 0, recent: 0 }; });
+    arr.forEach(it => {
+      const nm = String(it.ITEM_NAME || it.PRDLST_NM || it.PRODUCT_NAME || it.ITEM_PRMISN_NM || it.PRDLST_NM_ENG || '');
+      if (!nm) return;
+      /* 보고일 — 필드명이 제각각이라 후보 다수 시도(파싱 실패 시 건수 신호만 사용) */
+      const rawDate = String(it.PRDLST_REPORT_DATE || it.REPORT_DATE || it.PRMS_DT
+                          || it.ITEM_PERMIT_DATE || it.RPT_DT || it.APRVL_YMD || it.PRDLST_PRMISN_DE || '');
+      const dm = rawDate.match(/(\d{4})[.\-\/]?(\d{2})[.\-\/]?(\d{2})/);
+      const ts = dm ? new Date(+dm[1], +dm[2] - 1, +dm[3]).getTime() : null;
+      const isRecent = ts !== null && (now - ts) <= SIXMO && (now - ts) >= 0;
+      SUPPLY_FORMS.forEach(f => {
+        if (f.re.test(nm)) { buckets[f.name].count++; if (isRecent) buckets[f.name].recent++; }
+      });
+    });
+    const trends = Object.values(buckets).filter(b => b.count > 0)
+      .sort((a, b) => (b.recent - a.recent) || (b.count - a.count));
+    window._supplyTrends = trends.length ? trends : null;
+    if (!trends.length) window._supplyErr = '제형 매칭 0건';
+  } catch { window._supplyErr = '수집 실패'; }
+}
+
 /* ════ Gemini 예측 분석 ════ */
 async function runGeminiPrediction(period) {
   period = period || currentPeriod;
@@ -1670,6 +1737,26 @@ async function runGeminiPrediction(period) {
       + window._exportTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
       + `\n※ 검색·클릭은 "관심", 수출액은 실제 출하·결제된 "판매 실적"이다. K뷰티 수출 목표상 가장 강한 신호이므로 최우선 가중할 것`
     : '';
+  const supplyDetail = (window._supplyTrends && window._supplyTrends.length)
+    ? `\n[식약처 기능성화장품 보고품목 — 제형 분포 (공급 선행신호·실측)]\n`
+      + window._supplyTrends.slice(0, 12).map(t => `${t.name} ${t.count}건${t.recent ? `(최근6개월 신규 ${t.recent})` : ''}`).join(' · ')
+      + `\n※ 이는 소비자 관심이 아니라 제조사가 식약처에 실제로 '보고(=생산 설비·공정 준비 완료)'한 제형 분포다. 검색·클릭은 수요(관심)지만 이 보고는 공급(생산 준비)이며 수요보다 선행한다. 보고 건수가 많고 특히 최근6개월 신규 보고가 늘어난 제형은 시장 출시가 임박했다는 강한 신호이므로, 수요 신호와 교차해 우선 가중하라.`
+    : '';
+  /* 규제 캘린더 — 예측이 아니라 확정 일정. 강제되는 패키징·성분 변화를 결정론적 가중 */
+  const regDetail = (() => {
+    const nowD = new Date();
+    const within = REGS.map(r => {
+      const m = String(r.date).match(/(\d{4})[.\-](\d{1,2})(?:[.\-](\d{1,2}))?/);
+      if (!m) return null;
+      const d = new Date(+m[1], +m[2] - 1, +(m[3] || 1));
+      const months = Math.round((d - nowD) / (30 * 86400000));
+      return { r, d, months };
+    }).filter(x => x && x.months >= -3 && x.months <= 18).sort((a, b) => a.d - b.d);
+    if (!within.length) return '';
+    return `\n[규제 캘린더 — 확정 선행신호 (날짜 확정)]\n`
+      + within.map(({ r, months }) => `${r.date} (${months <= 0 ? '시행중/임박' : 'D-' + months + '개월'}) [${r.tag}] ${r.title} → ${r.action}`).join('\n')
+      + `\n※ 규제는 예측이 아니라 확정된 일정이다. 위 규제가 강제하는 패키징·성분 변화(예: 모노머티리얼·리필 전환, 미세플라스틱·특정성분 대체, 농도상한 리포뮬레이션, 해외 등록 의무)에 직접 해당하는 화장품 유형은 결정론적으로 가중하라.`;
+  })();
   const ct = window._climateTrend;
   const seasonalOutlook = window._seasonalOutlook;
   const climateDetail = ct
@@ -1683,10 +1770,11 @@ async function runGeminiPrediction(period) {
         ].filter(Boolean).join(' · ')
     : '';
   const prompt = `당신은 화장품 OEM/ODM 업계 전문 트렌드 분석가입니다.
-아래 4대 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
+아래 외부 요인 데이터를 분석하여 ${horizon}에 유행할 화장품 유형 TOP5를 예측하세요.
+신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${climateDetail}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${climateDetail}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -1695,7 +1783,8 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${climateDetai
 3. packaging 필드에 권장 패키징 형태를 구체적으로 기재 (예: "에어리스 펌프 30~50ml", "스틱 몰딩 15g", "소용량 앰플 2ml×7")
 4. 한국콜마·코스맥스·코스메카코리아 절대 언급 금지
 5. 스킨케어에 한정하지 말고 색조·향수·맨즈 그루밍·바디케어 등 전 카테고리·전 성별 트렌드를 균형있게 검토
-6. JSON만 출력 (설명 텍스트 없음)
+6. 공급(식약처 보고)·규제 신호는 수요(검색·클릭)보다 선행하므로 더 높게 가중하되, 그 근거를 각 항목의 tech·season에 드러나게 반영
+7. JSON만 출력 (설명 텍스트 없음)
 
 [필수 JSON 형식]
 {"predictions":[{"rank":1,"type":"정확한 화장품 유형명","packaging":"권장 패키징 형태","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
@@ -2556,12 +2645,15 @@ async function collectAll() {
 
   updateStatusSummary();
 
-  setStep('⑤ 박람회 일정 확인 중...', '일정 확인');
+  setStep('⑤ 식약처 공급 선행신호 수집 중...', '공급 신호');
+  await collectMFDSSupply();
+
+  setStep('⑥ 박람회 일정 확인 중...', '일정 확인');
   window._expoVerified = await verifyExpoSchedules();
   renderZ4();
 
   const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
-  setStep(`⑥ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
+  setStep(`⑦ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
   await runGeminiPrediction(currentPeriod);
@@ -2621,6 +2713,11 @@ function genReport() {
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
     window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
   }
+  if (window._supplyTrends && window._supplyTrends.length) {
+    lines.push('');
+    lines.push('▶ 식약처 기능성화장품 보고품목 — 제형 분포 (공급 선행신호)');
+    window._supplyTrends.slice(0, 10).forEach(t => lines.push(`  • ${t.name}: ${t.count}건${t.recent ? ` (최근6개월 신규 ${t.recent}건)` : ''}`));
+  }
   if (window._newsTrends && window._newsTrends.length) {
     lines.push('');
     lines.push('▶ 뷰티 뉴스·미디어 최다 언급 키워드');
@@ -2660,8 +2757,18 @@ function genReport() {
     }
   }
   lines.push('');
-  lines.push('▶ 즉시 대응 법령·규제');
-  REGS.filter(r => r.level === 'critical').forEach(r => lines.push(`  • [${r.tag}] ${r.title} (${r.date})`));
+  lines.push('▶ 즉시 대응 법령·규제 (확정 선행신호 · D-day 순)');
+  {
+    const nowD = new Date();
+    REGS.map(r => {
+      const m = String(r.date).match(/(\d{4})[.\-](\d{1,2})(?:[.\-](\d{1,2}))?/);
+      const d = m ? new Date(+m[1], +m[2] - 1, +(m[3] || 1)) : null;
+      return { r, d, months: d ? Math.round((d - nowD) / (30 * 86400000)) : null };
+    }).sort((a, b) => (a.d || 0) - (b.d || 0)).forEach(({ r, months }) => {
+      const dlabel = months === null ? '' : months <= 0 ? ' [시행중/임박]' : ` [D-${months}개월]`;
+      lines.push(`  • [${r.tag}] ${r.title} (${r.date})${dlabel}`);
+    });
+  }
   lines.push('─'.repeat(40));
   lines.push('※ 본 보고서는 AI 예측 기반입니다. 최종 확인 필요.');
   document.getElementById('repText').value = lines.join('\n');
@@ -3120,6 +3227,11 @@ function showCollectedData() {
   }
   if (window._newsTrends && window._newsTrends.length) {
     lines.push(`[뉴스 최다언급] ` + window._newsTrends.map(t => `${t.name}(${t.count})`).join(' · '));
+  }
+  if (window._supplyTrends && window._supplyTrends.length) {
+    lines.push(`[공급 선행·식약처 보고품목] ` + window._supplyTrends.slice(0, 10).map(t => `${t.name}(${t.count}${t.recent ? `/신규${t.recent}` : ''})`).join(' · '));
+  } else if (window._supplyErr) {
+    lines.push(`[공급 선행·식약처 보고품목] ${window._supplyErr}`);
   }
   if (window._climateTrend) {
     const ct = window._climateTrend;
