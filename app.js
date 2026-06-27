@@ -791,6 +791,25 @@ async function fetchProxy(url, timeout = 9000) {
   return null;
 }
 
+/* Open-Meteo 호출 — 직접 fetch(CORS 지원) 우선, 실패 시 공용 프록시로 폴백.
+   일부 사내망·정부망에서 api.open-meteo.com 직접 접속이 막히면 폴백조차 '연결 실패'로
+   떴는데, 프록시 경유 한 단계를 더 둬서 가용성을 높인다. JSON 객체를 반환(실패 시 null). */
+async function fetchOpenMeteo(url, timeout = 8000) {
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (r.ok) return await r.json();
+  } catch {}
+  /* 직접 실패 → 프록시 폴백 */
+  try {
+    const txt = await fetchProxy(url, timeout);
+    if (txt) return JSON.parse(txt);
+  } catch {}
+  return null;
+}
+
 async function collectClimate() {
   const key = K.public();
   setSdot('sd-climate', 'warn');
@@ -849,16 +868,12 @@ async function collectClimate() {
      - 기상청 실패/키 없을 때 현재기온·습도·UV 폴백 데이터 제공
      - 16일 예보 전반부(1~8일) vs 후반부(9~16일) 평균 최고기온으로 단기 추세(trend16) 산출 */
   let trend16 = null, omTodayMax = null;
-  try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 8000);
+  {
     const omUrl = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
       '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code' +
       '&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FSeoul&forecast_days=16';
-    const r = await fetch(omUrl, { signal: ctrl.signal });
-    clearTimeout(tid);
-    if (r.ok) {
-      const j = await r.json();
+    const j = await fetchOpenMeteo(omUrl, 8000);
+    if (j) {
       const maxArr = j?.daily?.temperature_2m_max || [];
       if (maxArr[0] !== undefined) omTodayMax = maxArr[0];
       if (maxArr.length >= 16) {
@@ -875,7 +890,7 @@ async function collectClimate() {
         if (maxArr[3] !== undefined) midTempMax = maxArr[3];
       }
     }
-  } catch {}
+  }
   setSdot('sd-climate', temp !== '—' ? 'ok' : 'warn');
 
   /* ── Open-Meteo Archive: 평년(작년 동기간 ±3일) 대비 오늘 최고기온 편차 ── */
@@ -885,14 +900,10 @@ async function collectClimate() {
       const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const start = new Date(today); start.setFullYear(start.getFullYear() - 1); start.setDate(start.getDate() - 3);
       const end = new Date(today); end.setFullYear(end.getFullYear() - 1); end.setDate(end.getDate() + 3);
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 8000);
       const histUrl = 'https://archive-api.open-meteo.com/v1/archive?latitude=37.5665&longitude=126.9780' +
         `&start_date=${fmt(start)}&end_date=${fmt(end)}&daily=temperature_2m_max&timezone=Asia%2FSeoul`;
-      const r = await fetch(histUrl, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (r.ok) {
-        const j = await r.json();
+      const j = await fetchOpenMeteo(histUrl, 8000);
+      if (j) {
         const arr = (j?.daily?.temperature_2m_max || []).filter(v => v !== null && v !== undefined);
         if (arr.length) {
           const normalAvg = arr.reduce((s, x) => s + x, 0) / arr.length;
@@ -1056,13 +1067,17 @@ async function collectEconomy() {
   setSdot('sd-ecos', ekey ? (cpiYoY !== null ? 'ok' : 'warn') : 'off');
   const infl = cpiYoY !== null ? parseFloat(cpiYoY) : null;
   const score = infl === null ? 3.2 : infl >= 3 ? 4.0 : infl >= 2 ? 3.6 : 3.2;
+  /* 미수집 사유 구분 — 키 미설정 vs 키 있으나 응답 실패(프록시·승인상태 점검 필요) */
+  const noDataReason = !ekey
+    ? '물가 데이터 미수집 — ECOS 키 미설정 (API 설정에서 키 등록 필요)'
+    : '물가 데이터 미수집 — ECOS 키는 있으나 응답 실패(프록시 차단·키 승인상태·StatisticSearch 권한 점검). 가성비·리필 수요 기조 가정';
   SIG_DATA.economy = {
     score,
     interpret: infl !== null
       ? `소비자물가 전년동월비 ${cpiYoY}% — ${infl >= 2.5 ? '가성비+리필 이중 수요, 프리미엄 양극화' : '물가 안정 — 신제품 가격 수용도 양호'}`
-      : '물가 데이터 미수집 (ECOS 키 확인) — 가성비·리필 수요 기조 가정',
+      : noDataReason,
     chips: [
-      cpi !== '—' ? `CPI ${cpi}` : (cpiYoY !== null ? 'ECOS 100대지표' : 'ECOS 연결 필요'),
+      cpi !== '—' ? `CPI ${cpi}` : (cpiYoY !== null ? 'ECOS 100대지표' : (ekey ? 'ECOS 응답실패' : 'ECOS 키 미설정')),
       cpiYoY !== null ? `물가 전년비 ${cpiYoY}%` : '',
       '리필수요↑'
     ].filter(Boolean),
@@ -1628,26 +1643,37 @@ async function collectMFDSFunc() {
   } catch { return { count: 0, ingredients: [], products: [] }; }
 }
 
-/* 식약처 화장품GMP 적합업체 현황 — Track A/B 제조사 DB 보완용 */
+/* 식약처 화장품제조업 등록현황 — Track A/B 제조사 실재성(식약처 등록 여부) 검증용.
+   ※ 기존엔 1페이지(100건)만 받아 등록 제조사 수천 곳 중 100곳과만 대조 → 실제 등록
+   업체도 "미검증"으로 누락되는 한계가 컸다. 페이지를 끝까지(상한 6000건) 받아 교차검증
+   정확도를 끌어올린다. 제품과 무관하게 동일하므로 세션 1회 수집 후 window._gmpCache에 캐시. */
 async function collectMFDSGMP() {
   const key = K.public();
   if (!key) return [];
+  const ROWS = 1000, MAX_PAGES = 6;   /* 최대 6000건까지 — 등록 제조업 전수에 근접 */
+  const all = [];
   try {
-    const url = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=100&type=json`;
-    const t = await fetchProxy(url, 10000);
-    if (!t) return [];
-    const j = JSON.parse(t);
-    const items = j?.response?.body?.items?.item
-                || j?.body?.items?.item
-                || j?.response?.body?.items
-                || [];
-    const arr = Array.isArray(items) ? items : (items ? [items] : []);
-    return arr.map(i => ({
-      name: i.ENTP_NAME || i.BSSH_NM || '',
-      addr: i.ADRES || i.ADDR || '',
-      gmpDate: i.APRVL_YMD || ''
-    })).filter(c => c.name);
-  } catch { return []; }
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const url = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=${page}&numOfRows=${ROWS}&type=json`;
+      const t = await fetchProxy(url, 12000);
+      if (!t) break;
+      let j;
+      try { j = JSON.parse(t); } catch { break; }
+      const items = j?.response?.body?.items?.item
+                  || j?.body?.items?.item
+                  || j?.response?.body?.items
+                  || [];
+      const arr = Array.isArray(items) ? items : (items ? [items] : []);
+      if (!arr.length) break;
+      arr.forEach(i => {
+        const name = i.ENTP_NAME || i.BSSH_NM || '';
+        if (name) all.push({ name, addr: i.ADRES || i.ADDR || '', gmpDate: i.APRVL_YMD || '' });
+      });
+      const total = +(j?.response?.body?.totalCount || j?.body?.totalCount || 0);
+      if (arr.length < ROWS || (total && all.length >= total)) break;   /* 마지막 페이지 도달 */
+    }
+    return all;
+  } catch { return all; }
 }
 
 /* 식약처 기능성화장품 보고품목 → 제형(생산유형) 분포를 공급단 선행신호로 집계.
@@ -2113,19 +2139,24 @@ function extractCompanyNames(text) {
    다른 키 없는 신호들과 동일하게 "있으면 보강, 없으면 조용히 생략" 원칙을 따른다. */
 async function searchKiprisApplicants(keyword) {
   const key = K.kipris();
+  window._kiprisRaw = null;
   if (!key) return [];
-  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
+  /* https로 호출 — http는 https 페이지에서 혼합콘텐츠로 차단될 수 있음(프록시 경유라도 안전) */
+  const url = `https://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
     + `?word=${encodeURIComponent(keyword + ' 화장품')}&accessKey=${encodeURIComponent(key)}&numOfRows=15`;
   try {
     const txt = await fetchProxy(url, 10000);
     if (!txt) return [];
-    /* XML 응답 — 태그명 표기 변형(applicantName 등) 대응, 대소문자 무시 */
-    const re = /<applicantname>([^<]+)<\/applicantname>/gi;
+    window._kiprisRaw = txt.slice(0, 500);   /* 연결 테스트 진단용 원문 일부 보관 */
+    /* XML 응답 — 출원인 태그 표기 변형(applicantName/applicant) 모두 대응, 대소문자 무시 */
     const names = new Set();
     let m;
-    while ((m = re.exec(txt))) {
-      const n = m[1].replace(/\|/g, ' ').trim();
-      if (n && n.length >= 2) names.add(n);
+    const reA = /<applicant(?:name)?>([^<]+)<\/applicant(?:name)?>/gi;
+    while ((m = reA.exec(txt))) {
+      m[1].replace(/\|/g, ',').split(',').forEach(n => {
+        n = n.trim();
+        if (n && n.length >= 2 && !/^\d+$/.test(n)) names.add(n);
+      });
     }
     return [...names].slice(0, 8);
   } catch { return []; }
@@ -2553,10 +2584,22 @@ function newCardHtml(c, idx) {
   const prodCls = prod === '생산중' ? 'prod-now' : prod === '생산이력' ? 'prod-past' : 'prod-maybe';
   const isInfer = c.evidence_type === 'inferred';
   const evalAdded = isInEvalList(c.name);
-  const evLink = c.sourceLink || c.homepage || '';
-  const detailBtn = evLink
-    ? `<button class="btn-mc btn-detail" onclick="window.open('${escJs(evLink)}','_blank')">근거 자료 열기 →</button>`
-    : `<button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>`;
+  /* 근거 링크 — 무엇이 열리는지 정직하게 라벨링.
+     sourceLink(판매 제품/근거 출처 페이지)와 homepage(회사 공식 홈페이지)는 성격이 달라
+     예전엔 둘 다 "근거 자료 열기"로 뭉뚱그려 판매 제품을 기대했는데 홈페이지가 열리는
+     혼란이 있었음 → 링크 종류별로 버튼 문구를 구분한다. */
+  let detailBtn;
+  if (c.sourceLink) {
+    const srcLabel = c.evidence_type === 'product' ? '판매 제품 페이지 →'
+                   : c.evidence_type === 'blog'    ? '근거 블로그 →'
+                   : c.evidence_type === 'news'    ? '근거 기사 →'
+                   : '근거 출처 →';
+    detailBtn = `<button class="btn-mc btn-detail" onclick="window.open('${escJs(c.sourceLink)}','_blank')">${srcLabel}</button>`;
+  } else if (c.homepage) {
+    detailBtn = `<button class="btn-mc btn-detail" onclick="window.open('${escJs(c.homepage)}','_blank')">공식 홈페이지 →</button>`;
+  } else {
+    detailBtn = `<button class="btn-mc btn-detail" onclick="alert('홈페이지 또는 KIPRIS에서 확인: ${escJs(c.name)}')">근거 확인</button>`;
+  }
   const conf = c.confidence ?? computeEvidenceScore(c);
   const confCls = conf >= 65 ? 'conf-hi' : conf >= 35 ? 'conf-mid' : 'conf-lo';
   return `<div class="mcard${isInfer ? ' mcard-infer' : ''}">
@@ -2567,7 +2610,7 @@ function newCardHtml(c, idx) {
     <div class="mc-meta">
       <span class="prod-badge ${prodCls}">${escHtml(prod)}</span>
       <span class="conf-badge ${confCls}">신뢰도 ${conf}</span>
-      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · 식약처 등록확인' : ''}${c.localVerified ? ' · 사업장 실재확인' : ''}${c._fallback ? ' · 사전수집(주기적 갱신)' : ''}
+      ${escHtml(c.region || '지역 확인 필요')} · DB 미등록${c.gmpConfirmed ? ' · <b style="color:var(--grn,#15803d)">식약처 제조업 등록확인</b>' : ' · <span style="color:var(--amber,#d97706)">식약처 등록 미확인</span>'}${c.localVerified ? ' · 사업장 실재확인' : ''}${c._fallback ? ' · 사전수집(주기적 갱신)' : ''}
     </div>
     <div class="evbox">
       <div class="ev-type ${evTypeCls}">${evLabel}</div>
@@ -3134,9 +3177,14 @@ async function testNaver() {
   const nid = K.naverID(), nsec = K.naverSec();
   if (!nid || !nsec) { showToast('네이버 Client ID와 Secret을 모두 입력 후 저장하세요'); return; }
   const el = document.getElementById('r-naver');
-  el.textContent = '네이버 뉴스 API 테스트 중 (프록시 4종 순차 시도)...'; el.style.color = 'var(--ink3)';
-  const targetUrl = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent('에어리스 화장품 OEM')}&display=3&sort=date`;
-  const j = await fetchNaverAPI(targetUrl, nid, nsec, 14000);
+  el.textContent = '네이버 뉴스 API 테스트 중 (뷰티 전반·최근 60일 / 프록시 4종 순차 시도)...'; el.style.color = 'var(--ink3)';
+  /* 단일어(에어리스) 고정 테스트는 "에어리스만 본다"는 오해를 줬다 → 실제 분석처럼
+     뷰티 전 카테고리(선케어·색조·기능성·맨즈)를 대표 검색어로 조회하고 최근 60일만 집계 */
+  const TEST_QUERIES = ['선크림 신제품', '쿠션 틴트 신상', '앰플 세럼 출시', '남성 그루밍 화장품'];
+  const now = Date.now(), RECENT = 60 * 86400000;
+  const j = await fetchNaverAPI(
+    `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(TEST_QUERIES[0])}&display=3&sort=date`,
+    nid, nsec, 14000);
   if (!j) {
     el.innerHTML = '';
     const msg = document.createElement('div');
@@ -3167,9 +3215,18 @@ async function testNaver() {
     }
     el.style.color = 'var(--red)'; return;
   }
-  const total = j.total ?? 0;
-  const titles = (j.items || []).map(i => '  · ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
-  el.textContent = `네이버 뉴스 연결 성공\n"에어리스 화장품 OEM" 총 ${total.toLocaleString()}건\n최신 기사:\n${titles || '  (없음)'}`;
+  /* 연결 확인됨 — 나머지 카테고리도 조회해 "뷰티 전반 + 최근성"을 함께 보여준다 */
+  const rest = await Promise.all(TEST_QUERIES.slice(1).map(q =>
+    fetchNaverAPI(`https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=10&sort=date`, nid, nsec, 12000)
+  ));
+  const allResp = [{ q: TEST_QUERIES[0], j }, ...TEST_QUERIES.slice(1).map((q, i) => ({ q, j: rest[i] }))];
+  const recentCount = resp => (resp && !resp._error)
+    ? (resp.items || []).filter(it => { const t = it.pubDate ? new Date(it.pubDate).getTime() : NaN; return !isNaN(t) && (now - t) <= RECENT; }).length
+    : 0;
+  const lines = allResp.map(({ q, j }) =>
+    `  · "${q}": 총 ${((j && j.total) || 0).toLocaleString()}건 (최근60일 표본 ${recentCount(j)}건)`);
+  const sample = (j.items || []).slice(0, 2).map(i => '    - ' + i.title.replace(/<[^>]+>/g, '')).join('\n');
+  el.textContent = `네이버 뉴스 연결 성공 — 뷰티 전 카테고리 조회 (선케어·색조·기능성·맨즈)\n${lines.join('\n')}\n예시 기사(선크림):\n${sample || '    (없음)'}`;
   el.style.color = 'var(--grn)';
   setStatus('st-naver', '확인됨', true);
 }
@@ -3251,7 +3308,16 @@ async function testKipris() {
       el.style.color = 'var(--grn)';
       setStatus('st-kipris', '확인됨', true);
     } else {
-      el.textContent = '응답은 받았으나 출원인 정보를 찾지 못했습니다.\n\nkipo-api.kipi.or.kr/accessKey로 수정 반영됨(2026-06-24) — 그래도 안 되면\n검색어("선세럼 화장품")에 해당하는 출원 건이 실제로 없거나, 키 등급(개발/운영)\n제한일 수 있습니다 — plus.kipris.or.kr 개발가이드·API 상태 페이지를 확인하세요.';
+      const raw = window._kiprisRaw || '';
+      /* 원문에서 오류코드/사유를 뽑아 실제 원인을 보여준다(빈 결과 vs 인증오류 vs 태그불일치 구분) */
+      const errMsg = (raw.match(/<errMsg>([^<]+)<\/errMsg>|<resultMsg>([^<]+)<\/resultMsg>|<returnReasonCode>([^<]+)/i) || [])
+        .slice(1).filter(Boolean)[0];
+      const totalCount = (raw.match(/<totalCount>(\d+)<\/totalCount>/i) || [])[1];
+      el.textContent =
+        '응답은 받았으나 출원인을 추출하지 못했습니다.\n'
+        + (errMsg ? `\nAPI 메시지: ${errMsg}` : (totalCount === '0' ? '\n→ "선세럼 화장품" 검색 결과 0건 (해당 출원 자체가 없음 — 정상)' : ''))
+        + (raw ? `\n\n[응답 원문 일부]\n${raw.slice(0, 200)}` : '\n응답 본문이 비어 있음')
+        + '\n\n※ "선세럼"은 연결 테스트용 검색어일 뿐, 실제 분석은 예측 품목 키워드로 검색합니다.\n  인증오류면 키 등급(개발/운영)·승인상태를, 0건이면 다른 검색어로 재시도하세요.';
       el.style.color = 'var(--red)';
     }
   } catch (e) {
