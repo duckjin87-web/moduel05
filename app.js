@@ -717,10 +717,16 @@ async function fetchProxy(url, timeout = 9000) {
   /* HTML 에러 페이지 / 프록시 자체 오류 텍스트 걸러냄 */
   const BAD = ['<!doctype', '<html', 'unexpected error', 'something went wrong',
                'bad gateway', '502 bad', '503 service', 'rate limit exceeded', 'too many requests'];
+  /* 프록시가 "대상 응답"이 아니라 "프록시 자신의 사용법 오류"를 돌려주는 경우 —
+     이걸 정상 응답으로 착각해 호출자에 넘기면 안 됨(codetabs 'Bad request, valid format is …' 등) */
+  const PROXY_ERR = ['valid format is', 'codetabs.com/v1', 'please read our docs', 'allorigins', 'cors-anywhere'];
   const isGoodText = (t) => {
     if (!t || t.length < 6) return false;
     const tl = t.toLowerCase().trimStart();
-    return !BAD.some(p => tl.startsWith(p) || (p.includes(' ') && tl.includes(p)));
+    if (BAD.some(p => tl.startsWith(p) || (p.includes(' ') && tl.includes(p)))) return false;
+    /* 짧은 JSON 에러 envelope만 걸러냄(정상 대용량 응답에 우연히 포함되는 오탐 방지) */
+    if (t.length < 400 && PROXY_ERR.some(p => tl.includes(p))) return false;
+    return true;
   };
 
   /* 0. 직접 요청 — CORS 허용 API(에어코리아 등)는 프록시 불필요 */
@@ -782,7 +788,7 @@ async function fetchProxy(url, timeout = 9000) {
   try {
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 8000));
-    const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, { signal: ctrl.signal });
+    const r = await fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`, { signal: ctrl.signal });
     clearTimeout(tid);
     const t = await r.text();
     if (isGoodText(t)) return t;
@@ -2141,8 +2147,10 @@ async function searchKiprisApplicants(keyword) {
   const key = K.kipris();
   window._kiprisRaw = null;
   if (!key) return [];
-  /* https로 호출 — http는 https 페이지에서 혼합콘텐츠로 차단될 수 있음(프록시 경유라도 안전) */
-  const url = `https://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
+  /* KIPRIS Plus(kipo-api.kipi.or.kr)는 HTTP 전용 엔드포인트 — https로 호출하면 핸드셰이크
+     실패 가능. 어차피 https 프록시를 경유하므로(브라우저↔프록시는 https) 혼합콘텐츠 문제 없음.
+     따라서 대상 URL은 http로 둔다. */
+  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
     + `?word=${encodeURIComponent(keyword + ' 화장품')}&accessKey=${encodeURIComponent(key)}&numOfRows=15`;
   try {
     const txt = await fetchProxy(url, 10000);
@@ -3309,6 +3317,22 @@ async function testKipris() {
       setStatus('st-kipris', '확인됨', true);
     } else {
       const raw = window._kiprisRaw || '';
+      if (!raw) {
+        /* fetchProxy가 null → 프록시 4종 모두 KIPRIS HTTP 엔드포인트 중계 실패(키 문제 아님) */
+        el.textContent =
+          'KIPRIS 응답을 받지 못했습니다 — CORS 프록시 중계 실패 (API 키 문제 아님)\n\n'
+          + '원인: KIPRIS Plus(kipo-api.kipi.or.kr)는 HTTP 전용 엔드포인트라 공개 CORS\n'
+          + '프록시가 안정적으로 중계하지 못합니다. 직전 오류 "Bad request(codetabs)"도\n'
+          + '프록시가 뱉은 것이지 KIPRIS·키 오류가 아니었습니다.\n\n'
+          + '권장 복구법:\n'
+          + '① KIPRIS는 보조 신호(특허 출원인)일 뿐 — 미설정이어도 TRACK B는 뉴스·식약처·\n'
+          + '   블로그·네이버쇼핑으로 정상 동작합니다(있으면 보강, 없으면 생략).\n'
+          + '② 정식 활용을 원하면 브라우저 직접호출 대신 서버 수집(GitHub Actions)으로\n'
+          + '   KIPRIS를 받아 정적 파일로 커밋하는 방식이 안정적입니다(트렌드 수집과 동일 패턴).\n'
+          + '   원하시면 그 파이프라인을 붙여드리겠습니다.';
+        el.style.color = 'var(--red)';
+        return;
+      }
       /* 원문에서 오류코드/사유를 뽑아 실제 원인을 보여준다(빈 결과 vs 인증오류 vs 태그불일치 구분) */
       const errMsg = (raw.match(/<errMsg>([^<]+)<\/errMsg>|<resultMsg>([^<]+)<\/resultMsg>|<returnReasonCode>([^<]+)/i) || [])
         .slice(1).filter(Boolean)[0];
@@ -3316,7 +3340,7 @@ async function testKipris() {
       el.textContent =
         '응답은 받았으나 출원인을 추출하지 못했습니다.\n'
         + (errMsg ? `\nAPI 메시지: ${errMsg}` : (totalCount === '0' ? '\n→ "선세럼 화장품" 검색 결과 0건 (해당 출원 자체가 없음 — 정상)' : ''))
-        + (raw ? `\n\n[응답 원문 일부]\n${raw.slice(0, 200)}` : '\n응답 본문이 비어 있음')
+        + `\n\n[응답 원문 일부]\n${raw.slice(0, 200)}`
         + '\n\n※ "선세럼"은 연결 테스트용 검색어일 뿐, 실제 분석은 예측 품목 키워드로 검색합니다.\n  인증오류면 키 등급(개발/운영)·승인상태를, 0건이면 다른 검색어로 재시도하세요.';
       el.style.color = 'var(--red)';
     }
