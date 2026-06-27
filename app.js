@@ -620,6 +620,95 @@ function openSigDetail(key) {
   document.getElementById('sigOverlay').classList.add('open');
 }
 
+/* ════ 예측 유형별 "신뢰도 분해 + 근거 스냅샷" 모달 ════
+   왜 이 유형이 뽑혔는지를 ▲4대 신호 기여도(신뢰도 분해) ▲카테고리별 실제 수집 근거
+   ▲예측 전반에 함께 반영된 공급·규제·해외 선행신호로 사용자가 이해할 수 있게 보여준다. */
+const PRED_CAT_META = [
+  { key:'climate', name:'기후·환경',   cls:'c-cl', why:'계절·기온·자외선·대기질이 이 유형 수요를 끌어올리는 정도' },
+  { key:'society', name:'사회·인구',   cls:'c-so', why:'1인가구·그루밍 확산·소비심리 등 인구·생활 변화' },
+  { key:'economy', name:'경제·리테일', cls:'c-ec', why:'물가·소비여력·수출 실적 등 구매력·실판매 흐름' },
+  { key:'culture', name:'문화·팝트렌드', cls:'c-cu', why:'검색·구매클릭·뉴스·뷰티미디어 트렌드' },
+];
+function buildPredEvidenceHtml(idx) {
+  const p = PREDICTIONS[idx];
+  if (!p) return '<div class="gm-p">예측 데이터가 없습니다.</div>';
+  const sig = p.signals || {};
+  const conf = p.confidence || 0;
+  /* ── ① 신뢰도 분해 ── */
+  let body = `<div class="gm-block">
+    <div class="gm-block-title">예측 신뢰도 분해 — 왜 신뢰도 ${conf}%인가</div>
+    <div class="gm-p">이 유형 <b>"${escHtml(p.type)}"</b>은 아래 4대 신호의 가중 합으로 도출됐습니다. 막대가 길수록 그 신호가 이 예측을 더 강하게 뒷받침한다는 뜻입니다.</div>
+    <div class="evi-bars">`;
+  const ranked = PRED_CAT_META.map(c => ({ ...c, w: Math.max(0, Math.min(1, +sig[c.key] || 0)) }))
+    .sort((a, b) => b.w - a.w);
+  ranked.forEach(c => {
+    const pct = Math.round(c.w * 100);
+    const contrib = Math.round(c.w * conf);
+    body += `<div class="evi-bar-row">
+      <span class="evi-bar-label">${c.name}</span>
+      <span class="evi-bar-track"><span class="evi-bar-fill ${c.cls}" style="width:${pct}%"></span></span>
+      <span class="evi-bar-val">${pct}% · 기여 ~${contrib}p</span>
+    </div>`;
+  });
+  body += `</div>
+    <div class="gm-note2" style="margin-top:6px">기여 점수(p)는 "신호 가중치 × 신뢰도"로 환산한 근사치입니다. 합이 100%가 안 될 수 있습니다(공급·규제·해외 선행신호가 별도로 반영되기 때문 — 아래 참조).</div>
+  </div>`;
+  /* ── ② 카테고리별 근거 스냅샷 (기여도 높은 순) ── */
+  ranked.forEach(c => {
+    if (c.w <= 0) return;
+    const d = SIG_DATA[c.key];
+    body += `<div class="gm-block">
+      <div class="gm-block-title">${c.name} 근거 — 이 예측 기여 ${Math.round(c.w * 100)}%</div>
+      <div class="gm-note2">${c.why}</div>
+      <div class="gm-p">${d ? escHtml(d.interpret || '해석 없음') : '이 신호는 수집되지 않았습니다.'}${d && d._sample ? ' <span style="color:var(--amber,#d97706)">(샘플/추정값 포함)</span>' : ''}</div>`;
+    if (d && d.chips) body += chipsHtml(d.chips);
+    if (c.key === 'economy') body += trendListHtml('관세청 수출 모멘텀(HS코드별 최근 3개월 vs 직전 3개월)', window._exportTrends);
+    if (c.key === 'culture') {
+      body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
+      body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
+      body += trendListHtml('뉴스·RSS 최다 언급 키워드', window._newsTrends, 'count');
+    }
+    if (c.key === 'climate' && window._climateTrend) {
+      const ct = window._climateTrend;
+      const parts = [];
+      if (ct.deviation !== null && ct.deviation !== undefined) parts.push(`평년(작년 동기간 ±3일) 대비 오늘 최고기온 <b>${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃</b>`);
+      if (window._seasonalOutlook && window._seasonalOutlook.length) parts.push('계절 전망: ' + window._seasonalOutlook.map(o => `${o.monthsAhead}개월 후 ${o.avgMaxTemp}℃`).join(' · '));
+      if (parts.length) body += `<ul class="gm-list">${parts.map(x => `<li>${x}</li>`).join('')}</ul>`;
+    }
+    body += sourceLinksHtml(c.key);
+    body += `</div>`;
+  });
+  /* ── ③ 예측 전반에 함께 반영된 공급·규제·해외 선행신호 (개별 카테고리 밖) ── */
+  let lead = '';
+  lead += trendListHtml('공급 선행 — 식약처 기능성화장품 보고 제형 분포(제조사 생산 준비)', (window._supplyTrends || []).map(t => ({ name: t.name + (t.recent ? `(신규 ${t.recent})` : ''), count: t.count })), 'count');
+  lead += trendListHtml('해외 박람회 선행 트렌드(최근 60일 보도 키워드)', (window._expoTrends || []).map(t => ({ name: t.name, count: t.count })), 'count');
+  /* 규제 D-day */
+  const nowD = new Date();
+  const regs = REGS.map(r => {
+    const m = String(r.date).match(/(\d{4})[.\-](\d{1,2})(?:[.\-](\d{1,2}))?/);
+    const dd = m ? new Date(+m[1], +m[2] - 1, +(m[3] || 1)) : null;
+    return { r, dd, months: dd ? Math.round((dd - nowD) / (30 * 86400000)) : null };
+  }).filter(x => x.months !== null && x.months >= -3 && x.months <= 18).sort((a, b) => a.dd - b.dd);
+  if (regs.length) {
+    lead += `<div class="gm-block"><div class="gm-block-title">규제 캘린더(확정 선행신호)</div><ul class="gm-list">${
+      regs.map(({ r, months }) => `<li>${escHtml(r.date)} (${months <= 0 ? '시행중/임박' : 'D-' + months + '개월'}) [${escHtml(r.tag)}] ${escHtml(r.title)}</li>`).join('')
+    }</ul></div>`;
+  }
+  body += `<div class="gm-block">
+    <div class="gm-block-title">이번 예측 전반에 함께 반영된 선행신호</div>
+    <div class="gm-note2">개별 카테고리 막대와 별개로, 모든 예측 유형에 공통 반영된 "공급·규제·해외" 선행신호입니다.</div>
+    ${lead || '<div class="gm-p">수집된 선행신호가 없습니다(키 미설정 시 생략됨).</div>'}
+  </div>`;
+  body += `<div class="gm-note">📸 스냅샷 기준: ${new Date().toLocaleString('ko-KR')} 수집 데이터 · 본 근거는 예측 생성 시점의 신호를 반영합니다.</div>`;
+  return body;
+}
+function openPredEvidence(idx) {
+  const p = PREDICTIONS[idx];
+  document.getElementById('sigModalTitle').textContent = `${p ? p.rank + '위 ' + p.type : '예측'} — 선정 근거 & 신뢰도 분해`;
+  document.getElementById('sigModalBody').innerHTML = buildPredEvidenceHtml(idx);
+  document.getElementById('sigOverlay').classList.add('open');
+}
+
 async function refreshSignal(key, btn) {
   btn = btn || (typeof event !== 'undefined' ? event.target : null);
   if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
@@ -2045,7 +2134,7 @@ function renderZ1() {
           <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
           <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
           <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
-          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div></td>
+          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div><button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">🔍 근거 보기</button></td>
           <td><div class="pchips">${chips}</div></td>
           <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
           <td><div class="p-season">${escHtml(p.season)}</div></td>

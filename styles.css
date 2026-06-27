@@ -748,6 +748,25 @@ button { font-family: inherit; cursor: pointer; }
 .gm-table td { color: var(--ink2); }
 .gm-link { color: var(--blue2); text-decoration: none; }
 .gm-link:hover { text-decoration: underline; }
+.gm-note2 { font-size: 10px; color: var(--ink3); line-height: 1.5; margin-bottom: 5px; }
+
+/* 예측 신뢰도 분해 막대 */
+.p-evi-btn {
+  display: block; margin-top: 5px; font-size: 9px; font-family: inherit;
+  padding: 2px 7px; border: .5px solid var(--bg3); border-radius: 4px;
+  background: var(--w); color: var(--ink2); cursor: pointer; white-space: nowrap;
+}
+.p-evi-btn:hover { background: var(--bg2); border-color: var(--ink3); }
+.evi-bars { display: flex; flex-direction: column; gap: 6px; margin-top: 7px; }
+.evi-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.evi-bar-label { width: 70px; flex-shrink: 0; color: var(--ink2); }
+.evi-bar-track { flex: 1; height: 10px; background: var(--bg3); border-radius: 5px; overflow: hidden; }
+.evi-bar-fill { display: block; height: 100%; border-radius: 5px; min-width: 2px; transition: width .3s; }
+.evi-bar-fill.c-cl { background: #3b82f6; }
+.evi-bar-fill.c-so { background: #8b5cf6; }
+.evi-bar-fill.c-ec { background: #f59e0b; }
+.evi-bar-fill.c-cu { background: #ec4899; }
+.evi-bar-val { width: 104px; flex-shrink: 0; text-align: right; color: var(--ink3); font-size: 10px; }
 
 /* ═══════════════════════════════════════
    Toast
