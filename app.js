@@ -2234,26 +2234,32 @@ async function searchKiprisApplicants(keyword) {
   const key = K.kipris();
   window._kiprisRaw = null;
   if (!key) return [];
-  /* KIPRIS Plus(kipo-api.kipi.or.kr)는 HTTP 전용 엔드포인트 — https로 호출하면 핸드셰이크
-     실패 가능. 어차피 https 프록시를 경유하므로(브라우저↔프록시는 https) 혼합콘텐츠 문제 없음.
-     따라서 대상 URL은 http로 둔다. */
+  /* ※ 2026-07-01 최종 확정: 이전 'getWordSearch'는 존재하지 않는(또는 다른) 오퍼레이션이라
+     INVALID REQUEST PARAMETER ERROR가 반복됐다. 실동작하는 KIPRIS Plus 구현(오픈소스
+     mcp_kipris)에서 자유검색(word) 오퍼레이션은 아래로 확정됨:
+       - 엔드포인트: plus.kipris.or.kr/openapi/rest/patUtiModInfoSearchSevice/freeSearchInfo
+       - 인증 파라미터: accessKey
+       - 필수/기본 파라미터: word·patent=true·utility=true·pageNo·numOfRows·descSort=false·sortSpec=AD
+       - 빈 값 파라미터(lastvalue 등)는 아예 보내지 않는다(빈값 전송이 파라미터 오류 유발).
+       - 응답 아이템: response.body.items.PatentUtilityInfo, 출원인 필드 <ApplicantName>.
+     HTTP 전용이지만 https 프록시를 경유하므로 혼합콘텐츠 문제는 없다. */
   const params = new URLSearchParams({
     word: keyword + ' 화장품',
-    patent: 'true',      /* 특허 포함 — 미지정 시 INVALID REQUEST PARAMETER ERROR */
-    utility: 'true',     /* 실용신안 포함 */
-    lastvalue: '',       /* 등록상태 필터 없음(전체) */
+    patent: 'true',
+    utility: 'true',
     pageNo: '1',
     numOfRows: '15',
-    sortSpec: '',        /* 정렬 기준 없음(기본) */
     descSort: 'false',
+    sortSpec: 'AD',
     accessKey: key,
   });
-  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch?${params.toString()}`;
+  const url = `http://plus.kipris.or.kr/openapi/rest/patUtiModInfoSearchSevice/freeSearchInfo?${params.toString()}`;
   try {
     const txt = await fetchProxy(url, 10000);
     if (!txt) return [];
-    window._kiprisRaw = txt.slice(0, 500);   /* 연결 테스트 진단용 원문 일부 보관 */
-    /* XML 응답 — 출원인 태그 표기 변형(applicantName/applicant) 모두 대응, 대소문자 무시 */
+    window._kiprisRaw = txt.slice(0, 600);   /* 연결 테스트 진단용 원문 일부 보관 */
+    /* XML 응답의 <ApplicantName>홍길동</ApplicantName> (다중 출원인은 | 구분) 추출.
+       태그 표기 변형(ApplicantName/applicant) 대소문자 무시로 대응 */
     const names = new Set();
     let m;
     const reA = /<applicant(?:name)?>([^<]+)<\/applicant(?:name)?>/gi;
@@ -3430,15 +3436,20 @@ async function testKipris() {
         el.style.color = 'var(--red)';
         return;
       }
-      /* 원문에서 오류코드/사유를 뽑아 실제 원인을 보여준다(빈 결과 vs 인증오류 vs 태그불일치 구분) */
+      /* KIPRIS 표준 resultCode로 실제 원인을 정확히 구분:
+         00 정상 · 10 파라미터오류 · 20 결과없음 · 30 미등록키 · 31 기한만료 */
+      const rc = (raw.match(/<resultCode>(\d+)<\/resultCode>/i) || [])[1];
+      const RC_MAP = { '00':'정상', '10':'요청 파라미터 오류', '20':'검색결과 0건(정상 — 해당 출원이 없음)',
+                       '30':'미등록 accessKey — 키 재확인/승인상태 점검', '31':'키 사용기한 만료' };
       const errMsg = (raw.match(/<errMsg>([^<]+)<\/errMsg>|<resultMsg>([^<]+)<\/resultMsg>|<returnReasonCode>([^<]+)/i) || [])
         .slice(1).filter(Boolean)[0];
       const totalCount = (raw.match(/<totalCount>(\d+)<\/totalCount>/i) || [])[1];
       el.textContent =
         '응답은 받았으나 출원인을 추출하지 못했습니다.\n'
-        + (errMsg ? `\nAPI 메시지: ${errMsg}` : (totalCount === '0' ? '\n→ "선세럼 화장품" 검색 결과 0건 (해당 출원 자체가 없음 — 정상)' : ''))
+        + (rc ? `\nKIPRIS resultCode ${rc}: ${RC_MAP[rc] || '알 수 없음'}` : '')
+        + (errMsg ? `\nAPI 메시지: ${errMsg}` : (totalCount === '0' ? '\n→ 검색 결과 0건 (해당 출원 자체가 없음 — 정상)' : ''))
         + `\n\n[응답 원문 일부]\n${raw.slice(0, 200)}`
-        + '\n\n※ "선세럼"은 연결 테스트용 검색어일 뿐, 실제 분석은 예측 품목 키워드로 검색합니다.\n  인증오류면 키 등급(개발/운영)·승인상태를, 0건이면 다른 검색어로 재시도하세요.';
+        + '\n\n※ "선세럼"은 연결 테스트용 검색어일 뿐, 실제 분석은 예측 품목 키워드로 검색합니다.\n  resultCode 30이면 키 승인상태를, 20이면 다른 검색어로 재시도하세요.';
       el.style.color = 'var(--red)';
     }
   } catch (e) {
