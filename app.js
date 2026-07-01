@@ -2224,14 +2224,12 @@ function extractCompanyNames(text) {
 }
 
 /* KIPRIS(특허정보원) 출원인 검색 — TRACK B 신규처 발굴에 "특허 출원" 근거를 추가하는 스캐폴드.
-   ※ 2026-06-24 재조사: "응답은 받았으나 출원인 정보를 찾지 못했습니다" 오류 원인은 (1) 호스트가
-   plus.kipris.or.kr이 아니라 특허정보원이 직접 운영하는 kipo-api.kipi.or.kr이고, (2) 인증
-   파라미터명이 ServiceKey가 아니라 accessKey인 것으로 데이터포털(data.go.kr 15058788)·KIPRIS
-   Plus 공개 안내에서 일관되게 확인됨 — 두 가지를 모두 수정. 다만 이 환경은 외부망 접근이
-   차단돼 있어(샌드박스 프록시) 실키로 라이브 호출까지는 검증 못 했다 — API 설정 패널의
-   "연결 테스트" 버튼으로 실키 등록 후 최종 확인 필요. 실패 시(엔드포인트 불일치·인증 오류 등)
-   빈 배열을 반환해 TRACK B 나머지 경로(뉴스·식약처·블로그·네이버쇼핑)는 그대로 동작한다 —
-   다른 키 없는 신호들과 동일하게 "있으면 보강, 없으면 조용히 생략" 원칙을 따른다. */
+   ※ 2026-07-01 재조사: 실키로 호출 시 <successYN>N</successYN> + "INVALID REQUEST PARAMETER
+   ERROR"가 반환됨 → 엔드포인트·accessKey 인증은 정상이고(그랬으면 인증오류), 요청 파라미터가
+   불완전한 것이 근본 원인. KIPRIS Plus patUtiModInfoSearchSevice/getWordSearch는 word·accessKey만으론
+   부족하고 검색 대상 문서종류 플래그(patent·utility)와 페이징·정렬 파라미터가 필수다. 정식 스펙에
+   맞춰 patent=true·utility=true·lastvalue(빈값)·pageNo·numOfRows·sortSpec(빈값)·descSort를 모두 채운다.
+   실패 시 빈 배열을 반환해 TRACK B 나머지 경로(뉴스·식약처·블로그·네이버쇼핑)는 그대로 동작한다. */
 async function searchKiprisApplicants(keyword) {
   const key = K.kipris();
   window._kiprisRaw = null;
@@ -2239,8 +2237,18 @@ async function searchKiprisApplicants(keyword) {
   /* KIPRIS Plus(kipo-api.kipi.or.kr)는 HTTP 전용 엔드포인트 — https로 호출하면 핸드셰이크
      실패 가능. 어차피 https 프록시를 경유하므로(브라우저↔프록시는 https) 혼합콘텐츠 문제 없음.
      따라서 대상 URL은 http로 둔다. */
-  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch`
-    + `?word=${encodeURIComponent(keyword + ' 화장품')}&accessKey=${encodeURIComponent(key)}&numOfRows=15`;
+  const params = new URLSearchParams({
+    word: keyword + ' 화장품',
+    patent: 'true',      /* 특허 포함 — 미지정 시 INVALID REQUEST PARAMETER ERROR */
+    utility: 'true',     /* 실용신안 포함 */
+    lastvalue: '',       /* 등록상태 필터 없음(전체) */
+    pageNo: '1',
+    numOfRows: '15',
+    sortSpec: '',        /* 정렬 기준 없음(기본) */
+    descSort: 'false',
+    accessKey: key,
+  });
+  const url = `http://kipo-api.kipi.or.kr/openapi/service/patUtiModInfoSearchSevice/getWordSearch?${params.toString()}`;
   try {
     const txt = await fetchProxy(url, 10000);
     if (!txt) return [];
