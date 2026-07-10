@@ -212,7 +212,9 @@ let PREDICTIONS = [];
 let MATCH_RESULTS = { trackA: [], trackB: [] };
 let SEL_IDX = -1;
 let currentPeriod = '6m';
-const PREDICTIONS_CACHE = { '6m': null, '1y': null };
+const PREDICTIONS_CACHE = { '2m': null, '6m': null, '1y': null };
+/* 예측 기간 라벨 — 1~2개월(즉시대응)·6개월·1년 3구간 공용 */
+const PERIOD_LABEL = { '2m': '1~2개월', '6m': '6개월', '1y': '1년' };
 let currentPkgType = '';   /* 현재 선택된 예측의 패키징 타입 */
 
 /* TRACK B 후보 인덱스 접근용 (onclick HTML attribute에서 JSON 직접 전달 방지) */
@@ -1598,7 +1600,7 @@ function getRankChanges(predictions, period) {
    히스토리는 기간(6개월=182일/1년=365일)이 도래해야 검증되므로, 운영 누적 기간이 짧으면
    당분간 검증 대상이 없는 것이 정상이다. */
 function periodMaturityMs(period) {
-  return period === '1y' ? 365 * 86400000 : 182 * 86400000;
+  return period === '1y' ? 365 * 86400000 : period === '2m' ? 60 * 86400000 : 182 * 86400000;
 }
 
 function backtestPredictions() {
@@ -1892,9 +1894,16 @@ async function runGeminiPrediction(period) {
   const model = K.model();
   const now = new Date();
   const yr = now.getFullYear();
-  const horizon = period === '6m'
+  const horizon = period === '2m'
+    ? `향후 1~2개월 이내 (${yr}년 ${now.getMonth()+1}월~${((now.getMonth()+2)%12)+1}월, 즉시 대응·시즌 임박 구간)`
+    : period === '6m'
     ? `${yr}년 하반기~${yr+1}년 상반기 (약 6개월 후)`
     : `${yr+1}년 전반 (약 12개월 후)`;
+  /* 1~2개월 초단기는 구조적 신호(규제·설비)보다 '이미 움직이는' 빠른 신호(검색·쇼핑클릭·
+     뉴스·계절 임박)를 우선한다. 장기(1년)는 반대로 공급·규제 선행신호를 더 크게 본다. */
+  const nearTermNote = period === '2m'
+    ? `\n[초단기(1~2개월) 예측 지침]\n이 구간은 신제품 개발이 아니라 "이미 출시됐거나 임박한" 품목의 단기 수요 급등을 예측한다. 검색·쇼핑클릭 급상승·뉴스 언급·계절 임박(기온/자외선) 신호를 최우선 가중하고, 리드타임이 긴 규제·신규 설비 신호는 참고로만 반영하라. 출시 적기(season)는 반드시 향후 8주 이내로 제시하라.`
+    : '';
   const sigSummary = Object.entries(SIG_DATA)
     .map(([k, v]) => `${k}: ${v?.score || '?'}/5 — ${v?.interpret || '수집 불가'}`)
     .join('\n');
@@ -1952,7 +1961,7 @@ async function runGeminiPrediction(period) {
           ct.deviation !== null ? `평년(작년 동기) 대비 ${ct.deviation >= 0 ? '+' : ''}${ct.deviation}℃` : '',
           ct.trend16 ? `16일 단기예보 추세(참고용, 장기예측 아님) ${ct.trend16.delta >= 0 ? '+' : ''}${ct.trend16.delta}℃ (1주차 평균 ${ct.trend16.week1}℃ → 2주차 평균 ${ct.trend16.week2}℃)` : '',
           (seasonalOutlook && seasonalOutlook.length)
-            ? `※ ${period === '1y' ? '1년' : '6개월'} 예측 시 이 항목을 우선 참고 — 평년 기준 계절 전망: ` + seasonalOutlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) 평균최고 ${o.avgMaxTemp}℃`).join(' · ')
+            ? `※ ${PERIOD_LABEL[period] || '6개월'} 예측 시 이 항목을 우선 참고 — 평년 기준 계절 전망: ` + seasonalOutlook.map(o => `${o.monthsAhead}개월 후(${o.targetMonth}월) 평균최고 ${o.avgMaxTemp}℃`).join(' · ')
             : ''
         ].filter(Boolean).join(' · ')
     : '';
@@ -1961,7 +1970,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${climateDetail}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -2018,7 +2027,15 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail
       {rank:4,type:'다기능 세럼 스틱 (올인원 고형)',packaging:'스틱 몰딩 12g 회전식 용기',confidence:70,tech:'고형 세럼 스틱 몰딩 + 활성 성분 안정화',channel:['다이소','무신사','편의점'],season:'2027 1Q',signals:{climate:0.1,society:0.4,economy:0.2,culture:0.3}},
       {rank:5,type:'맞춤형 화장품 키트 (처방 배합)',packaging:'소분 앰플 2ml×5 + 베이스 크림 30ml 세트',confidence:62,tech:'소용량 다품종 혼합 충진 + 개인화 라벨링',channel:['D2C 브랜드','피부과 병원'],season:'2027 2Q',signals:{climate:0.05,society:0.5,economy:0.1,culture:0.35}},
     ];
-    PREDICTIONS_CACHE[period] = period === '1y' ? fallback1y : fallback6m;
+    /* 초단기(2m) 폴백 — 이미 시장에 있고 계절·검색이 즉시 미는 품목 위주 */
+    const fallback2m = [
+      {rank:1,type:'쿨링 선세럼·선쿠션 (여름 즉시 대응)',packaging:'에어리스/쿠션 15~50ml',confidence:84,tech:'쿨링 배합 + 고SPF 즉시 충진',channel:['올리브영','다이소'],season:'향후 4~8주',signals:{climate:0.55,society:0.05,economy:0.1,culture:0.3}},
+      {rank:2,type:'진정·수분 토너패드 (여름 데일리)',packaging:'토너패드 60~80매 리필형',confidence:78,tech:'패드 자동 투입 + 진정 성분',channel:['올리브영','편의점'],season:'향후 6주',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
+      {rank:3,type:'피지·모공 클렌징 (여름 시즌)',packaging:'튜브/펌프 150ml',confidence:72,tech:'저자극 계면활성 배합',channel:['올리브영','드러그스토어'],season:'향후 8주',signals:{climate:0.3,society:0.1,economy:0.2,culture:0.4}},
+      {rank:4,type:'남성 올인원·선스틱 (휴가철)',packaging:'스틱 몰딩 15g',confidence:66,tech:'스틱 성형 + 멀티기능',channel:['편의점','남성 채널'],season:'향후 8주',signals:{climate:0.4,society:0.2,economy:0.1,culture:0.3}},
+      {rank:5,type:'미스트·픽서 (지속력·쿨링)',packaging:'스프레이 50~100ml',confidence:60,tech:'분무 충진 + 쿨링·픽싱',channel:['올리브영','다이소'],season:'향후 6주',signals:{climate:0.45,society:0.05,economy:0.1,culture:0.4}},
+    ];
+    PREDICTIONS_CACHE[period] = period === '1y' ? fallback1y : period === '2m' ? fallback2m : fallback6m;
     PREDICTIONS = PREDICTIONS_CACHE[period];
     showToast('Gemini 연결 실패 — 샘플 예측 사용');
     return true;
@@ -2048,7 +2065,7 @@ async function switchPredPeriod(period) {
   } else if (Object.values(SIG_DATA).some(v => v)) {
     /* 신호 데이터 있음 → Gemini 재실행 */
     document.getElementById('z1body').innerHTML =
-      `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">${period === '1y' ? '1년' : '6개월'} 예측 분석 중...</div></div>`;
+      `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">6개월 예측 분석 중...</div></div>`;
     await runGeminiPrediction(period);
     renderZ1();
     resetZ2();
@@ -2091,8 +2108,8 @@ function renderZ1() {
     return;
   }
   const model = K.model() || 'gemini-2.0-flash';
-  const periodLabel = currentPeriod === '6m' ? '6개월 예측' : '1년 예측';
-  const periodCls   = currentPeriod === '6m' ? 'period-6m' : 'period-1y';
+  const periodLabel = (PERIOD_LABEL[currentPeriod] || '6개월') + ' 예측';
+  const periodCls   = 'period-' + currentPeriod;
   document.getElementById('geminiModelLabel').textContent =
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
   const sigMap   = { climate:'chip-cl', society:'chip-so', economy:'chip-ec', culture:'chip-cu' };
@@ -2152,7 +2169,7 @@ async function selectPred(idx) {
   SEL_IDX = idx;
   renderZ1();
   currentPkgType = p.packaging || '';
-  const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
+  const periodLabel = PERIOD_LABEL[currentPeriod] || '6개월';
   document.getElementById('z2subtitle').textContent =
     `— ${p.type} · ${periodLabel} 예측 · 신뢰도 ${p.confidence}%`;
   renderZ2Loading();
@@ -2822,6 +2839,7 @@ async function collectAll() {
   btn.classList.add('running'); btn.disabled = true;
 
   /* 캐시 초기화 */
+  PREDICTIONS_CACHE['2m'] = null;
   PREDICTIONS_CACHE['6m'] = null;
   PREDICTIONS_CACHE['1y'] = null;
   SEL_IDX = -1; currentPkgType = '';
@@ -2872,7 +2890,7 @@ async function collectAll() {
   window._expoVerified = await verifyExpoSchedules();
   renderZ4();
 
-  const periodLabel = currentPeriod === '6m' ? '6개월' : '1년';
+  const periodLabel = PERIOD_LABEL[currentPeriod] || '6개월';
   setStep(`⑦ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
@@ -2964,7 +2982,7 @@ function genReport() {
     lines.push('▶ 과거 예측 백테스트 (신호 일치도 — 실제 매출 검증 아님, 참고용)');
     matured.slice(0, 5).forEach(h => {
       const dateStr = new Date(h.ts).toLocaleDateString('ko-KR');
-      lines.push(`  • ${dateStr} ${h.period === '1y' ? '1년' : '6개월'} 예측: ${h.hits}/${h.total} 유형이 검증 시점 모멘텀 신호에서 재포착됨`);
+      lines.push(`  • ${dateStr} 6개월 예측: ${h.hits}/${h.total} 유형이 검증 시점 모멘텀 신호에서 재포착됨`);
     });
   }
   lines.push('');
@@ -3025,7 +3043,7 @@ function exportReportCSV() {
   const matured = backtestPredictions();
   matured.slice(0, 5).forEach(h => {
     const dateStr = new Date(h.ts).toLocaleDateString('ko-KR');
-    rows.push(['백테스트', dateStr, `${h.hits}/${h.total} 신호 일치 (${h.period === '1y' ? '1년' : '6개월'} 예측)`]);
+    rows.push(['백테스트', dateStr, `${h.hits}/${h.total} 신호 일치 (`]);
   });
   REGS.filter(r => r.level === 'critical').forEach(r => rows.push(['긴급 법령·규제', r.tag, `${r.title} (${r.date})`]));
   const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -3473,7 +3491,7 @@ function showCollectedData() {
     lines.push('');
   });
   if (PREDICTIONS.length) {
-    lines.push(`[예측 TOP5 — ${currentPeriod === '6m' ? '6개월' : '1년'}]`);
+    lines.push(`[예측 TOP5 — ${PERIOD_LABEL[currentPeriod] || '6개월'}]`);
     PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) 패키징: ${p.packaging || '—'}`));
     lines.push('');
   }
@@ -3584,6 +3602,7 @@ function init() {
       /* 24시간 이내 캐시만 복원 — 만료 캐시는 신호·예측 모두 무시 */
       if (d.ts && Date.now() - d.ts < 86400000) {
         if (d.signals) SIG_DATA = d.signals;
+        if (d.predictions_2m) { PREDICTIONS_CACHE['2m'] = d.predictions_2m; }
         if (d.predictions_6m) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
         if (d.predictions_1y) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
         /* 현재 기간의 캐시 로드 */
@@ -3603,9 +3622,10 @@ function init() {
 
 /* 24시간 캐시 저장 */
 window.addEventListener('beforeunload', () => {
-  if (PREDICTIONS_CACHE['6m'] || PREDICTIONS_CACHE['1y']) {
+  if (PREDICTIONS_CACHE['2m'] || PREDICTIONS_CACHE['6m'] || PREDICTIONS_CACHE['1y']) {
     ls('m5_cache', JSON.stringify({
       signals: SIG_DATA,
+      predictions_2m: PREDICTIONS_CACHE['2m'],
       predictions_6m: PREDICTIONS_CACHE['6m'],
       predictions_1y: PREDICTIONS_CACHE['1y'],
       ts: Date.now()
