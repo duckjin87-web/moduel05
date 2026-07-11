@@ -682,7 +682,7 @@ function buildPredEvidenceHtml(idx) {
   });
   /* ── ③ 예측 전반에 함께 반영된 공급·규제·해외 선행신호 (개별 카테고리 밖) ── */
   let lead = '';
-  lead += trendListHtml('공급 선행 — 식약처 기능성화장품 보고 제형 분포(제조사 생산 준비)', (window._supplyTrends || []).map(t => ({ name: t.name + (t.recent ? `(신규 ${t.recent})` : ''), count: t.count })), 'count');
+  lead += trendListHtml('공급 규모 — 식약처 등록 화장품 제형별 품목 수', (window._supplyTrends || []).map(t => ({ name: t.name + (t.recent ? `(신규 ${t.recent})` : ''), count: t.count })), 'count');
   lead += trendListHtml('해외 박람회 선행 트렌드(최근 60일 보도 키워드)', (window._expoTrends || []).map(t => ({ name: t.name, count: t.count })), 'count');
   /* 규제 D-day */
   const nowD = new Date();
@@ -1713,33 +1713,6 @@ async function collectBeautyRSS() {
   return { count, keywords, kwMap, articles, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
-async function collectMFDSFunc() {
-  const key = K.public();
-  if (!key) return { count: 0, ingredients: [], products: [] };
-  try {
-    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=30&type=json`;
-    const t = await fetchProxy(url, 10000);
-    if (!t) return { count: 0, ingredients: [], products: [] };
-    const j = JSON.parse(t);
-    /* 응답 구조: response→body→items→item (표준) 또는 body→items→item (일부 MFDS API) */
-    const items = j?.response?.body?.items?.item
-                || j?.body?.items?.item
-                || j?.response?.body?.items
-                || [];
-    const arr = Array.isArray(items) ? items : (items ? [items] : []);
-    const ingMap = {}, products = [];
-    arr.forEach(i => {
-      if (i.ITEM_NAME || i.PRDUCT_NM) products.push(i.ITEM_NAME || i.PRDUCT_NM);
-      (i.MTRAL_NM || i.INGR_NM || '').split(/,|\//).forEach(ing => {
-        ing = ing.trim().replace(/^\d+\.?\s*/, '');
-        if (ing.length > 2 && ing.length < 30) ingMap[ing] = (ingMap[ing]||0)+1;
-      });
-    });
-    const top = Object.entries(ingMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k);
-    return { count: arr.length, ingredients: top, products: products.slice(0,5) };
-  } catch { return { count: 0, ingredients: [], products: [] }; }
-}
-
 /* 식약처 화장품제조업 등록현황 — Track A/B 제조사 실재성(식약처 등록 여부) 검증용.
    ※ 기존엔 1페이지(100건)만 받아 등록 제조사 수천 곳 중 100곳과만 대조 → 실제 등록
    업체도 "미검증"으로 누락되는 한계가 컸다. 페이지를 끝까지(상한 6000건) 받아 교차검증
@@ -1773,30 +1746,15 @@ async function collectMFDSGMP() {
   } catch { return all; }
 }
 
-/* 식약처 기능성화장품 보고품목 → 제형(생산유형) 분포를 공급단 선행신호로 집계.
-   제조사가 식약처에 '보고'한 시점 = 그 제형을 만들 설비·공정을 갖췄다는 공식 증거.
-   수요(소비자 검색·클릭)보다 앞서는 신호이며, 보고일이 파싱되면 최근 6개월 신규
-   보고 비중(신규 진입 모멘텀 근사)도 함께 산출한다. */
-const SUPPLY_FORMS = [
-  {name:'앰플',         re:/앰플|ampoule/i},
-  {name:'세럼',         re:/세럼|serum/i},
-  {name:'에센스',       re:/에센스|essence/i},
-  {name:'크림',         re:/크림|cream/i},
-  {name:'로션·에멀전',  re:/로션|lotion|에멀젼|에멀전|emulsion/i},
-  {name:'토너·스킨',    re:/토너|toner|스킨로션|스킨토너/i},
-  {name:'미스트·스프레이', re:/미스트|mist|스프레이|spray|분무/i},
-  {name:'쿠션',         re:/쿠션|cushion/i},
-  {name:'스틱',         re:/스틱|stick/i},
-  {name:'밤',           re:/밤|balm/i},
-  {name:'젤',           re:/젤|gel/i},
-  {name:'패드',         re:/패드|pad/i},
-  {name:'마스크·팩·시트', re:/마스크|mask|시트팩|시트 마스크/i},
-  {name:'클렌징',       re:/클렌징|cleansing|클렌저|cleanser|폼클|클렌즈/i},
-  {name:'선·자외선차단', re:/선크림|선스크린|선세럼|선스틱|선밤|선블록|자외선|sunscreen|sun block|spf|uv차단/i},
-  {name:'파운데이션·색조', re:/파운데이션|foundation|컨실러|concealer|비비|bb크림|틴트|tint|메이크업베이스/i},
-  {name:'패치·니들',    re:/패치|patch|마이크로니들|니들/i},
-  {name:'오일',         re:/오일|oil/i},
-  {name:'폼·무스',      re:/무스|mousse|폼클렌|foam/i},
+/* 식약처 공급 선행신호 — 제형별 '등록 화장품 품목 수' 분포.
+   ※ 데이터 소스: 식약처 '화장품 관련 정보'(getCsmtcsPrductInfo) API. 이전엔 '기능성화장품
+   보고품목'(getFntnsCsmtcPrdlstInfo)을 썼는데, 이 API는 data.go.kr에서 별도 활용신청이
+   필요해 대부분의 키로는 미승인 상태(SERVICE_KEY_NOT_REGISTERED)라 실패했다. '화장품 관련
+   정보'는 GMP 업체현황과 함께 널리 승인되는 API이므로 이걸로 전환한다.
+   제형 키워드별 totalCount = 그 제형으로 식약처에 등록된 품목 수 = 공급(생산 준비) 규모. */
+const SUPPLY_QUERY_FORMS = [
+  '앰플', '세럼', '에센스', '크림', '토너', '미스트', '쿠션', '스틱',
+  '선크림', '패드', '마스크팩', '클렌징', '밤', '오일',
 ];
 
 async function collectMFDSSupply() {
@@ -1805,38 +1763,21 @@ async function collectMFDSSupply() {
   const key = K.public();
   if (!key) { window._supplyErr = '식약처(공공데이터) 키 미설정'; return; }
   try {
-    const url = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=100&type=json`;
-    const t = await fetchProxy(url, 12000);
-    if (!t) { window._supplyErr = '응답 없음'; return; }
-    let j;
-    try { j = JSON.parse(t); } catch { window._supplyErr = '응답 형식 오류'; return; }
-    const rc = j?.response?.header?.resultCode || j?.header?.resultCode;
-    if (rc && rc !== '00') { window._supplyErr = `API코드 ${rc}`; return; }
-    const items = j?.response?.body?.items?.item || j?.body?.items?.item
-                || j?.response?.body?.items || j?.body?.items || [];
-    const arr = Array.isArray(items) ? items : (items ? [items] : []);
-    if (!arr.length) { window._supplyErr = '데이터 0건'; return; }
-    const now = Date.now();
-    const SIXMO = 183 * 86400000;
-    const buckets = {};
-    SUPPLY_FORMS.forEach(f => { buckets[f.name] = { name: f.name, count: 0, recent: 0 }; });
-    arr.forEach(it => {
-      const nm = String(it.ITEM_NAME || it.PRDLST_NM || it.PRODUCT_NAME || it.ITEM_PRMISN_NM || it.PRDLST_NM_ENG || '');
-      if (!nm) return;
-      /* 보고일 — 필드명이 제각각이라 후보 다수 시도(파싱 실패 시 건수 신호만 사용) */
-      const rawDate = String(it.PRDLST_REPORT_DATE || it.REPORT_DATE || it.PRMS_DT
-                          || it.ITEM_PERMIT_DATE || it.RPT_DT || it.APRVL_YMD || it.PRDLST_PRMISN_DE || '');
-      const dm = rawDate.match(/(\d{4})[.\-\/]?(\d{2})[.\-\/]?(\d{2})/);
-      const ts = dm ? new Date(+dm[1], +dm[2] - 1, +dm[3]).getTime() : null;
-      const isRecent = ts !== null && (now - ts) <= SIXMO && (now - ts) >= 0;
-      SUPPLY_FORMS.forEach(f => {
-        if (f.re.test(nm)) { buckets[f.name].count++; if (isRecent) buckets[f.name].recent++; }
-      });
-    });
-    const trends = Object.values(buckets).filter(b => b.count > 0)
-      .sort((a, b) => (b.recent - a.recent) || (b.count - a.count));
+    const results = await Promise.all(SUPPLY_QUERY_FORMS.map(async form => {
+      /* numOfRows=1 — totalCount(총 품목 수)만 필요하므로 최소 페이로드 */
+      const url = `https://apis.data.go.kr/1471000/CsmtcsPrductInfoService01/getCsmtcsPrductInfo?serviceKey=${encodeURIComponent(key)}&prdlst_nm=${encodeURIComponent(form)}&numOfRows=1&pageNo=1&type=json`;
+      const t = await fetchProxy(url, 10000);
+      if (!t) return null;
+      let j;
+      try { j = JSON.parse(t); } catch { return null; }
+      const rc = j?.response?.header?.resultCode || j?.header?.resultCode;
+      if (rc && rc !== '00') { if (!window._supplyErr) window._supplyErr = `API코드 ${rc}`; return null; }
+      const total = +(j?.response?.body?.totalCount || j?.body?.totalCount || 0);
+      return { name: form, count: total };
+    }));
+    const trends = results.filter(r => r && r.count > 0).sort((a, b) => b.count - a.count);
     window._supplyTrends = trends.length ? trends : null;
-    if (!trends.length) window._supplyErr = '제형 매칭 0건';
+    if (!trends.length && !window._supplyErr) window._supplyErr = '제형별 등록 품목 0건';
   } catch { window._supplyErr = '수집 실패'; }
 }
 
@@ -1926,9 +1867,9 @@ async function runGeminiPrediction(period) {
       + `\n※ 검색·클릭은 "관심", 수출액은 실제 출하·결제된 "판매 실적"이다. K뷰티 수출 목표상 가장 강한 신호이므로 최우선 가중할 것`
     : '';
   const supplyDetail = (window._supplyTrends && window._supplyTrends.length)
-    ? `\n[식약처 기능성화장품 보고품목 — 제형 분포 (공급 선행신호·실측)]\n`
-      + window._supplyTrends.slice(0, 12).map(t => `${t.name} ${t.count}건${t.recent ? `(최근6개월 신규 ${t.recent})` : ''}`).join(' · ')
-      + `\n※ 이는 소비자 관심이 아니라 제조사가 식약처에 실제로 '보고(=생산 설비·공정 준비 완료)'한 제형 분포다. 검색·클릭은 수요(관심)지만 이 보고는 공급(생산 준비)이며 수요보다 선행한다. 보고 건수가 많고 특히 최근6개월 신규 보고가 늘어난 제형은 시장 출시가 임박했다는 강한 신호이므로, 수요 신호와 교차해 우선 가중하라.`
+    ? `\n[식약처 등록 화장품 — 제형별 품목 수 (공급 규모 신호·실측)]\n`
+      + window._supplyTrends.slice(0, 12).map(t => `${t.name} ${t.count}건`).join(' · ')
+      + `\n※ 식약처에 등록된 화장품 품목을 제형별로 집계한 수다. 특정 제형의 등록 품목이 많다는 것은 그 제형을 생산할 설비·공정을 갖춘 제조 기반이 두텁다는 공급측 신호다. 검색·클릭(수요)과 교차해, 공급 기반이 두터우면서 수요가 오르는 제형을 우선 가중하라.`
     : '';
   /* 규제 캘린더 — 예측이 아니라 확정 일정. 강제되는 패키징·성분 변화를 결정론적 가중 */
   const regDetail = (() => {
@@ -2967,7 +2908,7 @@ function genReport() {
   }
   if (window._supplyTrends && window._supplyTrends.length) {
     lines.push('');
-    lines.push('▶ 식약처 기능성화장품 보고품목 — 제형 분포 (공급 선행신호)');
+    lines.push('▶ 식약처 등록 화장품 — 제형별 품목 수 (공급 규모 신호)');
     window._supplyTrends.slice(0, 10).forEach(t => lines.push(`  • ${t.name}: ${t.count}건${t.recent ? ` (최근6개월 신규 ${t.recent}건)` : ''}`));
   }
   if (window._expoTrends && window._expoTrends.length) {
@@ -3143,8 +3084,10 @@ async function testPublic() {
   /* ── API 2: 에어코리아 서울 ── */
   const aqUrl  = `https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=${encodeURIComponent(key)}&returnType=json&numOfRows=3&pageNo=1&sidoName=${encodeURIComponent('서울')}&ver=1.0`;
 
-  /* ── API 3: 식약처 기능성화장품 보고품목 ── */
-  const mfdsUrl = `https://apis.data.go.kr/1471000/FntnsCsmtcPrdlstInfoService/getFntnsCsmtcPrdlstInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=5&type=json`;
+  /* ── API 3: 식약처 화장품 GMP 적합 업체현황 (앱이 실제 의존하는 API로 테스트) ──
+     이전엔 '기능성화장품 보고품목'을 테스트했는데 그 API는 별도 활용신청이 필요해 대부분
+     미승인 → 늘 실패했다. GMP 업체현황은 널리 승인되고 TRACK B 검증에도 실제 쓰인다. */
+  const mfdsUrl = `https://apis.data.go.kr/1471000/CsmtcsMnfstRegService01/getCsmtcsMnfstRegInfo?serviceKey=${encodeURIComponent(key)}&pageNo=1&numOfRows=5&type=json`;
 
   const parseRC = (j) => j?.response?.header?.resultCode || j?.header?.resultCode || null;
   const rcHint = (rc, rm) =>
@@ -3273,30 +3216,30 @@ async function testPublic() {
     } catch { addLine('','에어코리아 대기오염', `파싱 실패: ${aqRes.slice(0,60)}`, 'var(--red)'); }
   }
 
-  /* 결과 3: 식약처 기능성화장품 */
+  /* 결과 3: 식약처 GMP 업체현황 */
   if (!mfdsRes) {
     const d = await diagProxy(mfdsUrl);
-    addLine('','식약처 기능성화장품', diagMsg(d), 'var(--red)');
+    addLine('','식약처 GMP 업체현황', diagMsg(d), 'var(--red)');
   } else {
     try {
       const j = JSON.parse(mfdsRes);
       const rc = parseRC(j);
       if (rc && rc !== '00') {
-        addLine('','식약처 기능성화장품', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
+        addLine('','식약처 GMP 업체현황', rcHint(rc, j?.response?.header?.resultMsg), 'var(--amber,#d97706)');
       } else {
         const items = j?.response?.body?.items?.item || j?.body?.items?.item || j?.response?.body?.items || [];
         const cnt = Array.isArray(items) ? items.length : (items ? 1 : 0);
         const total = j?.response?.body?.totalCount || j?.body?.totalCount || '—';
-        addLine('','식약처 기능성화장품', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
+        addLine('','식약처 GMP 업체현황', `${cnt}건 수신 (전체 ${total}건)`, 'var(--grn)');
         anyOk = true;
       }
     } catch {
       const xmlRc = mfdsRes.match(/returnReasonCode[^>]*>(\w+)|resultCode[^>]*>(\w+)/)?.[1];
       const xmlMsg = mfdsRes.match(/returnAuthMsg[^>]*>([^<]+)|resultMsg[^>]*>([^<]+)/)?.[1];
       if (xmlRc) {
-        addLine('','식약처 기능성화장품', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
+        addLine('','식약처 GMP 업체현황', `API코드 ${xmlRc}: ${xmlMsg || rcHint(xmlRc,'')}`, 'var(--amber,#d97706)');
       } else {
-        addLine('','식약처 기능성화장품', `응답 형식 오류: "${mfdsRes.slice(0,80)}"`, 'var(--red)');
+        addLine('','식약처 GMP 업체현황', `응답 형식 오류: "${mfdsRes.slice(0,80)}"`, 'var(--red)');
       }
     }
   }
@@ -3530,9 +3473,9 @@ function showCollectedData() {
     lines.push(`[뉴스 최다언급] ` + window._newsTrends.map(t => `${t.name}(${t.count})`).join(' · '));
   }
   if (window._supplyTrends && window._supplyTrends.length) {
-    lines.push(`[공급 선행·식약처 보고품목] ` + window._supplyTrends.slice(0, 10).map(t => `${t.name}(${t.count}${t.recent ? `/신규${t.recent}` : ''})`).join(' · '));
+    lines.push(`[공급 규모·식약처 등록 품목] ` + window._supplyTrends.slice(0, 10).map(t => `${t.name}(${t.count}${t.recent ? `/신규${t.recent}` : ''})`).join(' · '));
   } else if (window._supplyErr) {
-    lines.push(`[공급 선행·식약처 보고품목] ${window._supplyErr}`);
+    lines.push(`[공급 규모·식약처 등록 품목] ${window._supplyErr}`);
   }
   if (window._expoTrends && window._expoTrends.length) {
     lines.push(`[해외 박람회 선행·최근${GLOBAL_EXPO_RECENT_DAYS}일] ` + window._expoTrends.slice(0, 10).map(t => `${t.name}(${t.count})`).join(' · '));
