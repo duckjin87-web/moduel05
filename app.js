@@ -2853,21 +2853,25 @@ async function collectAll() {
     if (sm) sm.textContent = pct;
   };
 
-  /* 1순위: 서버 사전수집 데이터 (프록시 불필요 — 내부망에서도 동작) */
-  setStep('사전수집 데이터 확인 중...', '확인 중');
-  const pre = await loadPrecollected();
-  if (pre) {
-    applyPrecollected(pre);
-    renderZ0();
-    const ageH = Math.max(0, Math.round((Date.now() - new Date(pre.collectedAt).getTime()) / 36e5));
-    showToast(`서버 사전수집 데이터 로드 (${ageH}시간 전 수집) — 프록시 미사용`);
-  } else {
-    /* 2순위: 브라우저에서 직접 라이브 수집 (외부 프록시 경유) */
-    const hasAnyKey = K.gemini() || K.public() || K.naverID() || K.ecos();
-    if (!hasAnyKey) {
+  /* 신호 수집 우선순위 — 사용자가 자기 키를 넣었으면 "그 키로 라이브 수집"이 최우선.
+     (이전엔 서버 사전수집본이 있으면 무조건 그걸 써서, 사용자가 키를 넣어도 자기 키가
+     적용되지 않는 문제가 있었음.) 키가 없을 때만 서버 사전수집본(프록시 불필요·내부망
+     동작)을 쓰고, 키는 있으나 라이브가 전부 실패하면 사전수집본으로 폴백한다. */
+  const hasOwnKeys = K.public() || K.naverID() || K.ecos();
+  let usedPre = false;
+  if (!hasOwnKeys) {
+    setStep('사전수집 데이터 확인 중...', '확인 중');
+    const pre = await loadPrecollected();
+    if (pre) {
+      applyPrecollected(pre); renderZ0(); usedPre = true;
+      const ageH = Math.max(0, Math.round((Date.now() - new Date(pre.collectedAt).getTime()) / 36e5));
+      showToast(`API 키 미설정 — 서버 사전수집 데이터 로드 (${ageH}시간 전) · 내 키 입력 시 실시간 수집됩니다`);
+    } else {
       showToast('API 키 미설정 — 샘플 데이터로 데모 실행합니다. [API 설정]에서 키를 입력하세요.');
     }
-
+  }
+  if (!usedPre) {
+    /* 사용자 키로 직접 라이브 수집 — "내 키가 실제 적용되는" 경로 */
     setStep('① 기후 수집 중...', '수집 1/4');
     await collectClimate(); renderZ0();
 
@@ -2879,6 +2883,16 @@ async function collectAll() {
 
     setStep('④ 문화 수집 중...', '수집 4/4');
     await collectCulture(); renderZ0();
+
+    /* 키는 있으나 라이브가 전부 실패(사내망 프록시 차단 등 → 전 신호 샘플)하면
+       서버 사전수집본으로 폴백해 빈손을 면한다 */
+    if (hasOwnKeys && ['climate','society','economy','culture'].every(k => !SIG_DATA[k] || SIG_DATA[k]._sample)) {
+      const pre = await loadPrecollected();
+      if (pre) {
+        applyPrecollected(pre); renderZ0();
+        showToast('라이브 수집 실패(프록시 차단 등) — 서버 사전수집 데이터로 대체');
+      }
+    }
   }
 
   updateStatusSummary();
