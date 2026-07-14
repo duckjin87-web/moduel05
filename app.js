@@ -349,82 +349,235 @@ function toggleExpoManualConfirm(name) {
   renderZ4();
 }
 
-/* ════ ZONE 4 박람회·전시회 일정 렌더 (보기 전용 + 담당자 확인 체크) ════ */
+/* ════ 국내 박람회 관리 — 편집형 목록(A) + 실행 관리(B) ════
+   EXPOS(하드코딩)를 기본 시드로 두고, 사용자 추가/편집/삭제·상태·마감·체크리스트·메모를
+   localStorage에 오버레이한다. 코드 수정 없이 운용 가능. 브라우저별 저장이라 팀 공유는
+   내보내기/가져오기(JSON)로 처리. */
+const EXPO_STATUSES = ['관심', '참가확정', '관람예정', '부스신청', '종료'];
+const EXPO_STATUS_CLS = { '관심': 'est-interest', '참가확정': 'est-join', '관람예정': 'est-visit', '부스신청': 'est-booth', '종료': 'est-done' };
+const EXPO_CHECKS = [['booth', '부스신청'], ['prereg', '사전등록'], ['catalog', '카탈로그 준비'], ['meeting', '미팅 예약']];
+const EXPO_TYPES = [['expo', 'B2B 박람회'], ['retail', '리테일 기획전'], ['equipment', '설비·패키징전']];
+
+function getExpoCustom() { try { return JSON.parse(ls('expo_custom') || '[]'); } catch { return []; } }
+function saveExpoCustom(a) { ls('expo_custom', JSON.stringify(a)); }
+function getExpoMeta() { try { return JSON.parse(ls('expo_meta') || '{}'); } catch { return {}; } }
+function saveExpoMeta(m) { ls('expo_meta', JSON.stringify(m)); }
+function getExpoHidden() { try { return JSON.parse(ls('expo_hidden') || '[]'); } catch { return []; } }
+function saveExpoHidden(a) { ls('expo_hidden', JSON.stringify(a)); }
+/* 시드(숨김 제외) + 사용자 추가분 병합 */
+function getAllExpos() {
+  const hidden = new Set(getExpoHidden());
+  const seed = EXPOS.filter(x => !hidden.has(x.name)).map(x => ({ ...x, _seed: true }));
+  const custom = getExpoCustom().map(x => ({ ...x, _custom: true }));
+  return [...seed, ...custom];
+}
+function setExpoMeta(name, patch) { const m = getExpoMeta(); m[name] = { ...(m[name] || {}), ...patch }; saveExpoMeta(m); }
+function setExpoStatus(name, val) { setExpoMeta(name, { status: val || '' }); renderZ4(); }
+function setExpoDeadline(name, which, val) { setExpoMeta(name, { [which === 'reg' ? 'regDeadline' : 'boothDeadline']: val || '' }); renderZ4(); }
+/* 체크박스·메모는 재렌더 없이 저장(포커스·펼침 유지) */
+function toggleExpoCheck(name, key, on) { const m = getExpoMeta(); const c = { ...((m[name] || {}).checklist || {}) }; c[key] = on; setExpoMeta(name, { checklist: c }); }
+function saveExpoMemo(name, val) { setExpoMeta(name, { memo: val }); }
+
+function deleteExpo(name, isCustom) {
+  if (!confirm(`"${name}"을(를) 목록에서 삭제할까요?${isCustom ? '' : ' (기본 제공 행사는 숨김 처리되며, 가져오기 초기화로 복구 가능)'}`)) return;
+  if (isCustom) saveExpoCustom(getExpoCustom().filter(x => x.name !== name));
+  else { const h = getExpoHidden(); if (!h.includes(name)) { h.push(name); saveExpoHidden(h); } }
+  const m = getExpoMeta(); delete m[name]; saveExpoMeta(m);
+  renderZ4();
+}
+
+/* 추가/편집 폼(모달) — name 없으면 신규, 있으면 편집 */
+function openExpoForm(name) {
+  const editing = name ? getAllExpos().find(x => x.name === name) : null;
+  let ov = document.getElementById('expoFormOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'expoFormOverlay'; ov.className = 'guide-overlay';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+  }
+  const g = (v) => escHtml(v || '');
+  const typeOpts = EXPO_TYPES.map(([v, l]) => `<option value="${v}"${editing && editing.type === v ? ' selected' : ''}>${l}</option>`).join('');
+  ov.innerHTML = `<div class="guide-modal" style="max-width:440px" onclick="event.stopPropagation()">
+    <div class="gm-head"><span class="gm-title">${editing ? '박람회 편집' : '박람회 추가'}</span>
+      <button class="gm-close" onclick="document.getElementById('expoFormOverlay').classList.remove('open')">×</button></div>
+    <div class="gm-body">
+      <div class="ef-field"><label>행사명 *</label><input id="ef-name" class="ef-in" value="${g(editing && editing.name)}" placeholder="예: 코스모뷰티 서울"></div>
+      <div class="ef-field"><label>유형</label><select id="ef-type" class="ef-in">${typeOpts}</select></div>
+      <div class="ef-field"><label>주최</label><input id="ef-org" class="ef-in" value="${g(editing && editing.org)}"></div>
+      <div class="ef-field"><label>장소</label><input id="ef-loc" class="ef-in" value="${g(editing && editing.location)}" placeholder="예: 서울 코엑스"></div>
+      <div class="ef-field"><label>개최일 (YYYY.MM.DD 또는 YYYY.MM.DD~MM.DD)</label><input id="ef-date" class="ef-in" value="${g(editing && editing.nextDate)}" placeholder="2026.05.27~2026.05.29"></div>
+      <div class="ef-field ef-check"><label><input type="checkbox" id="ef-confirmed"${editing && editing.confirmed ? ' checked' : ''}> 공식 발표된 확정 일정</label></div>
+      <div class="ef-field"><label>설명·소싱 포인트</label><textarea id="ef-focus" class="ef-in" rows="2">${g(editing && editing.focus)}</textarea></div>
+      <div class="ef-field"><label>공식 홈페이지 URL</label><input id="ef-url" class="ef-in" value="${g(editing && editing.url)}" placeholder="https://"></div>
+      <div class="ef-actions">
+        <button class="ebtn-add" onclick="submitExpoForm(${editing ? `'${escJs(editing.name)}'` : 'null'}, ${editing ? !!editing._seed : false})">${editing ? '저장' : '추가'}</button>
+        <button class="ebtn-tool" onclick="document.getElementById('expoFormOverlay').classList.remove('open')">취소</button>
+      </div>
+    </div>
+  </div>`;
+  ov.classList.add('open');
+}
+function submitExpoForm(originalName, wasSeed) {
+  const val = id => (document.getElementById(id).value || '').trim();
+  const name = val('ef-name');
+  if (!name) { showToast('행사명을 입력하세요'); return; }
+  const rec = {
+    name, type: val('ef-type') || 'expo', org: val('ef-org'), location: val('ef-loc'),
+    nextDate: val('ef-date'), confirmed: document.getElementById('ef-confirmed').checked,
+    focus: val('ef-focus'), url: val('ef-url'),
+    srcLabel: '공식 홈페이지', month: '',
+  };
+  const custom = getExpoCustom();
+  if (originalName) {
+    /* 편집 — 시드였다면 원본을 숨기고 커스텀으로 편입, 커스텀이면 교체 */
+    if (wasSeed) { const h = getExpoHidden(); if (!h.includes(originalName)) { h.push(originalName); saveExpoHidden(h); } }
+    else { const i = custom.findIndex(x => x.name === originalName); if (i >= 0) custom.splice(i, 1); }
+    /* 메타(상태·마감·메모) 이름 변경 시 이전(이관) */
+    if (originalName !== name) { const m = getExpoMeta(); if (m[originalName]) { m[name] = m[originalName]; delete m[originalName]; saveExpoMeta(m); } }
+    custom.push(rec);
+  } else {
+    if (getAllExpos().some(x => x.name === name)) { showToast('같은 이름의 행사가 이미 있습니다'); return; }
+    custom.push(rec);
+  }
+  saveExpoCustom(custom);
+  document.getElementById('expoFormOverlay').classList.remove('open');
+  renderZ4();
+  showToast(originalName ? '박람회 정보 저장됨' : '박람회 추가됨');
+}
+
+/* 내보내기/가져오기 — 사용자 데이터(추가·메타·숨김)를 JSON으로 백업·공유 */
+function exportExpos() {
+  const data = { _type: 'cosmedb_expos', custom: getExpoCustom(), meta: getExpoMeta(), hidden: getExpoHidden(), ts: Date.now() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  a.download = `cosmedb_expos_${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showToast('박람회 관리 데이터 내보냄');
+}
+function importExpos(file) {
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (d._type !== 'cosmedb_expos') { showToast('형식이 올바르지 않은 파일입니다'); return; }
+      if (Array.isArray(d.custom)) saveExpoCustom(d.custom);
+      if (d.meta && typeof d.meta === 'object') saveExpoMeta(d.meta);
+      if (Array.isArray(d.hidden)) saveExpoHidden(d.hidden);
+      renderZ4();
+      showToast('박람회 관리 데이터 가져옴');
+    } catch { showToast('파일을 읽지 못했습니다'); }
+  };
+  rd.readAsText(file);
+}
+
+/* ════ ZONE 4 박람회 렌더 (편집형 + 실행 관리) ════ */
 function renderZ4() {
   const el = document.getElementById('z4');
   if (!el) return;
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const verified = window._expoVerified || {};
   const manual = getExpoManualConfirm();
-  const fmtAgo = ts => {
-    const days = Math.floor((now - ts) / 86400000);
-    return days <= 0 ? '오늘' : `${days}일 전`;
-  };
-  const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' });
+  const meta = getExpoMeta();
+  const fmtAgo = ts => { const days = Math.floor((now - ts) / 86400000); return days <= 0 ? '오늘' : `${days}일 전`; };
+  const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const ddOf = val => { if (!val) return null; const d = new Date(val); if (isNaN(d)) return null; return Math.ceil((d - today) / 86400000); };
+  const ddLabel = dl => dl === null ? '' : dl < 0 ? '지남' : dl === 0 ? 'D-DAY' : `D-${dl}`;
 
-  const rows = EXPOS.map(x => {
-    const v = manual[x.name] ? null : verified[x.name];  /* 담당자 확인이 있으면 자동탐지 결과보다 우선 */
-    /* v가 likely/estimated이면 confirmedDate가 null이므로 기본 nextDate로 폴백
-       (null.split 크래시 방지 — 이 크래시는 collectAll 전체를 중단시켜 예측 미실행 유발) */
+  const rows = getAllExpos().map(x => {
+    const v = manual[x.name] ? null : verified[x.name];
     const dateStr = (v && v.confirmedDate) ? v.confirmedDate : x.nextDate;
     const parts = String(dateStr || '').split('~')[0].trim().split('.');
     const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
-    const daysLeft = isNaN(d) ? null : Math.ceil((d - now) / 86400000);
+    const daysLeft = isNaN(d) ? null : Math.ceil((d - today) / 86400000);
     const passed = daysLeft !== null && daysLeft < 0;
     return { x, v, dateStr, daysLeft, passed };
   });
-  /* A안 — 자동 정렬: 진행 예정(가까운 순) → 종료된 행사는 맨 뒤 */
   rows.sort((a, b) => {
     if (a.passed !== b.passed) return a.passed ? 1 : -1;
     return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
   });
 
-  el.innerHTML = rows.map(({ x, v, dateStr, daysLeft, passed }) => {
+  /* 상단 임박 요약(참고) — 개최 D-30 이내 또는 마감 임박 건수 */
+  const soon = rows.filter(r => !r.passed && r.daysLeft !== null && r.daysLeft <= 30).length;
+
+  const toolbar = `<div class="expo-toolbar">
+    <button class="ebtn-add" onclick="openExpoForm()">+ 박람회 추가</button>
+    <button class="ebtn-tool" onclick="exportExpos()">내보내기</button>
+    <button class="ebtn-tool" onclick="document.getElementById('expoImportFile').click()">가져오기</button>
+    <input type="file" id="expoImportFile" accept=".json" style="display:none" onchange="importExpos(this.files[0]);this.value=''">
+    ${soon ? `<span class="expo-soon">개최 임박(30일 내) ${soon}건</span>` : ''}
+  </div>`;
+
+  el.innerHTML = toolbar + rows.map(({ x, v, dateStr, daysLeft, passed }) => {
     const badgeCls = passed ? 'rl-pass' : daysLeft <= 30 ? 'rl-imm' : 'rl-upco';
     const badgeLabel = passed ? '종료' : daysLeft !== null ? `D-${daysLeft}` : '미정';
-    const typeTag = x.type === 'retail' ? '리테일 기획전' : x.type === 'equipment' ? '설비·패키징전' : 'B2B 박람회';
+    const typeTag = (EXPO_TYPES.find(t => t[0] === x.type) || [, 'B2B 박람회'])[1];
     const catLabel = x.type === 'retail' ? '리테일' : x.type === 'equipment' ? '설비' : '뷰티';
     const m = manual[x.name];
+    const md = meta[x.name] || {};
 
-    /* A안 — 3단계 신뢰도: 담당자확인(최우선) > 확정(뉴스 날짜 매칭) > 유력(관련 기사 있으나 날짜 미매칭) > 추정(기본값) */
     let confirmTag, lastChecked = '';
-    if (m) {
-      confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">✓ 담당자 확인</span>`;
-      lastChecked = `담당자 확인: ${fmtDate(m.confirmedAt)} · 재확인 권고: ${fmtDate(m.nextCheckDue)}`;
-    } else if (v?.status === 'confirmed') {
-      confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정(뉴스)</span>`;
-      lastChecked = `자동 확인: ${fmtAgo(v.checkedAt)}`;
-    } else if (v?.status === 'likely') {
-      confirmTag = `<span style="font-size:9px;font-weight:700;color:#92500e">유력</span>`;
-      lastChecked = `관련 기사 발견(날짜 미특정) · 자동 확인: ${fmtAgo(v.checkedAt)}`;
-    } else {
-      confirmTag = `<span style="font-size:9px;color:var(--ink3)">추정</span>`;
-      lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : '자동 확인 안 됨(네이버 키 필요)';
-    }
+    if (m) { confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">✓ 담당자 확인</span>`; lastChecked = `담당자 확인: ${fmtDate(m.confirmedAt)} · 재확인 권고: ${fmtDate(m.nextCheckDue)}`; }
+    else if (v?.status === 'confirmed') { confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정(뉴스)</span>`; lastChecked = `자동 확인: ${fmtAgo(v.checkedAt)}`; }
+    else if (v?.status === 'likely') { confirmTag = `<span style="font-size:9px;font-weight:700;color:#92500e">유력</span>`; lastChecked = `관련 기사 발견(날짜 미특정) · 자동 확인: ${fmtAgo(v.checkedAt)}`; }
+    else { confirmTag = `<span style="font-size:9px;color:var(--ink3)">추정</span>`; lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : (x._custom ? '사용자 추가 행사' : '자동 확인 안 됨(네이버 키 필요)'); }
 
-    /* 제목에 항상 노출되는 일정 확정여부 — 공식 발표된 정확한 날짜(x.confirmed)이거나
-       담당자 확인/뉴스 검색으로 확정된 경우 "확정", 그 외엔 통상 개최시기 기준 추정이므로 "예정" */
     const dateConfirmed = !!m || v?.status === 'confirmed' || !!x.confirmed;
-    const titleTag = dateConfirmed
-      ? `<span class="exp-confirmed">확정</span>`
-      : `<span class="exp-tentative">예정</span>`;
+    const titleTag = dateConfirmed ? `<span class="exp-confirmed">확정</span>` : `<span class="exp-tentative">예정</span>`;
+    const statusBadge = md.status ? `<span class="exp-status ${EXPO_STATUS_CLS[md.status] || ''}">${escHtml(md.status)}</span>` : '';
+    const nm = escJs(x.name);
+
+    /* 마감 D-day */
+    const regDd = ddOf(md.regDeadline), boothDd = ddOf(md.boothDeadline);
+    const statusOpts = ['<option value="">상태 없음</option>'].concat(
+      EXPO_STATUSES.map(s => `<option value="${s}"${md.status === s ? ' selected' : ''}>${s}</option>`)).join('');
+    const checks = EXPO_CHECKS.map(([k, lbl]) =>
+      `<label class="emg-chk"><input type="checkbox"${(md.checklist || {})[k] ? ' checked' : ''} onchange="toggleExpoCheck('${nm}','${k}',this.checked)">${lbl}</label>`).join('');
 
     return `<details class="reg-card expo-card${passed ? ' reg-passed' : ''}">
       <summary class="reg-hd expo-hd">
         <span class="exp-cat">${escHtml(catLabel)}</span>
         <span class="${badgeCls}">${badgeLabel}</span>
         <span class="reg-name" style="margin-top:0">${escHtml(x.name)}</span>
-        ${titleTag}
+        ${statusBadge}${titleTag}${x._custom ? '<span class="exp-custom-tag">내 추가</span>' : ''}
         <span class="exp-chev">▾</span>
       </summary>
       <div class="reg-body">
-        <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org)} · ${escHtml(x.location)} · ${escHtml(dateStr)} ${confirmTag}</div>
-        <div class="reg-detail">${escHtml(x.focus)}</div>
+        <div class="reg-meta">${escHtml(typeTag)} · ${escHtml(x.org || '주최 미상')} · ${escHtml(x.location || '장소 미상')} · ${escHtml(dateStr || '일정 미정')} ${confirmTag}</div>
+        <div class="reg-detail">${escHtml(x.focus || '')}</div>
         <div class="reg-meta" style="margin-top:3px;color:var(--ink3)">${escHtml(lastChecked)}</div>
+
+        <div class="expo-mgmt">
+          <div class="emg-row">
+            <span class="emg-label">상태</span>
+            <select class="emg-sel" onchange="setExpoStatus('${nm}',this.value)">${statusOpts}</select>
+          </div>
+          <div class="emg-row">
+            <span class="emg-label">사전등록 마감</span>
+            <input type="date" class="emg-date" value="${escHtml(md.regDeadline || '')}" onchange="setExpoDeadline('${nm}','reg',this.value)">
+            ${regDd !== null ? `<span class="emg-dd ${regDd < 0 ? 'dd-past' : regDd <= 7 ? 'dd-soon' : ''}">${ddLabel(regDd)}</span>` : ''}
+          </div>
+          <div class="emg-row">
+            <span class="emg-label">부스신청 마감</span>
+            <input type="date" class="emg-date" value="${escHtml(md.boothDeadline || '')}" onchange="setExpoDeadline('${nm}','booth',this.value)">
+            ${boothDd !== null ? `<span class="emg-dd ${boothDd < 0 ? 'dd-past' : boothDd <= 7 ? 'dd-soon' : ''}">${ddLabel(boothDd)}</span>` : ''}
+          </div>
+          <div class="emg-checks">${checks}</div>
+          <textarea class="emg-memo" placeholder="사후 메모 · 발굴한 제조사 · 팔로우업" onchange="saveExpoMemo('${nm}',this.value)">${escHtml(md.memo || '')}</textarea>
+        </div>
+
         <div class="reg-action">
           ${x.url ? `<a href="${escHtml(x.url)}" target="_blank" style="font-size:9px;color:var(--blue2)">${escHtml(x.srcLabel || '공식 홈페이지')} →</a>` : ''}
           ${v?.link ? ` <a href="${escHtml(v.link)}" target="_blank" style="font-size:9px;color:var(--blue2)">근거 기사 →</a>` : ''}
-          <button class="exp-confirm-btn" onclick="toggleExpoManualConfirm('${escJs(x.name)}')">${m ? '담당자 확인 취소' : '담당자 확인 처리'}</button>
+          <button class="exp-confirm-btn" onclick="toggleExpoManualConfirm('${nm}')">${m ? '담당자 확인 취소' : '담당자 확인 처리'}</button>
+          <button class="exp-confirm-btn" onclick="openExpoForm('${nm}')">편집</button>
+          <button class="exp-confirm-btn exp-del" onclick="deleteExpo('${nm}',${!!x._custom})">삭제</button>
         </div>
       </div>
     </details>`;

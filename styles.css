@@ -507,6 +507,47 @@ button { font-family: inherit; cursor: pointer; }
 .exp-chev { flex-shrink: 0; font-size: 9px; color: var(--ink3); transition: transform .15s; }
 .expo-card[open] .exp-chev { transform: rotate(180deg); }
 .expo-card .reg-body { cursor: default; }
+
+/* ── 박람회 관리 툴바 ── */
+.expo-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.ebtn-add, .ebtn-tool {
+  font-size: 10px; font-family: inherit; padding: 4px 10px; border-radius: var(--r); cursor: pointer;
+  border: .5px solid var(--bg3);
+}
+.ebtn-add { background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 600; }
+.ebtn-add:hover { background: var(--acc2); }
+.ebtn-tool { background: var(--w); color: var(--ink2); }
+.ebtn-tool:hover { background: var(--bg2); }
+.expo-soon { margin-left: auto; font-size: 9px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 10px; }
+
+/* ── 제목 상태·커스텀 배지 ── */
+.exp-status { flex-shrink: 0; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+.est-interest { background: #e0e7ff; color: #3730a3; }
+.est-join     { background: #dcfce7; color: #15803d; }
+.est-visit    { background: #cffafe; color: #0e7490; }
+.est-booth    { background: #fef3c7; color: #92500e; }
+.est-done     { background: var(--bg3); color: var(--ink3); }
+.exp-custom-tag { flex-shrink: 0; font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #fce7f3; color: #9d174d; }
+
+/* ── 실행 관리 영역 ── */
+.expo-mgmt { margin: 8px 0; padding: 8px 10px; background: var(--bg2); border-radius: var(--r); display: flex; flex-direction: column; gap: 6px; }
+.emg-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+.emg-label { width: 78px; flex-shrink: 0; color: var(--ink3); font-weight: 600; }
+.emg-sel, .emg-date { font-family: inherit; font-size: 10px; padding: 2px 6px; border: .5px solid var(--bg3); border-radius: 4px; background: var(--w); color: var(--ink); }
+.emg-dd { font-size: 9px; font-weight: 700; color: var(--ink3); padding: 1px 6px; border-radius: 3px; background: var(--bg3); }
+.emg-dd.dd-soon { background: #fef3c7; color: #b45309; }
+.emg-dd.dd-past { background: var(--bg3); color: var(--ink3); }
+.emg-checks { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 2px 0; }
+.emg-chk { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink2); cursor: pointer; }
+.emg-memo { width: 100%; min-height: 46px; font-family: inherit; font-size: 10px; padding: 5px 7px; border: .5px solid var(--bg3); border-radius: 5px; background: var(--w); color: var(--ink); resize: vertical; }
+.exp-del { color: var(--red); }
+
+/* ── 추가/편집 폼 ── */
+.ef-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 9px; }
+.ef-field > label { font-size: 10px; font-weight: 600; color: var(--ink2); }
+.ef-field.ef-check > label { flex-direction: row; display: flex; align-items: center; gap: 6px; font-weight: 400; }
+.ef-in { font-family: inherit; font-size: 12px; padding: 6px 8px; border: .5px solid var(--bg3); border-radius: 5px; background: var(--w); color: var(--ink); width: 100%; }
+.ef-actions { display: flex; gap: 8px; margin-top: 4px; }
 .exp-cat {
   flex-shrink: 0;
   font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
