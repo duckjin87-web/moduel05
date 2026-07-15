@@ -528,17 +528,13 @@ button { font-family: inherit; cursor: pointer; }
 .est-booth    { background: #fef3c7; color: #92500e; }
 .est-done     { background: var(--bg3); color: var(--ink3); }
 .exp-custom-tag { flex-shrink: 0; font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #fce7f3; color: #9d174d; }
+.exp-auto-tag { flex-shrink: 0; font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #dbeafe; color: #1e40af; }
 
 /* ── 실행 관리 영역 ── */
 .expo-mgmt { margin: 8px 0; padding: 8px 10px; background: var(--bg2); border-radius: var(--r); display: flex; flex-direction: column; gap: 6px; }
 .emg-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }
 .emg-label { width: 78px; flex-shrink: 0; color: var(--ink3); font-weight: 600; }
-.emg-sel, .emg-date { font-family: inherit; font-size: 10px; padding: 2px 6px; border: .5px solid var(--bg3); border-radius: 4px; background: var(--w); color: var(--ink); }
-.emg-dd { font-size: 9px; font-weight: 700; color: var(--ink3); padding: 1px 6px; border-radius: 3px; background: var(--bg3); }
-.emg-dd.dd-soon { background: #fef3c7; color: #b45309; }
-.emg-dd.dd-past { background: var(--bg3); color: var(--ink3); }
-.emg-checks { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 2px 0; }
-.emg-chk { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink2); cursor: pointer; }
+.emg-sel { font-family: inherit; font-size: 10px; padding: 2px 6px; border: .5px solid var(--bg3); border-radius: 4px; background: var(--w); color: var(--ink); }
 .emg-memo { width: 100%; min-height: 46px; font-family: inherit; font-size: 10px; padding: 5px 7px; border: .5px solid var(--bg3); border-radius: 5px; background: var(--w); color: var(--ink); resize: vertical; }
 .exp-del { color: var(--red); }
 
