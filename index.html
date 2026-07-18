@@ -144,6 +144,9 @@
   <span class="status-summary" id="statusSummary">수집 전</span>
 </div>
 
+<!-- ── 예측 스코어보드: 적중률·데이터 품질·앙상블 합의·판정 대기 ── -->
+<div class="scoreboard" id="scoreboard" style="display:none"></div>
+
 <!-- ── ZONE 0: 4대 신호 (카드 클릭 시 분석 근거 자료 모달 표시) ── -->
 <div class="z0" id="z0"></div>
 
@@ -156,7 +159,7 @@
       <button class="pred-period-tab active" data-period="6m">6개월 예측</button>
       <button class="pred-period-tab" data-period="1y">1년 예측</button>
     </div>
-    <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">예측 정확도 대시보드</button>
+    <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">정확도·실적 원장</button>
     <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
   </div>
   <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>

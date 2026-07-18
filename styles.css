@@ -291,6 +291,56 @@ button { font-family: inherit; cursor: pointer; }
 .bt-row-pct { flex: 0 0 36px; text-align: right; color: var(--ink2); font-weight: 600; }
 .bt-note { font-size: 9px; color: var(--ink3); margin-top: 8px; line-height: 1.6; }
 
+/* ═══ 예측 스코어보드 ═══ */
+.scoreboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+@media(max-width:900px){ .scoreboard { grid-template-columns: 1fr 1fr; } }
+.sb-tile { background: var(--w); border: .5px solid var(--bg3); border-radius: var(--r2); padding: 10px 13px; box-shadow: var(--s1); }
+.sb-tile.sb-click { cursor: pointer; }
+.sb-tile.sb-click:hover { box-shadow: var(--s2); }
+.sb-lb { font-size: 9px; font-weight: 700; letter-spacing: .07em; color: var(--ink3); text-transform: uppercase; }
+.sb-v { font-size: 21px; font-weight: 800; line-height: 1.25; margin-top: 2px; color: var(--ink); }
+.sb-vs { font-size: 12px; font-weight: 600; color: var(--ink3); }
+.sb-d { font-size: 9.5px; color: var(--ink2); margin-top: 2px; line-height: 1.45; }
+.sb-bar { height: 6px; border-radius: 3px; background: var(--bg3); margin-top: 6px; overflow: hidden; }
+.sb-bar b { display: block; height: 100%; border-radius: 3px; }
+
+/* ═══ 앙상블 합의·품질상한 배지 (예측 테이블) ═══ */
+.p-conf-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.agree-badge { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+.agb-hi  { background: #dcefe2; color: #2c6647; }
+.agb-mid { background: #f3ecd2; color: #7a6215; }
+.agb-lo  { background: var(--bg3); color: var(--ink3); }
+.cap-mark { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: #fdeaea; color: #9c3b3b; }
+
+/* ═══ 예측 실적 원장 ═══ */
+.ledger-sec { margin-top: 12px; border-top: .5px solid var(--bg3); padding-top: 10px; }
+.ledger-hd { font-size: 11px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }
+.ledger-sub { font-size: 9px; font-weight: 400; color: var(--ink3); margin-left: 6px; }
+.ledger-stat { font-size: 10.5px; color: var(--ink2); margin-bottom: 8px; }
+.lg-entry { border: .5px solid var(--bg3); border-radius: var(--r); background: var(--w); margin-bottom: 6px; overflow: hidden; }
+.lg-entry summary { cursor: pointer; list-style: none; padding: 7px 11px; font-size: 10.5px; font-weight: 600; color: var(--ink2); background: var(--bg2); display: flex; align-items: center; gap: 6px; }
+.lg-entry summary::-webkit-details-marker { display: none; }
+.lg-done { font-size: 9px; font-weight: 700; color: #2c6647; background: #dcefe2; padding: 1px 7px; border-radius: 8px; }
+.lg-due  { font-size: 9px; font-weight: 700; color: #7a4a10; background: #fdeecd; padding: 1px 7px; border-radius: 8px; }
+.lg-wait { font-size: 9px; font-weight: 700; color: var(--ink3); background: var(--bg3); padding: 1px 7px; border-radius: 8px; }
+.lg-items { padding: 6px 11px; display: flex; flex-direction: column; gap: 5px; }
+.lg-item { display: flex; align-items: center; gap: 8px; font-size: 10.5px; flex-wrap: wrap; }
+.lg-type { flex: 1; min-width: 180px; color: var(--ink); }
+.lg-type em { font-style: normal; color: var(--ink3); font-size: 9.5px; }
+.lg-auto { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+.lg-auto-y { background: #e3f0e8; color: #2c6647; }
+.lg-auto-n { background: var(--bg3); color: var(--ink3); }
+.lg-judge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 3px; }
+.lgj-hit  { background: #dcefe2; color: #2c6647; }
+.lgj-part { background: #f3ecd2; color: #7a6215; }
+.lgj-miss { background: #f4dddd; color: #8f3737; }
+.lgj-wait { background: var(--bg3); color: var(--ink3); }
+.lg-btns { display: flex; gap: 4px; }
+.lg-btn { font-size: 9px; font-weight: 700; font-family: inherit; padding: 2px 9px; border-radius: 3px; cursor: pointer; border: .5px solid var(--bg3); background: var(--w); }
+.lgb-hit:hover  { background: #dcefe2; border-color: #2c6647; color: #2c6647; }
+.lgb-part:hover { background: #f3ecd2; border-color: #7a6215; color: #7a6215; }
+.lgb-miss:hover { background: #f4dddd; border-color: #8f3737; color: #8f3737; }
+
 .ptable { width: 100%; border-collapse: collapse; }
 .ptable th {
   padding: 6px 12px;

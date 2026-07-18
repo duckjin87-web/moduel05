@@ -1779,11 +1779,50 @@ async function collectSociety() {
 function savePredHistory(predictions, period) {
   try {
     const hist = JSON.parse(ls('m5_history') || '[]');
-    const entry = { ts: Date.now(), period, predictions: predictions.map(p => ({rank:p.rank, type:p.type})) };
+    /* 같은 날 같은 기간의 재수집은 최신으로 대체(원장 중복 방지) */
+    const today = new Date().toDateString();
+    const dupIdx = hist.findIndex(h => h.period === period && new Date(h.ts).toDateString() === today && !h.judgments);
+    if (dupIdx >= 0) hist.splice(dupIdx, 1);
+    const entry = { ts: Date.now(), period, predictions: predictions.map(p => ({rank:p.rank, type:p.type, confidence:p.confidence})) };
     hist.unshift(entry);
-    /* 최근 12개 항목만 유지 */
-    ls('m5_history', JSON.stringify(hist.slice(0, 12)));
+    /* 원장 보존을 위해 24개 유지(판정 완료분 우선 보존) */
+    ls('m5_history', JSON.stringify(hist.slice(0, 24)));
   } catch {}
+}
+
+/* ════ 예측 실적 원장 — 판정(적중/부분/미스)·적중률 집계 ════
+   백테스트(자동 신호 재포착)는 보조 증거이고, 최종 판정은 담당자 클릭으로 확정한다.
+   판정 결과가 스코어보드의 '누적 예측 적중률' 원천 데이터가 된다. */
+function getLedgerHist() {
+  try { return JSON.parse(ls('m5_history') || '[]'); } catch { return []; }
+}
+function judgePrediction(entryTs, idx, verdict) {
+  try {
+    const hist = getLedgerHist();
+    const e = hist.find(h => h.ts === entryTs);
+    if (!e) return;
+    e.judgments = e.judgments || {};
+    e.judgments[idx] = { v: verdict, at: Date.now() };
+    ls('m5_history', JSON.stringify(hist));
+  } catch {}
+  const matured = backtestPredictions();
+  renderBacktestDashboard(matured);
+  renderScoreboard();
+  showToast(verdict === 'hit' ? '적중으로 판정 기록됨' : verdict === 'part' ? '부분 적중으로 기록됨' : '미스로 기록됨');
+}
+function ledgerStats() {
+  const hist = getLedgerHist();
+  let hit = 0, part = 0, miss = 0, pending = 0;
+  const now = Date.now();
+  hist.forEach(e => {
+    (e.predictions || []).forEach((p, i) => {
+      const j = e.judgments?.[i];
+      if (j) { if (j.v === 'hit') hit++; else if (j.v === 'part') part++; else miss++; }
+      else if (now - e.ts >= periodMaturityMs(e.period)) pending++;
+    });
+  });
+  const judged = hit + part + miss;
+  return { hit, part, miss, judged, pending, rate: judged ? Math.round((hit + part * 0.5) / judged * 100) : null };
 }
 
 function getRankChanges(predictions, period) {
@@ -1845,7 +1884,7 @@ function backtestPredictions() {
 function renderBacktestDashboard(matured) {
   const panel = document.getElementById('btDashPanel');
   if (!panel) return;
-  if (!matured.length) { panel.innerHTML = '<div class="bt-empty">아직 검증된(기간 도래) 예측이 없습니다.</div>'; return; }
+  if (!matured.length) { panel.innerHTML = '<div class="bt-empty">아직 검증된(기간 도래) 예측이 없습니다.</div>' + ledgerHtml(); return; }
   const rates = matured.map(h => h.total ? h.hits / h.total : 0);
   const avgRate = rates.reduce((s, x) => s + x, 0) / rates.length;
   const totalHits = matured.reduce((s, h) => s + h.hits, 0);
@@ -1870,7 +1909,95 @@ function renderBacktestDashboard(matured) {
       }).join('')}
     </div>
     <div class="bt-note">※ "적중"은 실매출 데이터가 아니라, 예측 시점 키워드가 검증 시점 모멘텀 신호(수출·구매·검색·뉴스)에서 다시 포착되는지를 보는 신호 일치도 지표입니다 — 완전한 정확도 측정이 아닙니다.</div>
+    ${ledgerHtml()}
   `;
+}
+
+/* 원장 렌더 — 회차별 예측 목록 + 자동 신호 재검 결과 + 판정 버튼/배지 */
+function ledgerHtml() {
+  const hist = getLedgerHist();
+  if (!hist.length) return '';
+  const now = Date.now();
+  const st = ledgerStats();
+  const stLine = st.judged
+    ? `누적 적중률 <b>${st.rate}%</b> (적중 ${st.hit} · 부분 ${st.part} · 미스 ${st.miss})${st.pending ? ` · <span style="color:var(--acc,#bf7b42)">판정 대기 ${st.pending}건</span>` : ''}`
+    : (st.pending ? `<span style="color:var(--acc,#bf7b42)">판정 대기 ${st.pending}건</span> — 아래에서 적중/부분/미스를 확정하면 적중률이 집계됩니다` : '판정 창이 도래한 예측이 아직 없습니다 — 기간이 차면 여기서 판정합니다');
+  const rows = hist.slice(0, 8).map(e => {
+    const matured = now - e.ts >= periodMaturityMs(e.period);
+    const dLeft = Math.ceil((e.ts + periodMaturityMs(e.period) - now) / 86400000);
+    const dateStr = new Date(e.ts).toLocaleDateString('ko-KR', { year:'2-digit', month:'2-digit', day:'2-digit' });
+    const items = (e.predictions || []).map((p, i) => {
+      const j = e.judgments?.[i];
+      const auto = e.details?.[i];
+      const autoTag = e.backtested
+        ? (auto?.hit ? '<span class="lg-auto lg-auto-y">신호 재포착</span>' : '<span class="lg-auto lg-auto-n">신호 무반응</span>')
+        : '';
+      let right;
+      if (j) {
+        right = j.v === 'hit' ? '<span class="lg-judge lgj-hit">적중</span>'
+              : j.v === 'part' ? '<span class="lg-judge lgj-part">부분</span>'
+              : '<span class="lg-judge lgj-miss">미스</span>';
+      } else if (matured) {
+        right = `<span class="lg-btns">
+          <button class="lg-btn lgb-hit" onclick="judgePrediction(${e.ts},${i},'hit')">적중</button>
+          <button class="lg-btn lgb-part" onclick="judgePrediction(${e.ts},${i},'part')">부분</button>
+          <button class="lg-btn lgb-miss" onclick="judgePrediction(${e.ts},${i},'miss')">미스</button>
+        </span>`;
+      } else {
+        right = `<span class="lg-judge lgj-wait">판정 D-${dLeft}</span>`;
+      }
+      return `<div class="lg-item">
+        <span class="lg-type">${p.rank}위 ${escHtml(p.type)}${p.confidence ? ` <em>${p.confidence}%</em>` : ''}</span>
+        ${autoTag}${right}
+      </div>`;
+    }).join('');
+    return `<details class="lg-entry"${(matured && !allJudged(e)) ? ' open' : ''}>
+      <summary>${dateStr} · ${PERIOD_LABEL[e.period] || e.period} 예측 ${e.predictions?.length || 0}건 ${matured ? (allJudged(e) ? '<span class="lg-done">판정 완료</span>' : '<span class="lg-due">판정 도래</span>') : `<span class="lg-wait">D-${dLeft}</span>`}</summary>
+      <div class="lg-items">${items}</div>
+    </details>`;
+  }).join('');
+  return `<div class="ledger-sec">
+    <div class="ledger-hd">예측 실적 원장 <span class="ledger-sub">자동 신호 재검은 보조 증거 — 최종 판정은 담당자 확정</span></div>
+    <div class="ledger-stat">${stLine}</div>
+    ${rows}
+  </div>`;
+}
+function allJudged(e) {
+  return (e.predictions || []).every((_, i) => e.judgments?.[i]);
+}
+
+/* ════ 예측 스코어보드 — "얼마나 맞혔고, 오늘 데이터는 얼마나 믿을 만한가" 상시 노출 ════ */
+function renderScoreboard() {
+  const el = document.getElementById('scoreboard');
+  if (!el) return;
+  const st = ledgerStats();
+  const q = computeDataQuality();
+  const cap = Math.round(55 + q.ratio * 45);
+  const ens = window._ensembleInfo;
+  const qColor = q.ratio >= 0.7 ? 'var(--grn)' : q.ratio >= 0.4 ? 'var(--yel)' : 'var(--red)';
+  el.innerHTML = `
+    <div class="sb-tile">
+      <div class="sb-lb">누적 예측 적중률</div>
+      <div class="sb-v" style="color:${st.rate !== null ? (st.rate >= 60 ? 'var(--grn)' : st.rate >= 40 ? 'var(--yel)' : 'var(--red)') : 'var(--ink3)'}">${st.rate !== null ? st.rate + '%' : '—'}</div>
+      <div class="sb-d">${st.judged ? `판정 ${st.judged}건 · 적중 ${st.hit} · 부분 ${st.part} · 미스 ${st.miss}` : '판정 완료 건 없음 — 원장에서 판정 시 집계'}</div>
+    </div>
+    <div class="sb-tile">
+      <div class="sb-lb">데이터 품질</div>
+      <div class="sb-v">${q.real}<span class="sb-vs">/${q.total}</span></div>
+      <div class="sb-bar"><b style="width:${Math.round(q.ratio * 100)}%;background:${qColor}"></b></div>
+      <div class="sb-d">${q.real < q.total ? `미수집·샘플 ${q.total - q.real}종 → 신뢰도 상한 ${cap}%` : '전 신호 실데이터 — 상한 없음'}</div>
+    </div>
+    <div class="sb-tile">
+      <div class="sb-lb">앙상블 합의</div>
+      <div class="sb-v">${ens ? `${ens.agreed}<span class="sb-vs">/${ens.top}</span>` : '—'}</div>
+      <div class="sb-d">${ens ? `3관점 독립 분석 중 2회 이상 일치한 유형 (${ens.runs}관점 성공)` : '수집 실행 시 3관점 교차검증 수행'}</div>
+    </div>
+    <div class="sb-tile${st.pending ? ' sb-click' : ''}"${st.pending ? ` onclick="document.getElementById('btnBtDash')?.click()"` : ''}>
+      <div class="sb-lb">판정 대기</div>
+      <div class="sb-v" style="color:${st.pending ? 'var(--acc)' : 'var(--ink3)'}">${st.pending}<span class="sb-vs">건</span></div>
+      <div class="sb-d">${st.pending ? '기간 도래 — 클릭해서 원장에서 판정하세요' : '판정 창이 도래한 예측 없음'}</div>
+    </div>`;
+  el.style.display = '';
 }
 
 async function collectBeautyRSS() {
@@ -2036,6 +2163,84 @@ async function collectGlobalExpoTrends() {
   } catch { window._expoErr = '수집 실패'; }
 }
 
+/* ════ 데이터 품질 게이지 + 신뢰도 상한(캡) ════
+   12개 신호 소스 중 "실데이터로 수집된" 비율을 산정. 샘플·미수집이 많을수록 예측
+   신뢰도에 상한을 걸어, 샘플로 만든 88%가 진짜 88%처럼 보이는 것을 구조적으로 차단. */
+function computeDataQuality() {
+  const items = [
+    ['기후 신호',        !!(SIG_DATA.climate && !SIG_DATA.climate._sample)],
+    ['사회 신호',        !!(SIG_DATA.society && !SIG_DATA.society._sample)],
+    ['경제 신호',        !!(SIG_DATA.economy && !SIG_DATA.economy._sample)],
+    ['문화 신호',        !!(SIG_DATA.culture && !SIG_DATA.culture._sample)],
+    ['검색 모멘텀',      !!(window._dlTrends && window._dlTrends.length)],
+    ['구매(쇼핑) 모멘텀', !!(window._salesTrends && window._salesTrends.length)],
+    ['수출 실적',        !!(window._exportTrends && window._exportTrends.length)],
+    ['뉴스 언급',        !!(window._newsTrends && window._newsTrends.length)],
+    ['뷰티 RSS',         !!(window._rssText && window._rssText.length > 100)],
+    ['식약처 공급',      !!(window._supplyTrends && window._supplyTrends.length)],
+    ['해외 박람회',      !!(window._expoTrends && window._expoTrends.length)],
+    ['기온 추세',        !!window._climateTrend],
+  ];
+  const real = items.filter(i => i[1]).length;
+  return { items, real, total: items.length, ratio: items.length ? real / items.length : 0 };
+}
+/* 상한식: 품질 100% → 100(무영향) · 50% → 78 · 0%(전부 샘플) → 55 */
+function applyQualityCap(preds) {
+  const q = computeDataQuality();
+  const cap = Math.round(55 + q.ratio * 45);
+  (preds || []).forEach(p => {
+    if ((p.confidence || 0) > cap) { p.confidence = cap; p._capped = true; }
+  });
+  window._dataQuality = q;
+  window._confCap = cap;
+  return preds;
+}
+
+/* ════ 앙상블 교차검증 — 3관점 독립 분석 후 합의 병합 ════
+   같은 데이터를 '균형/수요 우선/공급·규제 우선' 3가지 관점으로 독립 분석시키고,
+   유형명 토큰이 겹치는 예측을 한 군(cluster)으로 묶어 "몇 개 관점이 동의했는가(agree)"를
+   산출. 합의 많은 순 → 신뢰도 순으로 TOP5 승격. 단일 호출의 환각·편향을 제거한다. */
+function mergeEnsemble(runs) {
+  const tokensOf = t => extractSearchKw(t).split(' ').filter(w => w.length >= 2);
+  const similar = (a, b) => { const tb = new Set(tokensOf(b)); return tokensOf(a).some(w => tb.has(w)); };
+  const clusters = [];
+  runs.forEach((preds, ri) => (preds || []).forEach(p => {
+    if (!p || !p.type) return;
+    const c = clusters.find(c => similar(c.rep.type, p.type));
+    if (c) { c.members.push(p); c.runs.add(ri); }
+    else clusters.push({ rep: p, members: [p], runs: new Set([ri]) });
+  }));
+  return clusters.map(c => ({
+    ...c.rep,
+    confidence: Math.round(c.members.reduce((s, m) => s + (m.confidence || 0), 0) / c.members.length),
+    agree: c.runs.size,
+    agreeOf: runs.length,
+  }))
+  .sort((a, b) => (b.agree - a.agree) || (b.confidence - a.confidence))
+  .slice(0, 5)
+  .map((p, i) => ({ ...p, rank: i + 1 }));
+}
+
+/* Gemini 1회 호출 — 성공 시 predictions 배열, 실패 시 {status, errMsg}를 throw */
+async function callGeminiPredict(model, key, fullPrompt) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 30000);
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key.trim())}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{role:'user',parts:[{text:fullPrompt}]}], generationConfig:{maxOutputTokens:1800,temperature:0.3} }),
+      signal: ctrl.signal }
+  );
+  clearTimeout(tid);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data?.error?.message || `HTTP ${r.status}`); e.status = r.status; throw e; }
+  const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(txt);
+  const preds = parsed.predictions || [];
+  if (!preds.length) throw new Error('빈 예측 응답');
+  return preds;
+}
+
 /* ════ Gemini 예측 분석 ════ */
 async function runGeminiPrediction(period) {
   period = period || currentPeriod;
@@ -2135,30 +2340,36 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail
 [필수 JSON 형식]
 {"predictions":[{"rank":1,"type":"정확한 화장품 유형명","packaging":"권장 패키징 형태","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 30000);
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key.trim())}`,
-      { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:1800,temperature:0.3} }),
-        signal: ctrl.signal }
+    /* 앙상블 3관점 — 동일 데이터를 서로 다른 가중 관점으로 독립 분석시켜 합의를 취한다 */
+    const PERSPECTIVES = [
+      { key: '균형',   instr: '' },
+      { key: '수요',   instr: '\n[관점 지시 — 수요 우선]\n이번 분석은 소비자 수요 신호(검색·구매클릭·뉴스·수출)를 최우선 가중하는 관점으로 수행하라. 공급·규제는 보조 참고.' },
+      { key: '공급규제', instr: '\n[관점 지시 — 공급·규제 우선]\n이번 분석은 공급(식약처 등록 제형)·규제 캘린더·설비 관점을 최우선 가중하는 관점으로 수행하라. 소비자 검색·클릭은 보조 참고.' },
+    ];
+    const settled = await Promise.allSettled(
+      PERSPECTIVES.map(p => callGeminiPredict(model, key, prompt + p.instr))
     );
-    clearTimeout(tid);
-    const data = await r.json();
-    if (!r.ok) {
-      const errMsg = data?.error?.message || `HTTP ${r.status}`;
-      if (r.status === 429 && (errMsg.includes('limit: 0') || errMsg.includes('free_tier'))) {
+    const okRuns = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+    if (!okRuns.length) {
+      /* 전 관점 실패 — 대표 오류로 기존 토스트 규칙 유지 */
+      const firstErr = settled.find(s => s.status === 'rejected')?.reason;
+      const errMsg = firstErr?.message || '';
+      if (firstErr?.status === 429 && (errMsg.includes('limit: 0') || errMsg.includes('free_tier'))) {
         showToast('Gemini 쿼터 0 오류 — API 설정에서 모델을 gemini-2.5-flash-lite로 변경하세요 (AQ키 무료 지원)');
-      } else if (r.status === 429) {
+      } else if (firstErr?.status === 429) {
         showToast(`Gemini 요청 한도 초과 — 잠시 후 재시도하세요`);
-      } else {
-        showToast(`Gemini 오류 (${r.status}) — 샘플 예측 사용`);
+      } else if (firstErr?.status) {
+        showToast(`Gemini 오류 (${firstErr.status}) — 샘플 예측 사용`);
       }
-      throw new Error(errMsg);
+      throw (firstErr || new Error('전 관점 호출 실패'));
     }
-    const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(txt);
-    PREDICTIONS_CACHE[period] = parsed.predictions || [];
+    const merged = applyQualityCap(mergeEnsemble(okRuns));
+    window._ensembleInfo = {
+      runs: okRuns.length,
+      agreed: merged.filter(p => (p.agree || 0) >= 2).length,
+      top: merged.length,
+    };
+    PREDICTIONS_CACHE[period] = merged;
     PREDICTIONS = PREDICTIONS_CACHE[period];
     return true;
   } catch (e) {
@@ -2185,8 +2396,10 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail
       {rank:4,type:'남성 올인원·선스틱 (휴가철)',packaging:'스틱 몰딩 15g',confidence:66,tech:'스틱 성형 + 멀티기능',channel:['편의점','남성 채널'],season:'향후 8주',signals:{climate:0.4,society:0.2,economy:0.1,culture:0.3}},
       {rank:5,type:'미스트·픽서 (지속력·쿨링)',packaging:'스프레이 50~100ml',confidence:60,tech:'분무 충진 + 쿨링·픽싱',channel:['올리브영','다이소'],season:'향후 6주',signals:{climate:0.45,society:0.05,economy:0.1,culture:0.4}},
     ];
-    PREDICTIONS_CACHE[period] = period === '1y' ? fallback1y : period === '2m' ? fallback2m : fallback6m;
+    /* 폴백도 품질 상한을 그대로 적용 — 샘플 기반 수치가 실측처럼 보이지 않게 */
+    PREDICTIONS_CACHE[period] = applyQualityCap(period === '1y' ? fallback1y : period === '2m' ? fallback2m : fallback6m);
     PREDICTIONS = PREDICTIONS_CACHE[period];
+    window._ensembleInfo = null;   /* 앙상블 미수행(샘플) */
     showToast('Gemini 연결 실패 — 샘플 예측 사용');
     return true;
   }
@@ -2245,7 +2458,7 @@ function renderZ1() {
   const matured = backtestPredictions();
   const btBtn = document.getElementById('btnBtDash');
   if (btBtn) {
-    btBtn.style.display = matured.length ? '' : 'none';
+    btBtn.style.display = (matured.length || getLedgerHist().length) ? '' : 'none';
     btBtn.onclick = () => {
       const panel = document.getElementById('btDashPanel');
       const show = panel.style.display === 'none';
@@ -2301,7 +2514,7 @@ function renderZ1() {
           <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
           <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
           <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
-          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div><button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">🔍 근거 보기</button></td>
+          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div><div class="p-conf-tags">${p.agree ? `<span class="agree-badge ${p.agree >= (p.agreeOf || 3) ? 'agb-hi' : p.agree >= 2 ? 'agb-mid' : 'agb-lo'}" title="3관점 독립 분석 중 ${p.agree}개 관점 일치">합의 ${p.agree}/${p.agreeOf || 3}</span>` : ''}${p._capped ? `<span class="cap-mark" title="데이터 품질(실데이터 비율)에 따른 신뢰도 상한 적용됨">품질상한▼</span>` : ''}</div><button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">🔍 근거 보기</button></td>
           <td><div class="pchips">${chips}</div></td>
           <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
           <td><div class="p-season">${escHtml(p.season)}</div></td>
@@ -3066,6 +3279,7 @@ async function collectAll() {
 
   /* IMP-04: 보고서 자동 생성 */
   genReport();
+  renderScoreboard();
 
   btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
   showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
@@ -3710,6 +3924,7 @@ function init() {
   renderZ1();
   renderZ3();
   renderZ4();
+  renderScoreboard();
 
   const now = new Date();
   document.getElementById('hdPeriod').textContent = `기준: ${now.getFullYear()}년 ${now.getMonth() + 1}월`;
@@ -3782,6 +3997,7 @@ function init() {
         } else {
           renderZ0();
         }
+        renderScoreboard();   /* 복원된 신호 기준으로 품질 게이지 갱신 */
       }
     } catch {}
   }
