@@ -337,6 +337,42 @@ button { font-family: inherit; cursor: pointer; }
 .radar-item:hover { text-decoration: underline; }
 .radar-note { color: var(--ink3); font-size: 9px; }
 
+/* ═══ 소싱 퍼널 보드 ═══ */
+.funnel-board { padding: 11px 13px; border-top: .5px solid var(--bg3); }
+.fb-hd { font-size: 11px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
+.fb-sub { font-size: 9px; font-weight: 400; color: var(--ink3); margin-left: 6px; }
+.fb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media(max-width:900px){ .fb-grid { grid-template-columns: 1fr 1fr; } }
+.fb-tile { border-radius: var(--r); padding: 9px 12px; color: #fff; }
+.fb-n { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.fb-l { font-size: 10px; font-weight: 600; opacity: .95; }
+.fb-r { font-size: 9px; opacity: .8; margin-top: 1px; }
+.fb-evals { margin-top: 9px; display: flex; flex-direction: column; gap: 4px; }
+.fb-eval { display: flex; align-items: center; gap: 8px; font-size: 10.5px; background: var(--bg2); border: .5px solid var(--bg3); border-radius: 5px; padding: 4px 9px; }
+.fb-eval-name { flex: 1; color: var(--ink); font-weight: 600; }
+.fb-stage { font-size: 9px; font-weight: 700; font-family: inherit; padding: 2px 9px; border-radius: 8px; cursor: pointer; border: none; }
+.fb-stage.st-eval { background: var(--bg3); color: var(--ink2); }
+.fb-stage.st-meet { background: #dde7f5; color: #2a4a7f; }
+.fb-stage.st-deal { background: #dcefe2; color: #2c6647; }
+.fb-del { font-size: 11px; font-family: inherit; border: none; background: none; color: var(--ink3); cursor: pointer; padding: 0 3px; }
+.fb-del:hover { color: var(--red); }
+
+/* ═══ 워치독 배너 ═══ */
+.watchdog-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 10.5px; color: #7a4a10; background: #fdf3d9; border: .5px solid #ecd9a8;
+  border-radius: var(--r); padding: 7px 13px; margin-bottom: 10px;
+}
+.watchdog-bar b { font-size: 9px; font-weight: 800; color: #fff; background: var(--acc); padding: 1px 7px; border-radius: 3px; }
+.wd-close { margin-left: auto; font-size: 9px; font-family: inherit; border: .5px solid #ecd9a8; background: var(--w); color: var(--ink3); border-radius: 3px; padding: 2px 8px; cursor: pointer; }
+
+/* ═══ 주간 모멘텀 아카이브 ═══ */
+.cy-archive { padding: 8px 13px 11px; border-top: .5px solid var(--bg3); display: flex; flex-direction: column; gap: 5px; }
+.cya-row { display: flex; align-items: center; gap: 10px; font-size: 10px; flex-wrap: wrap; }
+.cya-date { font-weight: 700; color: var(--ink3); font-size: 9.5px; min-width: 74px; }
+.cya-kw { color: var(--ink2); background: var(--bg2); border: .5px solid var(--bg3); border-radius: 8px; padding: 1px 8px; }
+.cya-empty { font-size: 10px; color: var(--ink3); }
+
 /* ═══ 예측 실적 원장 ═══ */
 .ledger-sec { margin-top: 12px; border-top: .5px solid var(--bg3); padding-top: 10px; }
 .ledger-hd { font-size: 11px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }

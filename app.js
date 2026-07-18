@@ -2002,6 +2002,94 @@ function renderScoreboard() {
   el.style.display = '';
 }
 
+/* ════ 소싱 퍼널 — 예측 → TRACK B 후보 → 등록평가 → 미팅·실사 전환 추적 ════
+   "예측이 실제 소싱 성과로 이어지는가"를 숫자로 답한다. 등록평가 항목에는
+   단계(평가중→미팅·실사→계약) 순환 버튼을 제공(eval_pending의 stage 필드). */
+const EVAL_STAGES = [['eval', '평가중'], ['meet', '미팅·실사'], ['deal', '계약']];
+function funnelData() {
+  const now = Date.now();
+  const types = new Set();
+  getLedgerHist().forEach(e => {
+    if (now - e.ts <= 90 * 86400000) (e.predictions || []).forEach(p => types.add(extractSearchKw(p.type)));
+  });
+  let trackb = 0;
+  try { trackb = JSON.parse(ls('m5_trackb_seen') || '[]').length; } catch {}
+  const evals = getEvalList();
+  const meet = evals.filter(e => e.stage === 'meet' || e.stage === 'deal').length;
+  return { types: types.size, trackb, evals: evals.length, meet };
+}
+function cycleEvalStage(name) {
+  const list = getEvalList();
+  const it = list.find(e => e.name === name);
+  if (!it) return;
+  const idx = EVAL_STAGES.findIndex(([k]) => k === (it.stage || 'eval'));
+  it.stage = EVAL_STAGES[(idx + 1) % EVAL_STAGES.length][0];
+  ls('eval_pending', JSON.stringify(list));
+  renderFunnel();
+}
+function removeEvalItem(name) {
+  ls('eval_pending', JSON.stringify(getEvalList().filter(e => e.name !== name)));
+  renderFunnel();
+}
+function renderFunnel() {
+  const el = document.getElementById('funnelBoard');
+  if (!el) return;
+  const f = funnelData();
+  if (!f.types && !f.trackb && !f.evals) { el.style.display = 'none'; return; }
+  const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const evals = getEvalList();
+  const stageLb = s => (EVAL_STAGES.find(([k]) => k === (s || 'eval')) || [, '평가중'])[1];
+  el.innerHTML = `
+    <div class="fb-hd">소싱 퍼널 <span class="fb-sub">최근 90일 예측 → 발굴 → 평가 → 미팅·실사 전환</span></div>
+    <div class="fb-grid">
+      <div class="fb-tile" style="background:var(--acc)"><div class="fb-n">${f.types}</div><div class="fb-l">예측 유형</div><div class="fb-r">최근 90일</div></div>
+      <div class="fb-tile" style="background:var(--teal)"><div class="fb-n">${f.trackb}</div><div class="fb-l">TRACK B 후보</div><div class="fb-r">누적 발굴</div></div>
+      <div class="fb-tile" style="background:var(--blue)"><div class="fb-n">${f.evals}</div><div class="fb-l">등록평가</div><div class="fb-r">전환 ${pct(f.evals, f.trackb)}</div></div>
+      <div class="fb-tile" style="background:var(--pur)"><div class="fb-n">${f.meet}</div><div class="fb-l">미팅·실사+</div><div class="fb-r">전환 ${pct(f.meet, f.evals)}</div></div>
+    </div>
+    ${evals.length ? `<div class="fb-evals">${evals.slice(0, 10).map(e => `
+      <div class="fb-eval">
+        <span class="fb-eval-name">${escHtml(e.name)}</span>
+        <button class="fb-stage st-${e.stage || 'eval'}" onclick="cycleEvalStage('${escJs(e.name)}')" title="클릭 시 다음 단계로">${stageLb(e.stage)}</button>
+        <button class="fb-del" onclick="removeEvalItem('${escJs(e.name)}')" title="목록에서 제거">×</button>
+      </div>`).join('')}</div>` : ''}`;
+  el.style.display = '';
+}
+
+/* ════ 임계값 워치독 — 모멘텀 문턱 초과 시 접속 배너 (서버 없음 → 푸시 아닌 접속 시 알림) ════ */
+function checkWatchdog() {
+  const el = document.getElementById('watchdogBar');
+  if (!el) return;
+  const thr = +(ls('m5_watch_threshold') || 25);
+  const today = new Date().toISOString().slice(0, 10);
+  if (ls('m5_watch_dismiss') === today) { el.style.display = 'none'; return; }
+  const hits = [];
+  (window._dlTrends || []).forEach(t => { if ((t.delta ?? 0) >= thr) hits.push(`'${t.name}' 검색 +${t.delta}%`); });
+  (window._salesTrends || []).forEach(t => { if ((t.delta ?? 0) >= thr) hits.push(`'${t.name}' 구매클릭 +${t.delta}%`); });
+  if (!hits.length) { el.style.display = 'none'; return; }
+  el.innerHTML = `<b>워치독</b> 모멘텀 문턱(+${thr}%) 초과 ${hits.length}건 — ${hits.slice(0, 3).map(escHtml).join(' · ')}
+    <button class="wd-close" onclick="ls('m5_watch_dismiss','${today}');document.getElementById('watchdogBar').style.display='none'">오늘 그만 보기</button>`;
+  el.style.display = '';
+}
+
+/* ════ 주간 모멘텀 아카이브 — 스냅샷 타임라인(회차별 상위 변동) ════ */
+function toggleMomentumArchive() {
+  const el = document.getElementById('cyArchive');
+  if (!el) return;
+  if (el.style.display !== 'none') { el.style.display = 'none'; return; }
+  let hist = [];
+  try { hist = JSON.parse(ls('m5_momentum_hist') || '[]'); } catch {}
+  if (!hist.length) { el.innerHTML = '<div class="cya-empty">아직 축적된 스냅샷이 없습니다 — [전체 수집 실행] 시 자동 축적됩니다.</div>'; el.style.display = ''; return; }
+  el.innerHTML = hist.slice(0, 12).map(h => {
+    const movers = h.items.filter(i => i.delta !== undefined && i.delta !== null)
+      .sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0)).slice(0, 4);
+    return `<div class="cya-row"><span class="cya-date">${escHtml(h.date)}</span>${
+      movers.map(m => `<span class="cya-kw">${escHtml(m.name)} <b class="${m.delta >= 0 ? 'cy-up' : 'cy-dn'}">${m.delta >= 0 ? '+' : ''}${m.delta}%</b></span>`).join('')
+    }</div>`;
+  }).join('');
+  el.style.display = '';
+}
+
 async function collectBeautyRSS() {
   /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
   const feeds = [
@@ -2244,6 +2332,7 @@ function renderLifecycle() {
   };
   el.innerHTML = `
     <div class="zone-hd"><div class="zone-title">트렌드 라이프사이클 <span class="ztag">주간 기울기 기반 자동 분류 · 태동·성장만 예측 후보</span></div>
+      <button class="btn-hd btn-bt-toggle" onclick="toggleMomentumArchive()">주간 아카이브</button>
       <span class="zmodel">검색+구매+뉴스+수출 모멘텀 교차</span></div>
     <div class="cy-grid">
       ${COLS.map(([key, name, sub, cls]) => `
@@ -2251,7 +2340,8 @@ function renderLifecycle() {
           <div class="cy-col-hd">${name} <em>${sub}</em></div>
           ${st[key].slice(0, 5).map(fmt).join('') || '<div class="cy-none">해당 없음</div>'}
         </div>`).join('')}
-    </div>`;
+    </div>
+    <div id="cyArchive" class="cy-archive" style="display:none"></div>`;
   el.style.display = '';
 }
 
@@ -2742,6 +2832,7 @@ async function searchManufacturers(pred) {
     : mfrDB.sort((a, b) => (b.certs || []).length - (a.certs || []).length);
   MATCH_RESULTS.trackA = sorted.slice(0, 6);
   MATCH_RESULTS.trackB = await findNewManufacturers(pred.type, pred.tech);
+  renderFunnel();   /* 신규처 발굴 누적이 갱신됐으므로 퍼널 재집계 */
 }
 
 /* 회사명 정규화 — 법인 표기·공백 제거 (중복 판정·DB 대조용) */
@@ -3073,6 +3164,12 @@ JSON만 출력:
       });
     } catch {}
   }
+  /* 소싱 퍼널 집계용 — 이번 탐색에서 발굴된 신규처 후보를 누적 기록(중복 제거) */
+  try {
+    const seen = new Set(JSON.parse(ls('m5_trackb_seen') || '[]'));
+    top.forEach(c => { const n = normCompanyName(c.name); if (n) seen.add(n); });
+    ls('m5_trackb_seen', JSON.stringify([...seen].slice(-500)));
+  } catch {}
   return top;
 }
 
@@ -3335,6 +3432,7 @@ function addToEvalList(idx) {
   ls('eval_pending', JSON.stringify(list));
   const btn = document.getElementById('eval-btn-' + idx);
   if (btn) { btn.textContent = '추가됨'; btn.classList.add('added'); }
+  renderFunnel();
   showToast(`"${name}" 등록평가 리스트 추가 (TAB04 연동)`);
 }
 
@@ -3468,6 +3566,8 @@ async function collectAll() {
   /* IMP-04: 보고서 자동 생성 */
   genReport();
   renderScoreboard();
+  renderFunnel();
+  checkWatchdog();
 
   btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
   showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
@@ -4113,6 +4213,7 @@ function init() {
   renderZ3();
   renderZ4();
   renderScoreboard();
+  renderFunnel();
 
   const now = new Date();
   document.getElementById('hdPeriod').textContent = `기준: ${now.getFullYear()}년 ${now.getMonth() + 1}월`;
@@ -4186,6 +4287,7 @@ function init() {
           renderZ0();
         }
         renderScoreboard();   /* 복원된 신호 기준으로 품질 게이지 갱신 */
+        checkWatchdog();      /* 복원된 모멘텀 기준으로 문턱 초과 배너 */
       }
     } catch {}
   }
