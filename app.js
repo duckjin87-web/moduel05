@@ -229,6 +229,7 @@ const K = {
   naverSec:() => ls('naver_sec')   || '',
   ecos:    () => ls('ecos_key')    || '',
   kipris:  () => ls('kipris_key')  || '',
+  youtube: () => ls('youtube_key') || '',
 };
 
 function saveKey(type) {
@@ -261,6 +262,10 @@ function saveKey(type) {
     const v = document.getElementById('k-kipris').value.trim();
     if (v) { ls('kipris_key', v); setStatus('st-kipris', '설정됨', true); showToast('KIPRIS 키 저장됨'); }
   }
+  if (type === 'youtube') {
+    const v = document.getElementById('k-youtube').value.trim();
+    if (v) { ls('youtube_key', v); setStatus('st-youtube', '설정됨', true); showToast('YouTube 키 저장됨'); }
+  }
 }
 
 function setStatus(id, txt, ok) {
@@ -274,6 +279,7 @@ function loadKeys() {
   if (K.naverID()) { setStatus('st-naver', '설정됨', true); }
   if (K.ecos())   { setStatus('st-ecos', '설정됨', true); }
   if (K.kipris()) { setStatus('st-kipris', '설정됨', true); }
+  if (K.youtube()) { setStatus('st-youtube', '설정됨', true); }
   const mSel = document.getElementById('gemini-model');
   if (mSel && K.model()) mSel.value = K.model();
 }
@@ -893,6 +899,15 @@ function buildPredEvidenceHtml(idx) {
   let lead = '';
   lead += trendListHtml('공급 규모 — 식약처 등록 화장품 제형별 품목 수', (window._supplyTrends || []).map(t => ({ name: t.name + (t.recent ? `(신규 ${t.recent})` : ''), count: t.count })), 'count');
   lead += trendListHtml('해외 박람회 선행 트렌드(최근 60일 보도 키워드)', (window._expoTrends || []).map(t => ({ name: t.name, count: t.count })), 'count');
+  lead += trendListHtml('YouTube 콘텐츠 모멘텀(최근 30일 vs 직전 30일)', window._ytTrends);
+  lead += trendListHtml('글로벌 검색 모멘텀(Google Trends·미국)', window._gtrends);
+  lead += trendListHtml('해외 K뷰티 커뮤니티 언급(Reddit·최근 1개월)', (window._reddit || []).map(t => ({ name: t.name, count: t.count })), 'count');
+  /* 리테일 실측 앵커 — 실구매·실사용 공식 리포트(연간 정적 참조) */
+  if (RETAIL_ANCHORS.length) {
+    lead += `<div class="gm-block"><div class="gm-block-title">리테일 실측 앵커 (실구매·실사용 공식 리포트 — 연간)</div><ul class="gm-list">${
+      RETAIL_ANCHORS.map(a => `<li><b>${escHtml(a.src)}</b> (${escHtml(a.basis)}): ${escHtml(a.themes.join(' · '))} — <a class="gm-link" href="${escHtml(a.url)}" target="_blank">${escHtml(a.srcLabel)} →</a></li>`).join('')
+    }</ul></div>`;
+  }
   /* 규제 D-day */
   const nowD = new Date();
   const regs = REGS.map(r => {
@@ -1450,6 +1465,73 @@ const NEWS_TREND_QUERIES = ['화장품 신제품', '뷰티 트렌드', '더마 �
    국내보다 6~12개월 앞선 선행 트렌드로 활용. 박람회 사이트는 API·CORS가 없어 직접
    수집 불가하므로, 박람회를 다룬 최근 보도(네이버뉴스 최신순)를 검색해 키워드를 추출.
    비수기엔 박람회 직접 보도가 적어 마지막 쿼리(글로벌 일반 트렌드)로 자연 폴백된다. */
+/* ════ 리테일 실측 앵커 — 실구매·실사용 데이터 기반 연간 공개 리포트 (정적 참조) ════
+   검색·클릭은 '관심'이지만 이 앵커는 '실제 팔리고 쓰인' 데이터의 공식 집계 결과다.
+   연 1~2회 발표 시 이 상수만 갱신하면 됨(REGS와 동일 운영 방식). 예측 프롬프트의
+   검증 앵커 + 근거 모달 + 보고서에 반영된다. */
+const RETAIL_ANCHORS = [
+  { src: '올리브영 어워즈 2025', date: '2025.11', basis: '연간 실구매 데이터 1.8억 건 · 40개 부문',
+    themes: ['인디 브랜드 강세(수상작 다수가 인디)', '더마·선케어·베이스 부문 세분화', 'K뷰티·웰니스 통합 트렌드'],
+    url: 'https://corp.oliveyoung.com/ko/trend/insight-studio/8', srcLabel: '올리브영 인사이트 스튜디오' },
+  { src: '화해 2026 뷰티 트렌드 리포트', date: '2025.08', basis: '실사용 리뷰 940만 건 · 제품 38만 개',
+    themes: ['하이퍼 감각 케어(사용감·향 중시)', '고기능 미니멀리즘(성분 압축)', '안심 진정뷰티(저자극 검증)'],
+    url: 'https://business.hwahae.co.kr/insight/trendreport-2026/', srcLabel: '화해 비즈니스 인사이트' },
+];
+
+/* ════ YouTube 콘텐츠 모멘텀 — 뷰티 키워드 영상 업로드 속도 (공식 무료 API·CORS 허용) ════
+   최근 30일 vs 직전 30일 검색결과 수 비교 → 콘텐츠 생산 모멘텀. 검색(관심)·클릭(구매의도)
+   과 다른 '크리에이터 콘텐츠' 축을 문화 신호에 추가. search.list 100유닛×16회 ≈ 1,600유닛
+   (일 한도 10,000 내 여유). */
+const YT_KEYWORDS = ['선크림', '선세럼', '앰플', '토너패드', '쿠션', '립밤', '클렌징', '두피케어'];
+async function collectYouTubeTrends() {
+  window._ytTrends = null;
+  window._ytErr = null;
+  const key = K.youtube();
+  if (!key) { window._ytErr = 'YouTube 키 미설정'; return; }
+  try {
+    const now = Date.now();
+    const iso = ms => new Date(ms).toISOString();
+    const cnt = async (q, fromMs, toMs) => {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=id&type=video&maxResults=1&q=${encodeURIComponent(q + ' 화장품')}` +
+        `&publishedAfter=${encodeURIComponent(iso(fromMs))}&publishedBefore=${encodeURIComponent(iso(toMs))}&key=${encodeURIComponent(key)}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if (!r.ok) throw Object.assign(new Error(j?.error?.message || `HTTP ${r.status}`), { status: r.status });
+      return j?.pageInfo?.totalResults ?? 0;
+    };
+    const D30 = 30 * 86400000;
+    const results = await Promise.all(YT_KEYWORDS.map(async kw => {
+      try {
+        const [recent, prev] = await Promise.all([cnt(kw, now - D30, now), cnt(kw, now - 2 * D30, now - D30)]);
+        const delta = prev > 0 ? Math.round((recent - prev) / prev * 100) : (recent > 0 ? 100 : 0);
+        return { name: kw, delta, recent };
+      } catch (e) { throw e; }
+    })).catch(e => { window._ytErr = e.status === 403 ? '쿼터 초과 또는 키 미승인(403)' : (e.message || '호출 실패'); return null; });
+    if (!results) return;
+    const trends = results.filter(r => r.recent > 0).sort((a, b) => b.delta - a.delta);
+    window._ytTrends = trends.length ? trends : null;
+    if (!trends.length) window._ytErr = '영상 검색결과 0건';
+  } catch { window._ytErr = '수집 실패'; }
+}
+
+/* ════ 서버 수집 선행신호 로더 — Google Trends(글로벌 검색)·Reddit(해외 커뮤니티) ════
+   두 소스는 브라우저에서 직접 못 가져온다(비공식 API·CORS 차단) → GitHub Actions가
+   data/trends.json에 함께 수집해 두면 여기서 same-origin으로 읽는다. 라이브 수집
+   모드에서도 항상 로드(신선도 8일 이내만 채택). */
+async function loadServerLeads() {
+  window._gtrends = window._gtrends || null;
+  window._reddit = window._reddit || null;
+  try {
+    const r = await fetch('data/trends.json', { cache: 'no-store' });
+    if (!r.ok) return;
+    const j = await r.json();
+    const ageDays = (Date.now() - new Date(j.collectedAt).getTime()) / 86400000;
+    if (isNaN(ageDays) || ageDays > 8) return;
+    if (Array.isArray(j.gtrendsTrends) && j.gtrendsTrends.length) window._gtrends = j.gtrendsTrends;
+    if (Array.isArray(j.redditTrends) && j.redditTrends.length) window._reddit = j.redditTrends;
+  } catch {}
+}
+
 const GLOBAL_EXPO_QUERIES = [
   'Cosmoprof 화장품', '코스모프로프 뷰티', 'in-cosmetics 트렌드',
   'Cosmopack 패키징', '글로벌 화장품 트렌드',
@@ -2264,6 +2346,9 @@ function recordMomentumSnapshot() {
     (window._salesTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'shop' }));
     (window._exportTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'export' }));
     (window._newsTrends || []).forEach(t => items.push({ name: t.name, count: t.count, src: 'news' }));
+    (window._ytTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'youtube' }));
+    (window._gtrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'gtrends' }));
+    (window._reddit || []).forEach(t => items.push({ name: t.name, count: t.count, src: 'reddit' }));
     if (!items.length) return;
     const hist = JSON.parse(ls('m5_momentum_hist') || '[]');
     const today = new Date().toISOString().slice(0, 10);
@@ -2287,6 +2372,9 @@ function computeLifecycle() {
   (window._salesTrends || []).forEach(t => add(t.name, t.delta, 'shop'));
   (window._exportTrends || []).forEach(t => add(t.name, t.delta, 'export'));
   (window._newsTrends || []).forEach(t => add(t.name, null, 'news', t.count));
+  (window._ytTrends || []).forEach(t => add(t.name, t.delta, 'youtube'));
+  (window._gtrends || []).forEach(t => add(t.name, t.delta, 'gtrends'));
+  (window._reddit || []).forEach(t => add(t.name, null, 'reddit', t.count));
   const list = Object.values(cur);
   if (!list.length) return null;
   /* 이전 스냅샷(7일 이상 전)에서 같은 키워드의 delta → 기울기 */
@@ -2431,6 +2519,9 @@ function computeDataQuality() {
     ['식약처 공급',      !!(window._supplyTrends && window._supplyTrends.length)],
     ['해외 박람회',      !!(window._expoTrends && window._expoTrends.length)],
     ['기온 추세',        !!window._climateTrend],
+    ['YouTube 모멘텀',   !!(window._ytTrends && window._ytTrends.length)],
+    ['글로벌 검색(GTrends)', !!(window._gtrends && window._gtrends.length)],
+    ['해외 커뮤니티(Reddit)', !!(window._reddit && window._reddit.length)],
   ];
   const real = items.filter(i => i[1]).length;
   return { items, real, total: items.length, ratio: items.length ? real / items.length : 0 };
@@ -2559,6 +2650,26 @@ async function runGeminiPrediction(period) {
           : '')
       + `\n※ 해외 선도 박람회에서 공개된 신규 성분·제형·패키징은 국내 출시보다 6~12개월 앞서는 선행 트렌드다. 단 박람회 원본이 아닌 보도 기반 간접 신호이므로, 수요·공급 신호와 교차 검증해 가중하라.`
     : '';
+  /* 리테일 실측 앵커 — 실구매·실사용 공식 집계(연간). 관심(검색)이 아닌 '팔린 것' 검증 기준 */
+  const retailDetail = RETAIL_ANCHORS.length
+    ? `\n[리테일 실측 앵커 — 실구매·실사용 데이터 공식 리포트 (연간 검증 기준)]\n`
+      + RETAIL_ANCHORS.map(a => `${a.src}(${a.basis}): ${a.themes.join(' · ')}`).join('\n')
+      + `\n※ 위는 검색·관심이 아니라 실제 구매·사용이 검증된 연간 집계다. 예측 유형이 이 실측 트렌드와 정합하면 신뢰도를 높이고, 정면 배치되면 그 이유를 tech에 명시하라.`
+    : '';
+  const ytDetail = (window._ytTrends && window._ytTrends.length)
+    ? `\n[YouTube 콘텐츠 모멘텀 — 최근 30일 vs 직전 30일 영상 수 증감 (실측)]\n`
+      + window._ytTrends.slice(0, 8).map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
+      + `\n※ 크리에이터 콘텐츠 생산 속도 — 검색·클릭과 독립된 문화 확산 신호.`
+    : '';
+  const gtrendsDetail = (window._gtrends && window._gtrends.length)
+    ? `\n[글로벌 검색 모멘텀(Google Trends·미국) — 최근 4주 vs 직전 8주 (실측·수출 선행)]\n`
+      + window._gtrends.slice(0, 8).map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
+      + `\n※ 해외 소비자 검색 — 수출 실적(후행)보다 앞서는 글로벌 수요 신호로 수출 채널 유형에 가중하라.`
+    : '';
+  const redditDetail = (window._reddit && window._reddit.length)
+    ? `\n[해외 K뷰티 커뮤니티(Reddit) 언급 빈도 — 최근 1개월 (실측)]\n`
+      + window._reddit.slice(0, 8).map(t => `${t.name}(${t.count}건)`).join(' · ')
+    : '';
   /* 라이프사이클 규칙 — 성장·태동만 후보, 쇠퇴 회피를 명시적 제약으로 주입 */
   const lc = window._lifecycle;
   const lifecycleDetail = lc
@@ -2587,7 +2698,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -3470,6 +3581,8 @@ function applyPrecollected(pre) {
   window._newsTrends = pre.newsTrends || null;
   window._rssText = pre.rssText || '';
   window._climateTrend = pre.climateTrend || null;
+  window._gtrends = pre.gtrendsTrends || null;
+  window._reddit = pre.redditTrends || null;
   /* 서버 수집 시점의 소스 연결 상태 재생 */
   Object.entries(pre.sdots || {}).forEach(([id, state]) => setSdot(id, state));
 }
@@ -3537,8 +3650,8 @@ async function collectAll() {
 
   updateStatusSummary();
 
-  setStep('⑤ 공급(식약처)·해외 박람회 선행신호 수집 중...', '선행신호');
-  await Promise.all([collectMFDSSupply(), collectGlobalExpoTrends()]);
+  setStep('⑤ 공급·해외박람회·YouTube·글로벌 선행신호 수집 중...', '선행신호');
+  await Promise.all([collectMFDSSupply(), collectGlobalExpoTrends(), collectYouTubeTrends(), loadServerLeads()]);
 
   /* 라이프사이클: 오늘 모멘텀을 스냅샷으로 누적 → 4단계 분류(예측 프롬프트에도 반영) */
   recordMomentumSnapshot();
@@ -3628,6 +3741,24 @@ function genReport() {
     lines.push(`▶ 해외 박람회 선행 트렌드 — 최근 ${GLOBAL_EXPO_RECENT_DAYS}일 글로벌 박람회 보도 키워드 (선행신호)`);
     window._expoTrends.slice(0, 10).forEach(t => lines.push(`  • ${t.name}: ${t.count}건 언급`));
   }
+  if (window._ytTrends && window._ytTrends.length) {
+    lines.push('');
+    lines.push('▶ YouTube 콘텐츠 모멘텀 (최근 30일 vs 직전 30일 영상 수)');
+    window._ytTrends.slice(0, 8).forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
+  if (window._gtrends && window._gtrends.length) {
+    lines.push('');
+    lines.push('▶ 글로벌 검색 모멘텀 — Google Trends 미국 (수출 선행)');
+    window._gtrends.slice(0, 8).forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
+  if (window._reddit && window._reddit.length) {
+    lines.push('');
+    lines.push('▶ 해외 K뷰티 커뮤니티 언급 — Reddit 최근 1개월');
+    window._reddit.slice(0, 8).forEach(t => lines.push(`  • ${t.name}: ${t.count}건`));
+  }
+  lines.push('');
+  lines.push('▶ 리테일 실측 앵커 (실구매·실사용 공식 리포트 — 연간)');
+  RETAIL_ANCHORS.forEach(a => lines.push(`  • ${a.src} (${a.basis}): ${a.themes.join(' · ')}`));
   if (window._newsTrends && window._newsTrends.length) {
     lines.push('');
     lines.push('▶ 뷰티 뉴스·미디어 최다 언급 키워드');
@@ -4094,6 +4225,33 @@ async function testEcos() {
   }
 }
 
+async function testYoutube() {
+  const key = K.youtube();
+  if (!key) { showToast('YouTube 키를 먼저 입력 후 저장하세요'); return; }
+  const el = document.getElementById('r-youtube');
+  el.textContent = 'YouTube Data API 테스트 중 ("선크림 화장품" 최근 30일 영상 검색)...'; el.style.color = 'var(--ink3)';
+  try {
+    const after = new Date(Date.now() - 30 * 86400000).toISOString();
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=3&q=${encodeURIComponent('선크림 화장품')}&publishedAfter=${encodeURIComponent(after)}&key=${encodeURIComponent(key)}`);
+    const j = await r.json();
+    if (!r.ok) {
+      const msg = j?.error?.message || `HTTP ${r.status}`;
+      el.textContent = r.status === 403
+        ? `접근 거부(403): ${msg}\n\n확인:\n① Google Cloud Console에서 "YouTube Data API v3" 활성화\n② API 키 제한(HTTP 리퍼러/API 제한) 설정 점검\n③ 일 쿼터(10,000유닛) 소진 여부`
+        : `오류(${r.status}): ${msg}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const total = j?.pageInfo?.totalResults ?? 0;
+    const titles = (j.items || []).map(i => '  · ' + (i.snippet?.title || '').slice(0, 40)).join('\n');
+    el.textContent = `YouTube 연결 성공 — 최근 30일 "선크림 화장품" 영상 약 ${total.toLocaleString()}건\n${titles}`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-youtube', '확인됨', true);
+  } catch (e) {
+    el.textContent = '연결 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
 async function testKipris() {
   const key = K.kipris();
   if (!key) { showToast('KIPRIS 키를 먼저 입력 후 저장하세요'); return; }
@@ -4191,6 +4349,15 @@ function showCollectedData() {
   }
   if (window._expoTrends && window._expoTrends.length) {
     lines.push(`[해외 박람회 선행·최근${GLOBAL_EXPO_RECENT_DAYS}일] ` + window._expoTrends.slice(0, 10).map(t => `${t.name}(${t.count})`).join(' · '));
+  }
+  if (window._ytTrends && window._ytTrends.length) {
+    lines.push(`[YouTube 모멘텀] ` + window._ytTrends.slice(0, 8).map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
+  }
+  if (window._gtrends && window._gtrends.length) {
+    lines.push(`[글로벌 검색·GTrends] ` + window._gtrends.slice(0, 8).map(t => `${t.name}(${t.delta >= 0 ? '+' : ''}${t.delta}%)`).join(' · '));
+  }
+  if (window._reddit && window._reddit.length) {
+    lines.push(`[해외 커뮤니티·Reddit] ` + window._reddit.slice(0, 8).map(t => `${t.name}(${t.count})`).join(' · '));
   } else if (window._expoErr) {
     lines.push(`[해외 박람회 선행] ${window._expoErr}`);
   }
@@ -4236,6 +4403,8 @@ function init() {
   document.getElementById('btnTestEcos').addEventListener('click', testEcos);
   document.getElementById('btnSaveKipris').addEventListener('click', () => saveKey('kipris'));
   document.getElementById('btnTestKipris').addEventListener('click', testKipris);
+  document.getElementById('btnSaveYoutube').addEventListener('click', () => saveKey('youtube'));
+  document.getElementById('btnTestYoutube').addEventListener('click', testYoutube);
   document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);

@@ -115,10 +115,99 @@ for (const id of ['sd-climate', 'sd-air', 'sd-ecos', 'sd-datalab', 'sd-news', 's
   sdots[id] = els[id] ? (els[id].className.replace('sdot', '').trim() || 'off') : 'off';
 }
 
+/* ── 글로벌 선행신호 (서버 전용 — 브라우저는 CORS·비공식 API라 직접 수집 불가) ── */
+
+/* Google Trends 비공식 API — explore 토큰 → 타임라인. 비공식이므로 실패 시 null(정상 동작 유지).
+   미국(geo=US) 기준 K뷰티 영문 키워드의 최근 4주 vs 직전 8주 평균 비교 = 수출 선행 검색 모멘텀 */
+const GTRENDS_KEYWORDS = [
+  { en: 'korean sunscreen', kr: '선크림(글로벌)' },
+  { en: 'snail mucin',      kr: '달팽이 점액(글로벌)' },
+  { en: 'glass skin',       kr: '유리피부(글로벌)' },
+  { en: 'korean toner pad', kr: '토너패드(글로벌)' },
+  { en: 'pdrn skincare',    kr: 'PDRN(글로벌)' },
+  { en: 'cushion foundation', kr: '쿠션(글로벌)' },
+  { en: 'korean lip balm',  kr: '립밤(글로벌)' },
+  { en: 'rice toner',       kr: '쌀 토너(글로벌)' },
+];
+async function collectGoogleTrends() {
+  const results = [];
+  for (const kw of GTRENDS_KEYWORDS) {
+    try {
+      const exploreReq = JSON.stringify({ comparisonItem: [{ keyword: kw.en, geo: 'US', time: 'today 3-m' }], category: 44, property: '' });
+      const expR = await directFetch(
+        `https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req=${encodeURIComponent(exploreReq)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }, 15000);
+      if (!expR.ok) continue;
+      const expTxt = (await expR.text()).replace(/^\)\]\}',?\s*/, '');
+      const widget = JSON.parse(expTxt).widgets?.find(w => w.id === 'TIMESERIES');
+      if (!widget) continue;
+      const mlR = await directFetch(
+        `https://trends.google.com/trends/api/widgetdata/multiline?hl=en-US&tz=0&req=${encodeURIComponent(JSON.stringify(widget.request))}&token=${encodeURIComponent(widget.token)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } }, 15000);
+      if (!mlR.ok) continue;
+      const mlTxt = (await mlR.text()).replace(/^\)\]\}',?\s*/, '');
+      const pts = (JSON.parse(mlTxt).default?.timelineData || []).map(p => p.value?.[0] ?? 0);
+      if (pts.length < 8) continue;
+      const recent = pts.slice(-4), prior = pts.slice(0, -4);
+      const avg = a => a.reduce((s, x) => s + x, 0) / (a.length || 1);
+      const pAvg = avg(prior);
+      const delta = pAvg > 0 ? Math.round((avg(recent) - pAvg) / pAvg * 100) : 0;
+      results.push({ name: kw.kr, en: kw.en, delta });
+      await new Promise(r => setTimeout(r, 1200));   /* 레이트리밋 회피 */
+    } catch { /* 키워드 단위 실패 무시 */ }
+  }
+  return results.length ? results.sort((a, b) => b.delta - a.delta) : null;
+}
+
+/* Reddit 해외 K뷰티 커뮤니티 — 공개 JSON(서버는 UA만 붙이면 접근 가능). 최근 1개월 인기글
+   제목·본문에서 영문 키워드 언급 빈도 집계 → 한국어 명칭으로 매핑 */
+const REDDIT_SUBS = ['AsianBeauty', 'KoreanBeauty', '30PlusSkinCare'];
+const REDDIT_KEYWORDS = [
+  { en: /sunscreen|spf/i,        kr: '선크림' },
+  { en: /snail\s?mucin/i,        kr: '달팽이 점액' },
+  { en: /toner\s?pad/i,          kr: '토너패드' },
+  { en: /ampoule|serum/i,        kr: '앰플·세럼' },
+  { en: /cushion/i,              kr: '쿠션' },
+  { en: /pdrn|exosome/i,         kr: 'PDRN·엑소좀' },
+  { en: /retinol|retinal/i,      kr: '레티놀' },
+  { en: /cica|centella/i,        kr: '시카' },
+  { en: /lip\s?(balm|mask)/i,    kr: '립밤·립마스크' },
+  { en: /cleansing|cleanser/i,   kr: '클렌징' },
+];
+async function collectReddit() {
+  const counts = {};
+  let ok = false;
+  for (const sub of REDDIT_SUBS) {
+    try {
+      const r = await directFetch(`https://www.reddit.com/r/${sub}/top.json?t=month&limit=100`,
+        { headers: { 'User-Agent': 'cosmedb-trend-collector/1.0' } }, 15000);
+      if (!r.ok) continue;
+      const j = await r.json();
+      ok = true;
+      (j?.data?.children || []).forEach(c => {
+        const text = `${c.data?.title || ''} ${c.data?.selftext || ''}`;
+        REDDIT_KEYWORDS.forEach(k => { if (k.en.test(text)) counts[k.kr] = (counts[k.kr] || 0) + 1; });
+      });
+      await new Promise(r2 => setTimeout(r2, 800));
+    } catch { /* 서브레딧 단위 실패 무시 */ }
+  }
+  if (!ok) return null;
+  const list = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  return list.length ? list : null;
+}
+
+console.log('글로벌 선행신호 수집 (Google Trends·Reddit)...');
+const gtrendsTrends = await collectGoogleTrends();
+const redditTrends = await collectReddit();
+console.log(` · Google Trends: ${gtrendsTrends ? gtrendsTrends.length + '건' : '실패(비공식 API — 다음 회차 재시도)'}`);
+console.log(` · Reddit: ${redditTrends ? redditTrends.length + '건' : '실패(차단 가능 — 다음 회차 재시도)'}`);
+
 const out = {
   collectedAt: new Date().toISOString(),
   sig: sandbox.SIG_DATA,
   sdots,
+  gtrendsTrends,
+  redditTrends,
   dlTrends: sandbox.window._dlTrends || null,
   dlErr: sandbox.window._dlErr ?? null,
   salesTrends: sandbox.window._salesTrends || null,
