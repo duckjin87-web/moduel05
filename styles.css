@@ -312,6 +312,31 @@ button { font-family: inherit; cursor: pointer; }
 .agb-lo  { background: var(--bg3); color: var(--ink3); }
 .cap-mark { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: #fdeaea; color: #9c3b3b; }
 
+/* ═══ 트렌드 라이프사이클 맵 ═══ */
+.cy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 11px 13px; }
+@media(max-width:900px){ .cy-grid { grid-template-columns: 1fr 1fr; } }
+.cy-col { background: var(--bg2); border: .5px solid var(--bg3); border-radius: var(--r); padding: 8px; }
+.cy-col.cy-grow { border-top: 2.5px solid var(--grn); }
+.cy-col-hd { font-size: 10px; font-weight: 800; color: var(--ink); display: flex; justify-content: space-between; margin-bottom: 6px; }
+.cy-col-hd em { font-style: normal; font-weight: 400; font-size: 9px; color: var(--ink3); }
+.cy-kw { background: var(--w); border: .5px solid var(--bg3); border-radius: 5px; padding: 4px 8px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--ink); }
+.cy-mo { font-size: 9px; font-weight: 700; }
+.cy-up { color: var(--grn); } .cy-dn { color: var(--red); } .cy-fl { color: var(--ink3); }
+.cy-none { font-size: 9.5px; color: var(--ink3); padding: 4px 2px; }
+
+/* ═══ 시즌 앵커 배지 ═══ */
+.p-anchor { display: inline-block; font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-top: 3px; }
+.anch-y { background: #e3f0e8; color: #2c6647; }
+.anch-m { background: #f3ecd2; color: #7a6215; }
+.anch-n { background: #f4dddd; color: #8f3737; }
+
+/* ═══ 신제품 레이더 스트립 ═══ */
+.radar-strip { padding: 7px 13px; border-top: .5px solid var(--bg3); background: var(--bg2); font-size: 10px; color: var(--ink2); line-height: 1.7; }
+.radar-lb { font-size: 9px; font-weight: 800; color: #fff; background: var(--teal); padding: 1px 7px; border-radius: 3px; margin-right: 5px; }
+.radar-item { color: var(--blue2); text-decoration: none; }
+.radar-item:hover { text-decoration: underline; }
+.radar-note { color: var(--ink3); font-size: 9px; }
+
 /* ═══ 예측 실적 원장 ═══ */
 .ledger-sec { margin-top: 12px; border-top: .5px solid var(--bg3); padding-top: 10px; }
 .ledger-hd { font-size: 11px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }

@@ -150,6 +150,9 @@
 <!-- ── ZONE 0: 4대 신호 (카드 클릭 시 분석 근거 자료 모달 표시) ── -->
 <div class="z0" id="z0"></div>
 
+<!-- ── 트렌드 라이프사이클 맵: 태동→성장→성숙→쇠퇴 (수집 시 자동 분류) ── -->
+<div class="z1 z-cycle" id="zCycle" style="display:none"></div>
+
 <!-- ── ZONE 1: 예측 TOP5 ── -->
 <div class="z1">
   <div class="zone-hd">
@@ -168,6 +171,7 @@
       [전체 수집 실행] 버튼을 클릭하면 4대 신호 수집 후 Gemini가 예측 TOP5를 자동 도출합니다.
     </div>
   </div>
+  <div id="radarStrip" class="radar-strip" style="display:none"></div>
 </div>
 
 <!-- ── ZONE 2: 제조사 매칭 ── -->

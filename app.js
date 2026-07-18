@@ -1932,6 +1932,8 @@ function ledgerHtml() {
       const autoTag = e.backtested
         ? (auto?.hit ? '<span class="lg-auto lg-auto-y">신호 재포착</span>' : '<span class="lg-auto lg-auto-n">신호 무반응</span>')
         : '';
+      const radN = (e.radar || []).filter(r => r.rank === p.rank).length;
+      const radTag = radN ? `<span class="lg-auto lg-auto-y" title="신제품 레이더가 감지한 관련 출시 보도">출시감지 ${radN}건</span>` : '';
       let right;
       if (j) {
         right = j.v === 'hit' ? '<span class="lg-judge lgj-hit">적중</span>'
@@ -1948,7 +1950,7 @@ function ledgerHtml() {
       }
       return `<div class="lg-item">
         <span class="lg-type">${p.rank}위 ${escHtml(p.type)}${p.confidence ? ` <em>${p.confidence}%</em>` : ''}</span>
-        ${autoTag}${right}
+        ${autoTag}${radTag}${right}
       </div>`;
     }).join('');
     return `<details class="lg-entry"${(matured && !allJudged(e)) ? ' open' : ''}>
@@ -2163,6 +2165,165 @@ async function collectGlobalExpoTrends() {
   } catch { window._expoErr = '수집 실패'; }
 }
 
+/* ════ 트렌드 라이프사이클 맵 — 모멘텀 스냅샷 누적 → 태동/성장/성숙/쇠퇴 분류 ════
+   수집 때마다 키워드 모멘텀(검색·구매·뉴스·수출)을 날짜별로 localStorage에 누적하고,
+   현재 수치(레벨)와 이전 스냅샷 대비 변화(기울기)로 4단계를 분류한다.
+   "성장기만 예측 후보, 쇠퇴기는 회피"가 예측 프롬프트에 규칙으로 주입된다. */
+function recordMomentumSnapshot() {
+  try {
+    const items = [];
+    (window._dlTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'search' }));
+    (window._salesTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'shop' }));
+    (window._exportTrends || []).forEach(t => items.push({ name: t.name, delta: t.delta, src: 'export' }));
+    (window._newsTrends || []).forEach(t => items.push({ name: t.name, count: t.count, src: 'news' }));
+    if (!items.length) return;
+    const hist = JSON.parse(ls('m5_momentum_hist') || '[]');
+    const today = new Date().toISOString().slice(0, 10);
+    const di = hist.findIndex(h => h.date === today);
+    if (di >= 0) hist.splice(di, 1);              /* 같은 날 재수집은 최신으로 대체 */
+    hist.unshift({ date: today, items });
+    ls('m5_momentum_hist', JSON.stringify(hist.slice(0, 30)));   /* 최근 30회 스냅샷 보존 */
+  } catch {}
+}
+function computeLifecycle() {
+  /* 현재 스냅샷: 키워드별 대표 delta(최대)·등장 소스 수·뉴스 언급 */
+  const cur = {};
+  const add = (name, delta, src, count) => {
+    if (!name) return;
+    const k = cur[name] = cur[name] || { name, delta: null, srcs: new Set(), news: 0 };
+    if (delta !== undefined && delta !== null) k.delta = k.delta === null ? delta : Math.max(k.delta, delta);
+    if (count) k.news += count;
+    k.srcs.add(src);
+  };
+  (window._dlTrends || []).forEach(t => add(t.name, t.delta, 'search'));
+  (window._salesTrends || []).forEach(t => add(t.name, t.delta, 'shop'));
+  (window._exportTrends || []).forEach(t => add(t.name, t.delta, 'export'));
+  (window._newsTrends || []).forEach(t => add(t.name, null, 'news', t.count));
+  const list = Object.values(cur);
+  if (!list.length) return null;
+  /* 이전 스냅샷(7일 이상 전)에서 같은 키워드의 delta → 기울기 */
+  let prevMap = {};
+  try {
+    const hist = JSON.parse(ls('m5_momentum_hist') || '[]');
+    const weekAgo = Date.now() - 7 * 86400000;
+    const prev = hist.find(h => new Date(h.date).getTime() <= weekAgo);
+    if (prev) prev.items.forEach(it => { if (it.delta !== undefined) prevMap[it.name] = it.delta; });
+  } catch {}
+  const stages = { emerge: [], grow: [], mature: [], decline: [] };
+  list.forEach(k => {
+    const d = k.delta ?? 0;
+    const presence = k.srcs.size + (k.news >= 5 ? 1 : 0);
+    const slope = prevMap[k.name] !== undefined ? d - prevMap[k.name] : null;
+    let stage;
+    if (d <= -8) stage = 'decline';
+    else if (d < 8) stage = 'mature';
+    else if (slope !== null && slope < -5) stage = 'mature';   /* 모멘텀 꺾임 → 성숙 전환 */
+    else stage = presence >= 2 ? 'grow' : 'emerge';
+    stages[stage].push({ name: k.name, delta: k.delta, news: k.news, slope });
+  });
+  const byDelta = (a, b) => (b.delta ?? 0) - (a.delta ?? 0);
+  Object.values(stages).forEach(a => a.sort(byDelta));
+  return stages;
+}
+function renderLifecycle() {
+  const el = document.getElementById('zCycle');
+  if (!el) return;
+  const st = window._lifecycle;
+  if (!st) { el.style.display = 'none'; return; }
+  const COLS = [
+    ['emerge',  '태동기', '탐색',      ''],
+    ['grow',    '성장기', '예측 적기', 'cy-grow'],
+    ['mature',  '성숙기', '수주 경쟁', ''],
+    ['decline', '쇠퇴기', '회피',      ''],
+  ];
+  const fmt = k => {
+    const v = k.delta !== null && k.delta !== undefined
+      ? `<span class="cy-mo ${k.delta >= 8 ? 'cy-up' : k.delta <= -8 ? 'cy-dn' : 'cy-fl'}">${k.delta >= 0 ? '+' : ''}${k.delta}%</span>`
+      : `<span class="cy-mo cy-fl">${k.news}건</span>`;
+    return `<div class="cy-kw"><span>${escHtml(k.name)}</span>${v}</div>`;
+  };
+  el.innerHTML = `
+    <div class="zone-hd"><div class="zone-title">트렌드 라이프사이클 <span class="ztag">주간 기울기 기반 자동 분류 · 태동·성장만 예측 후보</span></div>
+      <span class="zmodel">검색+구매+뉴스+수출 모멘텀 교차</span></div>
+    <div class="cy-grid">
+      ${COLS.map(([key, name, sub, cls]) => `
+        <div class="cy-col ${cls}">
+          <div class="cy-col-hd">${name} <em>${sub}</em></div>
+          ${st[key].slice(0, 5).map(fmt).join('') || '<div class="cy-none">해당 없음</div>'}
+        </div>`).join('')}
+    </div>`;
+  el.style.display = '';
+}
+
+/* ════ 동년 동월 시즌 앵커 — 작년 같은 시기(±65일) 예측·판정 이력과 대조 ════ */
+function seasonAnchorForType(type) {
+  try {
+    const hist = getLedgerHist();
+    const now = Date.now();
+    const toks = extractSearchKw(type).split(' ').filter(w => w.length >= 2);
+    for (const e of hist) {
+      const age = now - e.ts;
+      if (age < 300 * 86400000 || age > 430 * 86400000) continue;   /* 약 1년 전 창 */
+      for (let i = 0; i < (e.predictions || []).length; i++) {
+        const p = e.predictions[i];
+        const tb = new Set(extractSearchKw(p.type).split(' ').filter(w => w.length >= 2));
+        if (!toks.some(w => tb.has(w))) continue;
+        const j = e.judgments?.[i];
+        return { type: p.type, verdict: j ? j.v : (e.details?.[i]?.hit ? 'signal' : null) };
+      }
+    }
+  } catch {}
+  return null;
+}
+
+/* ════ 신제품 레이더 — 뉴스 출시 감지 → 예측 유형 매칭 → 원장 자동 증거 첨부 ════ */
+async function collectProductRadar() {
+  window._productRadar = null;
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (!nid || !nsec || !PREDICTIONS.length) return;
+  try {
+    const resps = await Promise.all(['화장품 신제품 출시', '뷰티 신제품'].map(q =>
+      fetchNaverAPI(`https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=20&sort=date`, nid, nsec, 9000)));
+    const now = Date.now(), RECENT = 45 * 86400000;
+    const matches = [];
+    const seen = new Set();
+    resps.forEach(j => {
+      if (!j || j._error) return;
+      (j.items || []).forEach(it => {
+        const ts = it.pubDate ? new Date(it.pubDate).getTime() : NaN;
+        if (isNaN(ts) || now - ts > RECENT) return;
+        const title = (it.title || '').replace(/<[^>]+>/g, '');
+        if (seen.has(title)) return;
+        for (const p of PREDICTIONS) {
+          if (isRelevantToProductType(title, extractSearchKw(p.type))) {
+            seen.add(title);
+            matches.push({ rank: p.rank, type: p.type, title, link: it.link || '' });
+            break;
+          }
+        }
+      });
+    });
+    window._productRadar = matches.slice(0, 8);
+    /* 오늘 원장 엔트리에 검증 증거로 첨부 — 판정 시 참고 자료가 된다 */
+    if (matches.length) {
+      const hist = getLedgerHist();
+      const today = new Date().toDateString();
+      const e = hist.find(h => new Date(h.ts).toDateString() === today);
+      if (e) { e.radar = matches.slice(0, 8).map(m => ({ rank: m.rank, title: m.title, link: m.link })); ls('m5_history', JSON.stringify(hist)); }
+    }
+  } catch {}
+}
+function renderRadar() {
+  const el = document.getElementById('radarStrip');
+  if (!el) return;
+  const r = window._productRadar;
+  if (!r || !r.length) { el.style.display = 'none'; return; }
+  el.innerHTML = `<span class="radar-lb">신제품 레이더</span> 최근 45일 출시 보도 중 예측 관련 <b>${r.length}건</b> 감지 — ` +
+    r.slice(0, 3).map(m => `<a href="${escHtml(m.link)}" target="_blank" class="radar-item">[${m.rank}위 관련] ${escHtml(m.title.slice(0, 28))}…</a>`).join(' · ') +
+    ` <span class="radar-note">→ 원장에 검증 증거로 자동 첨부됨</span>`;
+  el.style.display = '';
+}
+
 /* ════ 데이터 품질 게이지 + 신뢰도 상한(캡) ════
    12개 신호 소스 중 "실데이터로 수집된" 비율을 산정. 샘플·미수집이 많을수록 예측
    신뢰도에 상한을 걸어, 샘플로 만든 88%가 진짜 88%처럼 보이는 것을 구조적으로 차단. */
@@ -2308,6 +2469,17 @@ async function runGeminiPrediction(period) {
           : '')
       + `\n※ 해외 선도 박람회에서 공개된 신규 성분·제형·패키징은 국내 출시보다 6~12개월 앞서는 선행 트렌드다. 단 박람회 원본이 아닌 보도 기반 간접 신호이므로, 수요·공급 신호와 교차 검증해 가중하라.`
     : '';
+  /* 라이프사이클 규칙 — 성장·태동만 후보, 쇠퇴 회피를 명시적 제약으로 주입 */
+  const lc = window._lifecycle;
+  const lifecycleDetail = lc
+    ? `\n[트렌드 라이프사이클 분류 — 주간 모멘텀 기울기 기반 실측]\n`
+      + [lc.grow.length ? `성장기(예측 최우선 후보): ${lc.grow.slice(0, 6).map(k => k.name).join(', ')}` : '',
+         lc.emerge.length ? `태동기(선제 후보): ${lc.emerge.slice(0, 4).map(k => k.name).join(', ')}` : '',
+         lc.mature.length ? `성숙기(신규 예측 지양): ${lc.mature.slice(0, 4).map(k => k.name).join(', ')}` : '',
+         lc.decline.length ? `쇠퇴기(회피 — TOP5 금지): ${lc.decline.slice(0, 4).map(k => k.name).join(', ')}` : '']
+        .filter(Boolean).join('\n')
+      + `\n※ 성장기·태동기 키워드 관련 유형을 우선하고, 쇠퇴기 키워드가 핵심인 유형은 TOP5에 넣지 마라.`
+    : '';
   const ct = window._climateTrend;
   const seasonalOutlook = window._seasonalOutlook;
   const climateDetail = ct
@@ -2325,7 +2497,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${climateDetail}${nearTermNote}
+${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${supplyDetail}${regDetail}${expoDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -2512,7 +2684,14 @@ function renderZ1() {
           : '';
         return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
           <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
-          <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div></td>
+          <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div>${(() => {
+            const an = seasonAnchorForType(p.type);
+            if (!an) return '';
+            const lbl = an.verdict === 'hit' ? '작년 동기 유사유형 적중' : an.verdict === 'part' ? '작년 동기 부분 적중'
+                      : an.verdict === 'miss' ? '작년 동기 미스' : an.verdict === 'signal' ? '작년 동기 신호 재포착' : '작년 동기 유사 예측 있음';
+            const cls = an.verdict === 'hit' || an.verdict === 'signal' ? 'anch-y' : an.verdict === 'miss' ? 'anch-n' : 'anch-m';
+            return `<div class="p-anchor ${cls}" title="작년 같은 시기(±65일) 예측 이력과 대조한 계절 반복성 참고">${lbl}</div>`;
+          })()}</td>
           <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
           <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div><div class="p-conf-tags">${p.agree ? `<span class="agree-badge ${p.agree >= (p.agreeOf || 3) ? 'agb-hi' : p.agree >= 2 ? 'agb-mid' : 'agb-lo'}" title="3관점 독립 분석 중 ${p.agree}개 관점 일치">합의 ${p.agree}/${p.agreeOf || 3}</span>` : ''}${p._capped ? `<span class="cap-mark" title="데이터 품질(실데이터 비율)에 따른 신뢰도 상한 적용됨">품질상한▼</span>` : ''}</div><button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">🔍 근거 보기</button></td>
           <td><div class="pchips">${chips}</div></td>
@@ -3263,6 +3442,11 @@ async function collectAll() {
   setStep('⑤ 공급(식약처)·해외 박람회 선행신호 수집 중...', '선행신호');
   await Promise.all([collectMFDSSupply(), collectGlobalExpoTrends()]);
 
+  /* 라이프사이클: 오늘 모멘텀을 스냅샷으로 누적 → 4단계 분류(예측 프롬프트에도 반영) */
+  recordMomentumSnapshot();
+  window._lifecycle = computeLifecycle();
+  renderLifecycle();
+
   setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인');
   window._expoVerified = await verifyExpoSchedules();
   await discoverDomesticExpos();
@@ -3276,6 +3460,10 @@ async function collectAll() {
   if (PREDICTIONS.length) savePredHistory(PREDICTIONS, currentPeriod);
   renderZ1();
   resetZ2();
+
+  setStep('⑧ 신제품 레이더 확인 중...', '출시 감지');
+  await collectProductRadar();
+  renderRadar();
 
   /* IMP-04: 보고서 자동 생성 */
   genReport();
