@@ -38,6 +38,16 @@
       <button class="btn-hd btn-api-set" id="btnApiSet">API 설정</button>
       <div class="api-panel" id="apiPanel">
         <div class="ap-hd">API 키 통합 설정</div>
+        <div class="ap-sec" style="background:var(--bg2);border-radius:6px;padding:8px">
+          <div class="ap-label">백엔드 연결 (Vercel) <span class="ap-status" id="st-backend">미연결</span></div>
+          <div class="ap-row">
+            <input type="text" class="ap-in" id="k-backend" placeholder="https://프로젝트명.vercel.app (키 입력 불필요 모드)">
+            <button class="ap-btn ap-save" id="btnSaveBackend">저장</button>
+            <button class="ap-btn ap-test" id="btnTestBackend">테스트</button>
+          </div>
+          <div class="ap-hint">키를 Vercel 서버 환경변수에 두면 <b>브라우저 키 입력이 전부 불필요</b>합니다. Vercel 도메인에서 접속 시 자동 연결. 연결 시 아래 개별 키는 비워도 됩니다(입력 시 개별 키 우선).</div>
+          <div id="r-backend" class="ap-result"></div>
+        </div>
         <div class="ap-sec">
           <div class="ap-label">Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
           <div class="ap-row">
@@ -141,51 +151,57 @@
   </div>
 </div>
 
-<!-- ── 수집 상태 바 ── -->
-<div class="status-bar" id="statusBar">
-  <span class="sitem"><span class="sdot off" id="sd-climate"></span>기상청</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-air"></span>에어코리아</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-ecos"></span>ECOS 원자재</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-datalab"></span>네이버 DataLab</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-news"></span>네이버 뉴스</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-kosis"></span>KOSIS CPI</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-export"></span>관세청 수출</span><span class="ssep"></span>
-  <span class="sitem"><span class="sdot off" id="sd-kipris"></span><span style="color:var(--ink3)">KIPRIS(키 대기)</span></span>
-  <span class="status-summary" id="statusSummary">수집 전</span>
-</div>
-
-<!-- ── 예측 스코어보드: 적중률·데이터 품질·앙상블 합의·판정 대기 ── -->
-<div class="scoreboard" id="scoreboard" style="display:none"></div>
-
 <!-- ── 워치독 배너: 모멘텀 문턱 초과 시 접속 알림 ── -->
 <div class="watchdog-bar" id="watchdogBar" style="display:none"></div>
 
-<!-- ── ZONE 0: 4대 신호 (카드 클릭 시 분석 근거 자료 모달 표시) ── -->
-<div class="z0" id="z0"></div>
+<!-- ══ 메인 그리드: 결과(예측)가 첫 화면 — 좌측 히어로 + 우측 신뢰 레일 ══ -->
+<div class="main-grid">
+  <div class="mg-left">
+    <!-- ── ZONE 1: 예측 TOP5 (히어로) ── -->
+    <div class="z1">
+      <div class="zone-hd">
+        <div class="zone-title">예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
+        <div class="pred-period-tabs" id="predPeriodTabs">
+          <button class="pred-period-tab" data-period="2m">1~2개월</button>
+          <button class="pred-period-tab active" data-period="6m">6개월</button>
+          <button class="pred-period-tab" data-period="1y">1년</button>
+        </div>
+        <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">정확도·실적 원장</button>
+        <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
+      </div>
+      <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>
+      <div id="z1body">
+        <div class="z1-placeholder">
+          [전체 수집 실행]을 누르면 15종 신호 수집 후 3관점 교차검증으로 예측 TOP5가 도출됩니다.
+        </div>
+      </div>
+      <div id="radarStrip" class="radar-strip" style="display:none"></div>
+    </div>
+  </div>
+
+  <aside class="mg-rail">
+    <!-- 예측 스코어보드: 적중률·데이터 품질·앙상블 합의·판정 대기 -->
+    <div class="scoreboard" id="scoreboard" style="display:none"></div>
+    <!-- 수집 상태 -->
+    <div class="status-bar" id="statusBar">
+      <span class="sitem"><span class="sdot off" id="sd-climate"></span>기상청</span>
+      <span class="sitem"><span class="sdot off" id="sd-air"></span>에어코리아</span>
+      <span class="sitem"><span class="sdot off" id="sd-ecos"></span>ECOS</span>
+      <span class="sitem"><span class="sdot off" id="sd-datalab"></span>DataLab</span>
+      <span class="sitem"><span class="sdot off" id="sd-news"></span>네이버 뉴스</span>
+      <span class="sitem"><span class="sdot off" id="sd-kosis"></span>KOSIS</span>
+      <span class="sitem"><span class="sdot off" id="sd-export"></span>관세청</span>
+      <span class="sitem"><span class="sdot off" id="sd-kipris"></span>KIPRIS</span>
+      <span class="status-summary" id="statusSummary">수집 전</span>
+    </div>
+  </aside>
+</div>
 
 <!-- ── 트렌드 라이프사이클 맵: 태동→성장→성숙→쇠퇴 (수집 시 자동 분류) ── -->
 <div class="z1 z-cycle" id="zCycle" style="display:none"></div>
 
-<!-- ── ZONE 1: 예측 TOP5 ── -->
-<div class="z1">
-  <div class="zone-hd">
-    <div class="zone-title">예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
-    <div class="pred-period-tabs" id="predPeriodTabs">
-      <button class="pred-period-tab" data-period="2m">1~2개월 예측</button>
-      <button class="pred-period-tab active" data-period="6m">6개월 예측</button>
-      <button class="pred-period-tab" data-period="1y">1년 예측</button>
-    </div>
-    <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">정확도·실적 원장</button>
-    <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
-  </div>
-  <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>
-  <div id="z1body">
-    <div class="z1-placeholder">
-      [전체 수집 실행] 버튼을 클릭하면 4대 신호 수집 후 Gemini가 예측 TOP5를 자동 도출합니다.
-    </div>
-  </div>
-  <div id="radarStrip" class="radar-strip" style="display:none"></div>
-</div>
+<!-- ── ZONE 0: 4대 신호 (카드 클릭 시 분석 근거 자료 모달 표시) ── -->
+<div class="z0" id="z0"></div>
 
 <!-- ── ZONE 2: 제조사 매칭 ── -->
 <div class="z2">

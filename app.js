@@ -221,15 +221,44 @@ let currentPkgType = '';   /* 현재 선택된 예측의 패키징 타입 */
 window._evalCandidates = [];
 
 /* ════ API 키 관리 ════ */
+/* ════ 백엔드(Vercel) 모드 ════
+   API 키를 Vercel 서버리스 함수(api/proxy.js)의 환경변수에 두면, 브라우저는 키 입력
+   없이 백엔드를 경유해 모든 API를 쓴다. 키 자리에는 센티널(__BK__)이 들어가고
+   서버가 호스트별 실제 키로 치환한다. Vercel 배포 도메인에서는 자동 활성화,
+   GitHub Pages 등 다른 호스팅에서는 [API 설정]의 백엔드 URL로 연결. */
+const BK = {
+  base() {
+    const manual = (ls('backend_url') || '').trim().replace(/\/+$/, '');
+    if (manual) return manual;
+    return /\.vercel\.app$/.test(location.hostname) ? location.origin : '';
+  },
+  on() { return !!BK.base(); },
+};
+/* 백엔드 경유 원시 호출 — 대상 URL(센티널 포함 가능)을 서버가 키 치환 후 대신 호출 */
+async function bkFetch(targetUrl, opts = {}, timeout = 15000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    return await fetch(`${BK.base()}/api/proxy?url=${encodeURIComponent(targetUrl)}`, {
+      method: opts.method || 'GET',
+      headers: opts.body ? { 'Content-Type': opts.contentType || 'application/json' } : undefined,
+      ...(opts.body ? { body: opts.body } : {}),
+      signal: ctrl.signal,
+    });
+  } finally { clearTimeout(tid); }
+}
+
 const K = {
-  gemini:  () => ls('gemini_key')  || '',
+  /* 백엔드 모드에선 미입력 키를 센티널로 대체 — 모든 키 가드를 통과시키고
+     실제 값은 서버가 주입한다 */
+  gemini:  () => ls('gemini_key')  || (BK.on() ? '__BK__' : ''),
   model:   () => ls('gemini_model') || 'gemini-2.5-flash-lite',
-  public:  () => ls('public_key')  || '',
-  naverID: () => ls('naver_id')    || '',
-  naverSec:() => ls('naver_sec')   || '',
-  ecos:    () => ls('ecos_key')    || '',
-  kipris:  () => ls('kipris_key')  || '',
-  youtube: () => ls('youtube_key') || '',
+  public:  () => ls('public_key')  || (BK.on() ? '__BK__' : ''),
+  naverID: () => ls('naver_id')    || (BK.on() ? '__BK__' : ''),
+  naverSec:() => ls('naver_sec')   || (BK.on() ? '__BK__' : ''),
+  ecos:    () => ls('ecos_key')    || (BK.on() ? '__BK__' : ''),
+  kipris:  () => ls('kipris_key')  || (BK.on() ? '__BK__' : ''),
+  youtube: () => ls('youtube_key') || (BK.on() ? '__BK__' : ''),
 };
 
 function saveKey(type) {
@@ -266,6 +295,35 @@ function saveKey(type) {
     const v = document.getElementById('k-youtube').value.trim();
     if (v) { ls('youtube_key', v); setStatus('st-youtube', '설정됨', true); showToast('YouTube 키 저장됨'); }
   }
+  if (type === 'backend') {
+    const v = document.getElementById('k-backend').value.trim().replace(/\/+$/, '');
+    ls('backend_url', v);   /* 빈 값 저장 = 연결 해제 */
+    setStatus('st-backend', v ? '설정됨' : '미연결', !!v);
+    showToast(v ? '백엔드 URL 저장됨 — 테스트로 서버 키 현황을 확인하세요' : '백엔드 연결 해제됨');
+  }
+}
+
+async function testBackend() {
+  const el = document.getElementById('r-backend');
+  const base = BK.base();
+  if (!base) { el.textContent = '백엔드 URL을 입력·저장하거나 Vercel 도메인에서 접속하세요'; el.style.color = 'var(--red)'; return; }
+  el.textContent = `백엔드 연결 테스트 중... (${base})`; el.style.color = 'var(--ink3)';
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(`${base}/api/proxy`, { signal: ctrl.signal });
+    clearTimeout(tid);
+    const j = await r.json();
+    if (!j.ok) throw new Error('응답 형식 오류');
+    const lbl = { naver: '네이버', public: '공공데이터', ecos: 'ECOS', gemini: 'Gemini', youtube: 'YouTube', kipris: 'KIPRIS' };
+    const lines = Object.entries(j.keys).map(([k, on]) => `  · ${lbl[k] || k}: ${on ? '서버 키 등록됨 ✓' : '미등록 — Vercel 환경변수에 추가 필요'}`);
+    el.textContent = `백엔드 연결 성공\n${lines.join('\n')}\n※ 등록된 키의 API는 브라우저 키 입력 없이 바로 동작합니다`;
+    el.style.color = 'var(--grn)';
+    setStatus('st-backend', '연결됨', true);
+  } catch (e) {
+    el.textContent = `연결 실패: ${e.message}\n\n확인:\n① Vercel에 이 저장소를 배포했는지 (api/proxy.js 포함)\n② URL이 https://프로젝트명.vercel.app 형식인지`;
+    el.style.color = 'var(--red)';
+  }
 }
 
 function setStatus(id, txt, ok) {
@@ -274,12 +332,17 @@ function setStatus(id, txt, ok) {
 }
 
 function loadKeys() {
-  if (K.gemini()) { setStatus('st-gemini', '설정됨', true); document.getElementById('k-gemini').value = K.gemini(); }
-  if (K.public()) { setStatus('st-public', '설정됨', true); }
-  if (K.naverID()) { setStatus('st-naver', '설정됨', true); }
-  if (K.ecos())   { setStatus('st-ecos', '설정됨', true); }
-  if (K.kipris()) { setStatus('st-kipris', '설정됨', true); }
-  if (K.youtube()) { setStatus('st-youtube', '설정됨', true); }
+  /* 상태 표시는 브라우저에 직접 저장된 키 기준(ls) — 백엔드 센티널(__BK__)과 구분 */
+  const bk = BK.on();
+  const st = (id, has) => setStatus(id, has ? '설정됨' : (bk ? '백엔드' : '미설정'), has || bk);
+  if (ls('gemini_key')) document.getElementById('k-gemini').value = ls('gemini_key');
+  st('st-gemini', !!ls('gemini_key'));
+  st('st-public', !!ls('public_key'));
+  st('st-naver', !!ls('naver_id'));
+  st('st-ecos', !!ls('ecos_key'));
+  st('st-kipris', !!ls('kipris_key'));
+  st('st-youtube', !!ls('youtube_key'));
+  if (BK.base()) { setStatus('st-backend', '연결됨', true); const bi = document.getElementById('k-backend'); if (bi) bi.value = ls('backend_url') || BK.base(); }
   const mSel = document.getElementById('gemini-model');
   if (mSel && K.model()) mSel.value = K.model();
 }
@@ -526,14 +589,7 @@ async function discoverDomesticExpos() {
 [뉴스]
 ${corpus.slice(0, 5000)}
 JSON만 출력: {"expos":[{"name":"정확한 행사명","date":"YYYY.MM.DD 또는 YYYY.MM.DD~MM.DD (불명확하면 빈 문자열)","location":"장소 (불명확하면 빈 문자열)","type":"expo|retail|equipment"}]}`;
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 15000);
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(gkey.trim())}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 700, temperature: 0 } }), signal: ctrl.signal });
-    clearTimeout(tid);
-    const data = await r.json();
-    const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+    const txt = await geminiGenerate(prompt, { maxTokens: 700, temperature: 0, timeout: 15000 });
     const parsed = JSON.parse(txt);
     const found = (parsed.expos || []).filter(e => e && e.name && e.name.trim().length >= 3).map(e => ({
       name: e.name.trim(),
@@ -983,6 +1039,14 @@ function getMidFcstTime() {
 /* 네이버 API 전용 프록시 — X-Naver-* 헤더 포워딩 필요
    사내망·방화벽 환경에 따라 차단 프록시가 다르므로 4종 순차 시도 */
 async function fetchNaverAPI(targetUrl, nid, nsec, timeout = 11000, opts = {}) {
+  /* 백엔드 모드 — 서버가 네이버 헤더 키를 환경변수에서 주입해 대신 호출(프록시 4종 불필요) */
+  if (BK.on() && (nid === '__BK__' || nsec === '__BK__')) {
+    try {
+      const r = await bkFetch(targetUrl, opts, timeout);
+      if (!r.ok) return { _error: r.status, _body: await r.text().catch(() => '') };
+      return await r.json();
+    } catch { return null; }
+  }
   const hdrs = { 'X-Naver-Client-Id': nid, 'X-Naver-Client-Secret': nsec };
   if (opts.body) hdrs['Content-Type'] = opts.contentType || 'application/json';
   /* referrer 명시 — 프록시가 Referer 헤더를 네이버로 전달해 도메인 검증 통과
@@ -1044,8 +1108,18 @@ async function fetchProxy(url, timeout = 9000) {
     return true;
   };
 
+  /* -1. 백엔드 모드 — URL 안의 __BK__ 센티널을 서버가 실키로 치환해 대신 호출 */
+  if (BK.on()) {
+    try {
+      const r = await bkFetch(url, {}, timeout);
+      const t = await r.text();
+      if (isGoodText(t)) return t;
+    } catch {}
+  }
+
   /* 0. 직접 요청 — CORS 허용 API(에어코리아 등)는 프록시 불필요 */
   try {
+    if (url.includes('__BK__')) throw new Error('backend-only');   /* 센티널 URL은 직접 호출 무의미 */
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), Math.min(timeout, 7000));
     const r = await fetch(url, { signal: ctrl.signal });
@@ -1494,7 +1568,7 @@ async function collectYouTubeTrends() {
     const cnt = async (q, fromMs, toMs) => {
       const url = `https://www.googleapis.com/youtube/v3/search?part=id&type=video&maxResults=1&q=${encodeURIComponent(q + ' 화장품')}` +
         `&publishedAfter=${encodeURIComponent(iso(fromMs))}&publishedBefore=${encodeURIComponent(iso(toMs))}&key=${encodeURIComponent(key)}`;
-      const r = await fetch(url);
+      const r = key === '__BK__' ? await bkFetch(url, {}, 12000) : await fetch(url);
       const j = await r.json();
       if (!r.ok) throw Object.assign(new Error(j?.error?.message || `HTTP ${r.status}`), { status: r.status });
       return j?.pageInfo?.totalResults ?? 0;
@@ -2563,22 +2637,32 @@ function mergeEnsemble(runs) {
   .map((p, i) => ({ ...p, rank: i + 1 }));
 }
 
-/* Gemini 1회 호출 — 성공 시 predictions 배열, 실패 시 {status, errMsg}를 throw */
-async function callGeminiPredict(model, key, fullPrompt) {
-  const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), 30000);
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key.trim())}`,
-    { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{role:'user',parts:[{text:fullPrompt}]}], generationConfig:{maxOutputTokens:1800,temperature:0.3} }),
-      signal: ctrl.signal }
-  );
-  clearTimeout(tid);
+/* ════ Gemini 공통 호출 — 모든 호출부(예측·TRACK B·행사 발견·테스트)가 이 하나를 쓴다.
+   백엔드 모드면 서버가 키를 주입해 대신 호출. 성공 시 텍스트, 실패 시 status 포함 throw. */
+async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000 } = {}) {
+  const key = K.gemini();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(key.trim())}`;
+  const body = JSON.stringify({ contents: [{ role: 'user', parts: [{ text: promptText }] }],
+    generationConfig: { maxOutputTokens: maxTokens, temperature } });
+  let r;
+  if (key === '__BK__') {
+    r = await bkFetch(url, { method: 'POST', body }, timeout);
+  } else {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: ctrl.signal });
+    } finally { clearTimeout(tid); }
+  }
   const data = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error(data?.error?.message || `HTTP ${r.status}`); e.status = r.status; throw e; }
-  const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
-  const parsed = JSON.parse(txt);
-  const preds = parsed.predictions || [];
+  return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+}
+
+/* Gemini 예측 1회 — predictions 배열 반환, 빈 응답은 throw */
+async function callGeminiPredict(fullPrompt) {
+  const txt = await geminiGenerate(fullPrompt, { maxTokens: 1800, temperature: 0.3, timeout: 30000 });
+  const preds = JSON.parse(txt).predictions || [];
   if (!preds.length) throw new Error('빈 예측 응답');
   return preds;
 }
@@ -2720,7 +2804,7 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${g
       { key: '공급규제', instr: '\n[관점 지시 — 공급·규제 우선]\n이번 분석은 공급(식약처 등록 제형)·규제 캘린더·설비 관점을 최우선 가중하는 관점으로 수행하라. 소비자 검색·클릭은 보조 참고.' },
     ];
     const settled = await Promise.allSettled(
-      PERSPECTIVES.map(p => callGeminiPredict(model, key, prompt + p.instr))
+      PERSPECTIVES.map(p => callGeminiPredict(prompt + p.instr))
     );
     const okRuns = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
     if (!okRuns.length) {
@@ -2845,63 +2929,76 @@ function renderZ1() {
   }
   const model = K.model() || 'gemini-2.0-flash';
   const periodLabel = (PERIOD_LABEL[currentPeriod] || '6개월') + ' 예측';
-  const periodCls   = 'period-' + currentPeriod;
   document.getElementById('geminiModelLabel').textContent =
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
-  const sigMap   = { climate:'chip-cl', society:'chip-so', economy:'chip-ec', culture:'chip-cu' };
   const sigLabel = { climate:'기후', society:'사회', economy:'경제', culture:'문화' };
   const btSummary = matured.length
-    ? ` · 과거 예측 백테스트(신호 일치도) ${matured.slice(0, 3).map(h => `${h.hits}/${h.total}`).join(', ')}`
+    ? ` · 백테스트 ${matured.slice(0, 3).map(h => `${h.hits}/${h.total}`).join(', ')}`
     : '';
+  const q = window._dataQuality || computeDataQuality();
+  const changes = getRankChanges(PREDICTIONS, currentPeriod);
+
   el.innerHTML = `
-    <div style="padding:6px 12px 4px;background:var(--bg2);border-bottom:.5px solid var(--bg3);font-size:10px;color:var(--ink3);display:flex;align-items:center;gap:6px">
-      <span class="period-badge ${periodCls}">${periodLabel}</span>
-      예측 기준 데이터: ${Object.values(SIG_DATA).filter(v=>v).length}/4 신호 수집됨 · 항목 클릭 시 패키징 적합 업체 자동 조회${btSummary}
+    <div class="z1-meta">
+      <span class="period-badge period-${currentPeriod}">${periodLabel}</span>
+      신호 ${q.real}/${q.total} 실데이터 · 카드 클릭 시 제조사 매칭${btSummary}
     </div>
-    <table class="ptable">
-    <thead><tr>
-      <th style="width:32px">#</th>
-      <th>화장품 유형 및 핵심 기술 요건</th>
-      <th style="width:160px">권장 패키징</th>
-      <th style="width:130px">예측 신뢰도</th>
-      <th>근거 신호</th>
-      <th>추천 채널</th>
-      <th>출시 적기</th>
-      <th style="width:24px"></th>
-    </tr></thead>
-    <tbody>${(() => {
-      const changes = getRankChanges(PREDICTIONS, currentPeriod);
-      return PREDICTIONS.map((p, i) => {
-        const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
-        const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        const chips = topSig.map(([k, v]) =>
-          `<span class="pchip ${sigMap[k]}">${sigLabel[k]} ${v >= 0.4 ? '●●●' : v >= 0.3 ? '●●' : '●'}</span>`
-        ).join('');
-        const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
-        const delta = changes[p.rank];
-        const deltaHtml = delta === 'NEW' ? '<span class="rank-new">NEW</span>'
-          : typeof delta === 'number' && delta > 0 ? `<span class="rank-up">▲${delta}</span>`
-          : typeof delta === 'number' && delta < 0 ? `<span class="rank-dn">▼${Math.abs(delta)}</span>`
-          : '';
-        return `<tr class="prow${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
-          <td><div class="p-rank ${rankCls}">${String(p.rank).padStart(2, '0')}${deltaHtml}</div></td>
-          <td><div class="p-type">${escHtml(p.type)}</div><div class="p-tech">${escHtml(p.tech)}</div>${(() => {
-            const an = seasonAnchorForType(p.type);
-            if (!an) return '';
-            const lbl = an.verdict === 'hit' ? '작년 동기 유사유형 적중' : an.verdict === 'part' ? '작년 동기 부분 적중'
-                      : an.verdict === 'miss' ? '작년 동기 미스' : an.verdict === 'signal' ? '작년 동기 신호 재포착' : '작년 동기 유사 예측 있음';
-            const cls = an.verdict === 'hit' || an.verdict === 'signal' ? 'anch-y' : an.verdict === 'miss' ? 'anch-n' : 'anch-m';
-            return `<div class="p-anchor ${cls}" title="작년 같은 시기(±65일) 예측 이력과 대조한 계절 반복성 참고">${lbl}</div>`;
-          })()}</td>
-          <td><div class="p-pkg">📦 ${escHtml(p.packaging || '—')}</div></td>
-          <td><div class="p-conf"><div class="cbar-bg"><div class="cbar ${confCls}" style="width:${p.confidence}%"></div></div><span class="cnum ${confCls}">${p.confidence}%</span></div><div class="p-conf-tags">${p.agree ? `<span class="agree-badge ${p.agree >= (p.agreeOf || 3) ? 'agb-hi' : p.agree >= 2 ? 'agb-mid' : 'agb-lo'}" title="3관점 독립 분석 중 ${p.agree}개 관점 일치">합의 ${p.agree}/${p.agreeOf || 3}</span>` : ''}${p._capped ? `<span class="cap-mark" title="데이터 품질(실데이터 비율)에 따른 신뢰도 상한 적용됨">품질상한▼</span>` : ''}</div><button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">🔍 근거 보기</button></td>
-          <td><div class="pchips">${chips}</div></td>
-          <td><div class="p-channel">${(p.channel || []).slice(0, 2).map(escHtml).join('<br>')}</div></td>
-          <td><div class="p-season">${escHtml(p.season)}</div></td>
-          <td><span class="p-arr">${SEL_IDX === i ? '▼' : '▶'}</span></td>
-        </tr>`;
-      }).join('');
-    })()}</tbody></table>`;
+    <div class="pred-list">${PREDICTIONS.map((p, i) => {
+      const confCls = p.confidence >= 80 ? 'hi' : p.confidence >= 65 ? 'mi' : 'lo';
+      /* "왜 이 결과인가" 한 줄 — 상위 신호 기여를 문장으로 */
+      const topSig = Object.entries(p.signals || {}).sort((a, b) => b[1] - a[1]).slice(0, 2)
+        .filter(([, v]) => v > 0);
+      const why = topSig.length
+        ? topSig.map(([k, v]) => `${sigLabel[k]} ${Math.round(v * 100)}%`).join(' · ') + ' 신호 주도'
+        : '';
+      const delta = changes[p.rank];
+      const deltaHtml = delta === 'NEW' ? '<span class="rank-new">NEW</span>'
+        : typeof delta === 'number' && delta > 0 ? `<span class="rank-up">▲${delta}</span>`
+        : typeof delta === 'number' && delta < 0 ? `<span class="rank-dn">▼${Math.abs(delta)}</span>` : '';
+      /* 근거 칩: 합의 · 라이프사이클 단계 · 시즌 앵커 · 품질상한 */
+      const chips = [];
+      if (p.agree) chips.push(`<span class="pc-chip ${p.agree >= (p.agreeOf || 3) ? 'pcc-strong' : p.agree >= 2 ? 'pcc-mid' : 'pcc-weak'}" title="3관점 독립 분석 중 ${p.agree}개 관점이 같은 유형을 지목">합의 ${p.agree}/${p.agreeOf || 3}</span>`);
+      const stg = stageForType(p.type);
+      if (stg) chips.push(`<span class="pc-chip ${stg.key === 'grow' || stg.key === 'emerge' ? 'pcc-strong' : stg.key === 'decline' ? 'pcc-bad' : 'pcc-weak'}" title="키워드 모멘텀 기울기 기반 라이프사이클 단계">${stg.label}</span>`);
+      const an = seasonAnchorForType(p.type);
+      if (an) {
+        const lbl = an.verdict === 'hit' ? '작년 동기 적중' : an.verdict === 'part' ? '작년 동기 부분' :
+                    an.verdict === 'miss' ? '작년 동기 미스' : an.verdict === 'signal' ? '작년 동기 재포착' : '작년 동기 예측';
+        chips.push(`<span class="pc-chip ${an.verdict === 'hit' || an.verdict === 'signal' ? 'pcc-strong' : an.verdict === 'miss' ? 'pcc-bad' : 'pcc-mid'}" title="작년 같은 시기(±65일) 예측 이력 대조">${lbl}</span>`);
+      }
+      if (p._capped) chips.push(`<span class="pc-chip pcc-bad" title="실데이터 비율에 따른 신뢰도 상한 적용">품질상한▼</span>`);
+      return `<div class="pcard${i === 0 ? ' pcard-top' : ''}${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
+        <div class="pc-rank">${String(p.rank).padStart(2, '0')}${deltaHtml}</div>
+        <div class="pc-main">
+          <div class="pc-type">${escHtml(p.type)}</div>
+          ${why ? `<div class="pc-why">${why}${p.tech ? ` — ${escHtml(p.tech)}` : ''}</div>` : `<div class="pc-why">${escHtml(p.tech || '')}</div>`}
+          ${chips.length ? `<div class="pc-chips">${chips.join('')}</div>` : ''}
+          <div class="pc-meta">
+            <span>📦 ${escHtml(p.packaging || '—')}</span>
+            ${(p.channel || []).length ? `<span>${(p.channel || []).slice(0, 2).map(escHtml).join(' · ')}</span>` : ''}
+            <span>${escHtml(p.season || '')}</span>
+          </div>
+        </div>
+        <div class="pc-side">
+          <div class="pc-num ${confCls}">${p.confidence}<em>%</em></div>
+          <div class="pc-bar"><b class="${confCls}" style="width:${p.confidence}%"></b></div>
+          <button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">근거 보기</button>
+        </div>
+        <span class="pc-arr">${SEL_IDX === i ? '▼' : '›'}</span>
+      </div>`;
+    }).join('')}</div>`;
+}
+
+/* 예측 유형 → 라이프사이클 단계 조회 (키워드 포함 매칭) */
+function stageForType(type) {
+  const lc = window._lifecycle;
+  if (!lc) return null;
+  const LB = { emerge: '태동기', grow: '성장기', mature: '성숙기', decline: '쇠퇴기' };
+  for (const key of ['grow', 'emerge', 'decline', 'mature']) {
+    if ((lc[key] || []).some(k => type.includes(k.name) || k.name.includes(extractSearchKw(type).split(' ')[0])))
+      return { key, label: LB[key] };
+  }
+  return null;
 }
 
 /* ════ 제조사 매칭 ════ */
@@ -3152,17 +3249,7 @@ ${allText}
 JSON만 출력:
 {"companies":[{"name":"업체명","evidence_type":"mfds|news|blog|inferred","production":"생산중|생산이력|생산가능(추측)","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
     try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 15000);
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(gkey.trim())}`,
-        { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:600,temperature:0} }),
-          signal: ctrl.signal }
-      );
-      clearTimeout(tid);
-      const data = await r.json();
-      const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+      const txt = await geminiGenerate(prompt, { maxTokens: 600, temperature: 0, timeout: 15000 });
       const parsed = JSON.parse(txt);
       (parsed.companies || []).forEach(c => { if (c.name) results.push(c); });
     } catch {}
@@ -3863,44 +3950,31 @@ async function testGemini() {
   const el = document.getElementById('r-gemini');
   el.textContent = '테스트 중...'; el.style.color = 'var(--ink3)';
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 12000);
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(key.trim())}`,
-      { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{role:'user',parts:[{text:'한 단어로만 답하세요: 화장품'}]}], generationConfig:{maxOutputTokens:10} }),
-        signal: ctrl.signal }
-    );
-    clearTimeout(tid);
-    let data;
-    try { data = await r.json(); } catch { data = {}; }
-    if (!r.ok) {
-      const errMsg = data?.error?.message || `HTTP ${r.status}`;
-      if (r.status === 429) {
+    let reply;
+    try {
+      reply = await geminiGenerate('한 단어로만 답하세요: 화장품', { maxTokens: 10, timeout: 12000 });
+    } catch (ge) {
+      const errMsg = ge.message || '';
+      if (ge.status === 429) {
         const isZeroQuota = errMsg.includes('limit: 0') || errMsg.includes('free_tier');
-        el.innerHTML = isZeroQuota
+        el.textContent = isZeroQuota
           ? `쿼터 0 오류 (429)\n\n해결:\n① 모델을 gemini-2.5-flash-lite 로 변경 (AQ키 무료 1,000건)\n② 또는 aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n③ 또는 Google Cloud Console에서 결제 계정 연결`
           : `요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
-        el.style.color = 'var(--red)';
-      } else if (r.status === 400) {
-        el.textContent = `잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트 (=, + 등 특수문자 인코딩 자동 처리)\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n④ Google Cloud Console → Generative Language API 활성화 확인\n\n원본 오류: ${errMsg}`;
-        el.style.color = 'var(--red)';
-      } else if (r.status === 403) {
+      } else if (ge.status === 400) {
+        el.textContent = `잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n\n원본 오류: ${errMsg}`;
+      } else if (ge.status === 403) {
         el.textContent = `접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
-        el.style.color = 'var(--red)';
       } else {
-        el.textContent = `오류 (${r.status}): ${errMsg}`;
-        el.style.color = 'var(--red)';
+        el.textContent = `오류${ge.status ? ` (${ge.status})` : ''}: ${errMsg}`;
       }
-      return;
+      el.style.color = 'var(--red)'; return;
     }
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (reply) {
       el.textContent = `연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
       el.style.color = 'var(--grn)';
       setStatus('st-gemini', '확인됨', true);
     } else {
-      el.textContent = '응답 형식 오류: ' + JSON.stringify(data).slice(0, 120);
+      el.textContent = '응답이 비어 있습니다 — 모델·키를 확인하세요';
       el.style.color = 'var(--yel)';
     }
   } catch (e) {
@@ -4232,7 +4306,8 @@ async function testYoutube() {
   el.textContent = 'YouTube Data API 테스트 중 ("선크림 화장품" 최근 30일 영상 검색)...'; el.style.color = 'var(--ink3)';
   try {
     const after = new Date(Date.now() - 30 * 86400000).toISOString();
-    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=3&q=${encodeURIComponent('선크림 화장품')}&publishedAfter=${encodeURIComponent(after)}&key=${encodeURIComponent(key)}`);
+    const ytUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=3&q=${encodeURIComponent('선크림 화장품')}&publishedAfter=${encodeURIComponent(after)}&key=${encodeURIComponent(key)}`;
+    const r = key === '__BK__' ? await bkFetch(ytUrl, {}, 12000) : await fetch(ytUrl);
     const j = await r.json();
     if (!r.ok) {
       const msg = j?.error?.message || `HTTP ${r.status}`;
@@ -4405,6 +4480,8 @@ function init() {
   document.getElementById('btnTestKipris').addEventListener('click', testKipris);
   document.getElementById('btnSaveYoutube').addEventListener('click', () => saveKey('youtube'));
   document.getElementById('btnTestYoutube').addEventListener('click', testYoutube);
+  document.getElementById('btnSaveBackend').addEventListener('click', () => saveKey('backend'));
+  document.getElementById('btnTestBackend').addEventListener('click', testBackend);
   document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
   document.getElementById('btnGenReport').addEventListener('click', genReport);
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);

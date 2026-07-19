@@ -1,42 +1,43 @@
 /* ============================================================
    CosmeDB – TAB05 트렌드 예측 & 소싱 검증
-   Ivory Pastel Theme
+   K-Beauty Lab Report Theme (v2 — 딥그린·포슬린)
    ============================================================ */
 
 :root {
+  /* ══ K-뷰티 랩 리포트 팔레트 — 포슬린 화이트 지면 + 딥그린 잉크 ══ */
   /* ── 텍스트 ── */
-  --ink:  #2c2419;
-  --ink2: #5c4e42;
-  --ink3: #9a8b7d;
+  --ink:  #1f2721;
+  --ink2: #48564c;
+  --ink3: #86948a;
 
   /* ── 배경 ── */
-  --bg:   #faf7f2;
-  --bg2:  #f3ede4;
-  --bg3:  #e8dfd3;
+  --bg:   #f5f6f3;
+  --bg2:  #edf0ea;
+  --bg3:  #dde3d8;
   --w:    #ffffff;
 
-  /* ── 헤더/구역 헤더 (과거 navy) ── */
-  --navy:  #ede6d8;
-  --navy2: #e2d9ca;
+  /* ── 구역 헤더 지면 ── */
+  --navy:  #eaeee6;
+  --navy2: #dfe5da;
 
   /* ── 강조색 ── */
-  --acc:   #bf7b42;   /* 테라코타 */
-  --acc2:  #d49060;
-  --teal:  #4a8874;
-  --teal2: #5ca090;
-  --yel:   #b89020;
-  --yel2:  #d4a830;
-  --blue:  #4a72a8;
-  --blue2: #5d88c8;
-  --red:   #b85050;
-  --grn:   #488060;
-  --grn2:  #5a9870;
-  --pur:   #7854b8;
+  --acc:   #175e4c;   /* 딥그린 — 브랜드 축 */
+  --acc2:  #1f7a62;
+  --teal:  #3e7d8a;
+  --teal2: #5899a7;
+  --yel:   #a3801f;
+  --yel2:  #c09a2e;
+  --blue:  #3d6ba3;
+  --blue2: #5584bd;
+  --red:   #ad4d4d;
+  --grn:   #2f7d50;
+  --grn2:  #46966a;
+  --pur:   #6b57a8;
 
   --r:  6px;
   --r2: 10px;
-  --s1: 0 1px 4px rgba(0,0,0,.06), 0 0 0 .5px rgba(0,0,0,.05);
-  --s2: 0 4px 16px rgba(0,0,0,.09), 0 0 0 .5px rgba(0,0,0,.05);
+  --s1: 0 1px 3px rgba(24,38,30,.07), 0 0 0 .5px rgba(24,38,30,.05);
+  --s2: 0 6px 20px rgba(24,38,30,.10), 0 0 0 .5px rgba(24,38,30,.05);
 }
 
 /* ── 리셋 ── */
@@ -61,34 +62,33 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--navy);
-  color: var(--ink);
+  padding: 13px 18px;
+  background: var(--acc);
+  color: #fff;
   border-radius: var(--r2);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   box-shadow: var(--s2);
   gap: 8px;
   flex-wrap: wrap;
-  border: .5px solid var(--bg3);
 }
-.hd-left { display: flex; align-items: center; gap: 9px; }
+.hd-left { display: flex; align-items: center; gap: 10px; }
 .hd-tag {
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: .1em;
-  background: var(--bg3);
-  padding: 2px 7px;
+  letter-spacing: .12em;
+  background: rgba(255,255,255,.16);
+  padding: 2px 8px;
   border-radius: 3px;
-  color: var(--ink2);
+  color: rgba(255,255,255,.92);
 }
-.hd-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.hd-title { font-size: 15.5px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
 .hd-period {
-  font-size: 11px;
-  color: var(--ink3);
-  padding: 3px 9px;
-  border: .5px solid var(--bg3);
-  border-radius: var(--r);
-  background: var(--w);
+  font-size: 10.5px;
+  color: rgba(255,255,255,.85);
+  padding: 3px 10px;
+  border: .5px solid rgba(255,255,255,.25);
+  border-radius: 20px;
+  background: rgba(255,255,255,.08);
 }
 .hd-right { display: flex; align-items: center; gap: 5px; }
 .btn-hd {
@@ -99,26 +99,21 @@ button { font-family: inherit; cursor: pointer; }
   font-family: inherit;
   transition: all .12s;
 }
-.btn-collect {
+/* 헤더(딥그린 밴드) 안의 버튼 — 수집 버튼만 흰색으로 반전해 시선 고정 */
+.hd .btn-collect {
   border: none;
-  background: var(--acc);
-  color: #fff;
-  font-weight: 600;
+  background: #fff;
+  color: var(--acc);
+  font-weight: 700;
 }
-.btn-collect:hover { background: var(--acc2); }
-.btn-collect.running { background: var(--blue2); animation: pulse .9s infinite; }
-.btn-report {
-  border: .5px solid var(--bg3);
-  background: var(--w);
-  color: var(--ink2);
+.hd .btn-collect:hover { background: #eaf3ef; }
+.hd .btn-collect.running { background: rgba(255,255,255,.85); animation: pulse .9s infinite; }
+.hd .btn-report, .hd .btn-guide, .hd .btn-api-set {
+  border: .5px solid rgba(255,255,255,.3);
+  background: transparent;
+  color: rgba(255,255,255,.9);
 }
-.btn-report:hover { background: var(--bg2); }
-.btn-api-set {
-  border: .5px solid var(--bg3);
-  background: var(--bg2);
-  color: var(--ink3);
-}
-.btn-api-set:hover { background: var(--bg3); color: var(--ink2); }
+.hd .btn-report:hover, .hd .btn-guide:hover, .hd .btn-api-set:hover { background: rgba(255,255,255,.12); color: #fff; }
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.6} }
 
 /* ═══════════════════════════════════════
@@ -237,12 +232,14 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 14px;
-  border-bottom: .5px solid var(--bg3);
-  background: var(--navy);
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--bg3);
+  background: var(--w);
   color: var(--ink);
 }
-.zone-title { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.zone-title { font-size: 13px; font-weight: 800; letter-spacing: -.01em; display: flex; align-items: center; gap: 7px; }
 .ztag  { font-size: 9px; color: var(--ink3); letter-spacing: .08em; font-weight: 400; }
 .zmodel {
   font-size: 9px;
@@ -304,14 +301,6 @@ button { font-family: inherit; cursor: pointer; }
 .sb-bar { height: 6px; border-radius: 3px; background: var(--bg3); margin-top: 6px; overflow: hidden; }
 .sb-bar b { display: block; height: 100%; border-radius: 3px; }
 
-/* ═══ 앙상블 합의·품질상한 배지 (예측 테이블) ═══ */
-.p-conf-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-.agree-badge { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
-.agb-hi  { background: #dcefe2; color: #2c6647; }
-.agb-mid { background: #f3ecd2; color: #7a6215; }
-.agb-lo  { background: var(--bg3); color: var(--ink3); }
-.cap-mark { font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: #fdeaea; color: #9c3b3b; }
-
 /* ═══ 트렌드 라이프사이클 맵 ═══ */
 .cy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 11px 13px; }
 @media(max-width:900px){ .cy-grid { grid-template-columns: 1fr 1fr; } }
@@ -323,12 +312,6 @@ button { font-family: inherit; cursor: pointer; }
 .cy-mo { font-size: 9px; font-weight: 700; }
 .cy-up { color: var(--grn); } .cy-dn { color: var(--red); } .cy-fl { color: var(--ink3); }
 .cy-none { font-size: 9.5px; color: var(--ink3); padding: 4px 2px; }
-
-/* ═══ 시즌 앵커 배지 ═══ */
-.p-anchor { display: inline-block; font-size: 8.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-top: 3px; }
-.anch-y { background: #e3f0e8; color: #2c6647; }
-.anch-m { background: #f3ecd2; color: #7a6215; }
-.anch-n { background: #f4dddd; color: #8f3737; }
 
 /* ═══ 신제품 레이더 스트립 ═══ */
 .radar-strip { padding: 7px 13px; border-top: .5px solid var(--bg3); background: var(--bg2); font-size: 10px; color: var(--ink2); line-height: 1.7; }
@@ -402,48 +385,72 @@ button { font-family: inherit; cursor: pointer; }
 .lgb-part:hover { background: #f3ecd2; border-color: #7a6215; color: #7a6215; }
 .lgb-miss:hover { background: #f4dddd; border-color: #8f3737; color: #8f3737; }
 
-.ptable { width: 100%; border-collapse: collapse; }
-.ptable th {
-  padding: 6px 12px;
-  font-size: 9px; font-weight: 700;
-  color: var(--ink3);
-  text-align: left;
-  text-transform: uppercase;
-  letter-spacing: .07em;
+/* ═══ 메인 그리드 — 결과(예측) 히어로 + 우측 신뢰 레일 ═══ */
+.main-grid { display: grid; grid-template-columns: minmax(0, 1fr) 265px; gap: 10px; margin-bottom: 10px; align-items: start; }
+@media(max-width:980px){ .main-grid { grid-template-columns: 1fr; } }
+.mg-left .z1 { margin-bottom: 0; }
+.mg-rail { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 10px; }
+/* 레일에서는 스코어보드 세로 스택 */
+.mg-rail .scoreboard { grid-template-columns: 1fr; gap: 8px; margin-bottom: 0; }
+/* 레일용 수집 상태 — 칩 그리드 */
+.mg-rail .status-bar { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 9px 12px; margin-bottom: 0; }
+.mg-rail .status-summary { width: 100%; margin: 4px 0 0; text-align: left; }
+.mg-rail .ssep { display: none; }
+
+/* ═══ 예측 카드 리스트 (히어로) ═══ */
+.z1-meta {
+  padding: 7px 15px;
   border-bottom: .5px solid var(--bg3);
   background: var(--bg2);
+  font-size: 10px; color: var(--ink3);
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
 }
-.prow { cursor: pointer; border-bottom: .5px solid var(--bg3); transition: background .1s; }
-.prow:last-child { border-bottom: none; }
-.prow:hover { background: var(--bg2); }
-.prow.sel { background: #eef4ff; border-left: 3px solid var(--blue2); }
-.prow td { padding: 9px 12px; vertical-align: middle; }
-.p-rank { font-size: 12px; font-weight: 700; color: var(--ink3); width: 30px; }
-.p-rank.r1 { color: #b07820; }
-.p-rank.r2 { color: #7a8799; }
-.p-rank.r3 { color: #a06040; }
-.p-type  { font-size: 12px; font-weight: 600; color: var(--ink); }
-.p-tech  { font-size: 10px; color: var(--ink3); margin-top: 2px; }
-.p-conf  { display: flex; align-items: center; gap: 6px; min-width: 130px; }
-.cbar-bg { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
-.cbar    { height: 100%; border-radius: 3px; }
-.cbar.hi { background: var(--grn2); }
-.cbar.mi { background: var(--yel2); }
-.cbar.lo { background: #ccc; }
-.cnum    { font-size: 11px; font-weight: 600; min-width: 32px; text-align: right; }
-.cnum.hi { color: var(--grn); }
-.cnum.mi { color: var(--yel); }
-.cnum.lo { color: var(--ink3); }
-.pchips  { display: flex; gap: 3px; flex-wrap: wrap; }
-.pchip   { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
-.chip-cl { background: #dbeafe; color: #2a4a9f; }
-.chip-so { background: #d4f0e4; color: #1f6b42; }
-.chip-ec { background: #fef3c7; color: #92500e; }
-.chip-cu { background: #ffe8d8; color: #9a3818; }
-.p-season  { font-size: 10px; font-weight: 600; color: var(--ink2); white-space: nowrap; }
-.p-channel { font-size: 10px; color: var(--ink3); }
-.p-arr { color: var(--ink3); font-size: 11px; padding: 0 4px; transition: transform .15s; }
-.prow.sel .p-arr { color: var(--blue2); transform: rotate(90deg); }
+.pred-list { display: flex; flex-direction: column; }
+.pcard {
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 118px 18px;
+  gap: 0 12px;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: .5px solid var(--bg3);
+  cursor: pointer;
+  transition: background .12s;
+  position: relative;
+}
+.pcard:last-child { border-bottom: none; }
+.pcard:hover { background: var(--bg2); }
+.pcard.sel { background: #eef4ee; box-shadow: inset 3px 0 0 var(--acc); }
+.pcard-top { background: linear-gradient(90deg, rgba(23,94,76,.05), transparent 55%); }
+.pc-rank {
+  font-size: 19px; font-weight: 800; color: var(--ink3);
+  font-variant-numeric: tabular-nums; line-height: 1.1; text-align: center;
+}
+.pcard-top .pc-rank { color: var(--acc); }
+.pc-rank .rank-new, .pc-rank .rank-up, .pc-rank .rank-dn { display: block; font-size: 8px; }
+.pc-main { min-width: 0; }
+.pc-type { font-size: 13.5px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.pcard-top .pc-type { font-size: 15px; }
+.pc-why  { font-size: 10.5px; color: var(--ink2); margin-top: 3px; line-height: 1.55; }
+.pc-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.pc-chip { font-size: 9px; font-weight: 700; padding: 1.5px 7px; border-radius: 9px; }
+.pcc-strong { background: #ddeee5; color: #1c5c42; }
+.pcc-mid    { background: #f0ead2; color: #77621a; }
+.pcc-weak   { background: var(--bg3); color: var(--ink3); }
+.pcc-bad    { background: #f3dede; color: #8f3b3b; }
+.pc-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 9.5px; color: var(--ink3); margin-top: 5px; }
+.pc-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pc-num { font-size: 21px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.pc-num em { font-style: normal; font-size: 11px; font-weight: 600; }
+.pc-num.hi { color: var(--grn); }
+.pc-num.mi { color: var(--yel); }
+.pc-num.lo { color: var(--ink3); }
+.pc-bar { width: 100%; height: 5px; border-radius: 3px; background: var(--bg3); overflow: hidden; }
+.pc-bar b { display: block; height: 100%; border-radius: 3px; }
+.pc-bar b.hi { background: var(--grn2); }
+.pc-bar b.mi { background: var(--yel2); }
+.pc-bar b.lo { background: #c4cabf; }
+.pc-arr { color: var(--ink3); font-size: 13px; transition: transform .15s; }
+.pcard.sel .pc-arr { color: var(--acc); }
 
 /* ═══════════════════════════════════════
    ZONE 2: 제조사 매칭
