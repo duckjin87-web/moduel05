@@ -212,9 +212,10 @@ let PREDICTIONS = [];
 let MATCH_RESULTS = { trackA: [], trackB: [] };
 let SEL_IDX = -1;
 let currentPeriod = '6m';
-const PREDICTIONS_CACHE = { '2m': null, '6m': null, '1y': null };
+const PREDICTIONS_CACHE = { '3m': null, '6m': null, '1y': null };
 /* 예측 기간 라벨 — 1~2개월(즉시대응)·6개월·1년 3구간 공용 */
-const PERIOD_LABEL = { '2m': '1~2개월', '6m': '6개월', '1y': '1년' };
+/* 기획안 기준 3·6·12개월 구간. '2m'은 구버전 원장 이력 호환용 라벨 */
+const PERIOD_LABEL = { '3m': '3개월', '6m': '6개월', '1y': '12개월', '2m': '1~2개월' };
 let currentPkgType = '';   /* 현재 선택된 예측의 패키징 타입 */
 
 /* TRACK B 후보 인덱스 접근용 (onclick HTML attribute에서 JSON 직접 전달 방지) */
@@ -953,6 +954,18 @@ function buildPredEvidenceHtml(idx) {
   });
   /* ── ③ 예측 전반에 함께 반영된 공급·규제·해외 선행신호 (개별 카테고리 밖) ── */
   let lead = '';
+  /* 제형 레이더 — 이 예측이 어느 제형에 속하고 그 제형 점수가 무엇인지 */
+  {
+    const fm = formulationOfPred(p);
+    if (fm && fm.score !== undefined && fm.score !== null) {
+      lead += `<div class="gm-block"><div class="gm-block-title">제형 트렌드 점수 — ${escHtml(fm.name)} (${escHtml(fm.en)})</div>
+        <div class="gm-p"><b>${fm.score}점 · ${escHtml(fm.grade)}</b> (신뢰도 ${fm.coverage}%) — 필요 설비: ${escHtml(fm.capa.join(' · '))}</div>
+        <ul class="gm-list">${Object.keys(FORM_WEIGHTS).map(k => {
+          const c = fm.comp && fm.comp[k];
+          return `<li>${FORM_WLABEL[k]} (가중 ${Math.round(FORM_WEIGHTS[k]*100)}%) — ${c ? `<b>${c.score}점</b> · ${escHtml(c.srcs.join('·'))}` : '<span style="color:var(--ink3)">데이터 없음(가중치 제외)</span>'}</li>`;
+        }).join('')}</ul></div>`;
+    }
+  }
   lead += trendListHtml('공급 규모 — 식약처 등록 화장품 제형별 품목 수', (window._supplyTrends || []).map(t => ({ name: t.name + (t.recent ? `(신규 ${t.recent})` : ''), count: t.count })), 'count');
   lead += trendListHtml('해외 박람회 선행 트렌드(최근 60일 보도 키워드)', (window._expoTrends || []).map(t => ({ name: t.name, count: t.count })), 'count');
   lead += trendListHtml('YouTube 콘텐츠 모멘텀(최근 30일 vs 직전 30일)', window._ytTrends);
@@ -2004,7 +2017,7 @@ function getRankChanges(predictions, period) {
    히스토리는 기간(6개월=182일/1년=365일)이 도래해야 검증되므로, 운영 누적 기간이 짧으면
    당분간 검증 대상이 없는 것이 정상이다. */
 function periodMaturityMs(period) {
-  return period === '1y' ? 365 * 86400000 : period === '2m' ? 60 * 86400000 : 182 * 86400000;
+  return period === '1y' ? 365 * 86400000 : period === '3m' ? 90 * 86400000 : period === '2m' ? 60 * 86400000 : 182 * 86400000;
 }
 
 function backtestPredictions() {
@@ -2409,6 +2422,291 @@ async function collectGlobalExpoTrends() {
   } catch { window._expoErr = '수집 실패'; }
 }
 
+/* ════════════ 제형 트렌드 레이더 (Formulation Trend Radar) ════════════
+   기획안 구조 반영 — 성분이 아니라 '제형'을 예측 단위로 삼고,
+   성분(Ingredient) → 제형(Formulation) → 패키징(Packaging) → 생산설비(CAPA)로
+   이어지는 제조업 관점 조기경보 체계.
+
+   점수 = SNS·콘텐츠 35% + 검색 30% + 신제품 25% + 글로벌 선행 10%
+   ※ 수집되지 않은 축은 가중치에서 제외하고 재정규화한다. 없는 데이터를 중립값으로
+     채워 점수를 만들어내지 않고, 대신 커버리지를 신뢰도로 함께 표기한다. */
+const FORM_WEIGHTS = { sns: 0.35, search: 0.30, launch: 0.25, global: 0.10 };
+const FORM_WLABEL  = { sns: 'SNS·콘텐츠', search: '검색', launch: '신제품', global: '글로벌 선행' };
+
+/* 제형 표준 분류 — 기획안 Phase 1 체계. capa=필요 설비, pkg=대표 포장형태, ing=연관 성분 */
+const FORMULATIONS = [
+  { code:'CRM', name:'크림',        en:'Cream',            group:'스킨케어', re:/크림|cream/i,
+    hint:'유화물 전반(수분·영양·선크림 포함)', pkg:['자(Jar)','튜브','에어리스 펌프'],
+    capa:['유화 설비(호모믹서)','고점도 충진기','자·튜브 캡핑'], ing:['콜라겐','세라마이드','레티놀'] },
+  { code:'AMP', name:'앰플',        en:'Ampoule',          group:'스킨케어', re:/앰플|ampoule/i,
+    hint:'고농축 저점도 — 정밀·무균 충진', pkg:['앰플 바이알','드로퍼 보틀','소용량 파우치'],
+    capa:['저점도 정밀 충진','저온·무균 라인','드로퍼 조립'], ing:['PDRN','엑소좀','글루타치온'] },
+  { code:'TON', name:'토너',        en:'Toner',            group:'스킨케어', re:/토너|toner/i, ex:/패드|pad/i,
+    hint:'액상 대용량', pkg:['대용량 보틀','펌프 보틀'],
+    capa:['저점도 대용량 충진','인라인 여과'], ing:['판테놀','시카'] },
+  { code:'LOT', name:'로션·에멀전', en:'Lotion',           group:'스킨케어', re:/로션|lotion|에멀[전젼]|emulsion/i,
+    hint:'중점도 유화물', pkg:['펌프 보틀','튜브'],
+    capa:['유화 설비','중점도 충진기'], ing:['세라마이드','콜라겐'] },
+  { code:'ESS', name:'에센스·세럼', en:'Essence/Serum',    group:'스킨케어', re:/에센스|essence|세럼|serum/i,
+    hint:'가용화·저점도 기능성', pkg:['드로퍼','펌프 보틀','에어리스'],
+    capa:['가용화 설비','저점도 충진','산화방지 충진'], ing:['PDRN','레티놀','펩타이드'] },
+
+  { code:'SHT', name:'시트마스크',  en:'Sheet Mask',       group:'마스크',   re:/시트\s?마스크|마스크\s?팩|마스크팩|sheet\s?mask/i, ex:/하이드로겔|바이오|슬리핑|sleeping/i,
+    hint:'부직포 시트 함침', pkg:['개별 파우치'],
+    capa:['시트 함침 라인','파우치 실링','자동 폴딩'], ing:['히알루론산','시카'] },
+  { code:'HYD', name:'하이드로겔 마스크', en:'Hydrogel Mask', group:'마스크', re:/하이드로겔|hydro\s?gel|hydrogel/i,
+    hint:'겔 캐스팅·성형 — 트레이 수요 직결', pkg:['개별 트레이','파우치'],
+    capa:['겔 캐스팅·성형','저온 경화','트레이 인서트'], ing:['PDRN','콜라겐','스피큘'] },
+  { code:'BIO', name:'바이오셀룰로오스', en:'Bio-cellulose', group:'마스크', re:/바이오\s?셀룰로|bio-?cellulose/i,
+    hint:'배양 시트 — 고단가 프리미엄', pkg:['개별 파우치+지지필름'],
+    capa:['배양시트 취급','습식 함침','클린 실링'], ing:['엑소좀','콜라겐'] },
+  { code:'SLP', name:'슬리핑 마스크', en:'Sleeping Mask',  group:'마스크',   re:/슬리핑\s?(마스크|팩)|sleeping\s?(mask|pack)|수면\s?팩/i,
+    hint:'고점도 도포형', pkg:['자(Jar)','튜브'],
+    capa:['고점도 유화','자 충진'], ing:['레티놀','세라마이드'] },
+
+  { code:'TPD', name:'토너패드',    en:'Toner Pad',        group:'패드',     re:/토너\s?패드|toner\s?pad|패드|pad/i, ex:/아이\s?패치|eye\s?patch|겔\s?패드/i,
+    hint:'패드 적층·함침 — 리필 포맷 확대', pkg:['원형 자','리필 파우치'],
+    capa:['패드 자동 투입·적층','액 함침 정량','자 실링'], ing:['시카','판테놀','글루타치온'] },
+  { code:'GPD', name:'겔패드',      en:'Gel Pad',          group:'패드',     re:/겔\s?패드|gel\s?pad/i,
+    hint:'겔 성형 패드', pkg:['트레이','자(Jar)'],
+    capa:['겔 성형','패드 적층','트레이 인서트'], ing:['PDRN','히알루론산'] },
+  { code:'EYE', name:'아이패치',    en:'Eye Patch',        group:'패드',     re:/아이\s?패치|eye\s?patch|언더아이|under-?eye/i,
+    hint:'개별 트레이 자동화 필요 — 설비 투자 핵심', pkg:['개별 트레이','자(Jar)'],
+    capa:['겔 커팅·성형','개별 트레이 인서트(자동화)','트레이 실링'], ing:['PDRN','엑소좀','펩타이드'] },
+
+  { code:'STK', name:'스틱·밤',     en:'Stick',            group:'특수 제형', re:/스틱|stick|멀티밤|립밤|밤\s?스틱|balm/i,
+    hint:'고형 몰딩 — 휴대 포맷 확산', pkg:['스틱 용기(트위스트업)','회전식 용기'],
+    capa:['고형 성형(몰딩)','냉각 라인','스틱 조립'], ing:['세라마이드','펩타이드'] },
+  { code:'MST', name:'미스트',      en:'Mist',             group:'특수 제형', re:/미스트|mist|스프레이|spray|분무/i,
+    hint:'분무 충진·노즐', pkg:['스프레이 보틀','펌프'],
+    capa:['분무 충진','점도대응 노즐 조립','기밀 검사'], ing:['판테놀','히알루론산'] },
+  { code:'PWD', name:'파우더',      en:'Powder',           group:'특수 제형', re:/파우더|powder|분말/i,
+    hint:'분체 계량·방습', pkg:['병','소분 스틱팩'],
+    capa:['분체 계량·충진','방습 포장','제진 설비'], ing:['글루타치온','효소'] },
+  { code:'CAP', name:'캡슐',        en:'Capsule',          group:'특수 제형', re:/캡슐|capsule/i,
+    hint:'봉입·블리스터', pkg:['블리스터','자(Jar)'],
+    capa:['캡슐 성형·봉입','블리스터 실링'], ing:['레티놀','엑소좀'] },
+  { code:'POG', name:'필오프겔',    en:'Peel-Off Gel',     group:'특수 제형', re:/필\s?오프|peel-?off|필링\s?겔/i,
+    hint:'피막 형성 겔', pkg:['튜브','자(Jar)'],
+    capa:['겔 배합','고점도 충진'], ing:['효소','AHA'] },
+];
+
+/* 제형 진화 경로 — 트렌드는 단독 발생이 아니라 경로를 따라 이동한다(기획안 8장) */
+const EVOLUTION_PATHS = [
+  { title: '마스크 → 패치 → 트레이', codes: ['SHT', 'BIO', 'HYD', 'EYE'], end: '개별 트레이 설비 수요' },
+  { title: '크림 → 스틱 → 휴대 포맷', codes: ['CRM', 'STK'], end: '휴대형 고형 성형 라인' },
+  { title: '액상 → 패드화',           codes: ['TON', 'TPD', 'GPD'], end: '패드 적층·함침 자동화' },
+  { title: '고농축 안정화',           codes: ['ESS', 'AMP', 'CAP'], end: '무균·봉입 설비' },
+];
+
+/* 핵심 성분(기획안 Phase 2) — 신호에서 언급을 잡아 제형과 연결 */
+const KEY_INGREDIENTS = ['PDRN', '엑소좀', '레티놀', '콜라겐', '글루타치온', '스피큘'];
+
+function formMatches(f, name) {
+  const n = String(name || '');
+  if (!n) return false;
+  if (f.ex && f.ex.test(n)) return false;
+  return f.re.test(n);
+}
+const clamp100 = v => Math.max(0, Math.min(100, Math.round(v)));
+/* 증감률(%) → 0~100 점수. 0% = 50점, +40% ≈ 98점, -40% ≈ 2점 */
+const deltaToScore = d => clamp100(50 + d * 1.2);
+
+/* 4개 축 신호 풀 구성 — 각 항목은 {name, delta?|count?, src} */
+function radarPools() {
+  const P = { sns: [], search: [], launch: [], global: [] };
+  (window._ytTrends || []).forEach(t => P.sns.push({ name: t.name, delta: t.delta, src: 'YouTube' }));
+  (window._reddit  || []).forEach(t => P.sns.push({ name: t.name, count: t.count, src: 'Reddit' }));
+  (window._dlTrends || []).forEach(t => P.search.push({ name: t.name, delta: t.delta, src: '네이버검색' }));
+  (window._salesTrends || []).forEach(t => P.search.push({ name: t.name, delta: t.delta, src: '쇼핑클릭' }));
+  (window._supplyTrends || []).forEach(t => P.launch.push({ name: t.name, count: t.count, src: '식약처 등록' }));
+  (window._productRadar || []).forEach(t => P.launch.push({ name: t.title, count: 1, src: '출시보도' }));
+  (window._newsTrends || []).forEach(t => P.launch.push({ name: t.name, count: t.count, src: '뉴스언급' }));
+  (window._gtrends || []).forEach(t => P.global.push({ name: t.name, delta: t.delta, src: 'GTrends' }));
+  (window._expoTrends || []).forEach(t => P.global.push({ name: t.name, count: t.count, src: '해외박람회' }));
+  return P;
+}
+
+/* 제형별 트렌드 점수 산출 — 매칭된 신호만 사용하고 커버리지를 함께 반환 */
+function computeFormulationRadar() {
+  const P = radarPools();
+  if (!Object.values(P).some(a => a.length)) return null;
+  /* 1차: 제형별 축별 매칭 수집 */
+  const rows = FORMULATIONS.map(f => {
+    const m = {};
+    Object.keys(P).forEach(k => { m[k] = P[k].filter(it => formMatches(f, it.name)); });
+    return { f, m };
+  });
+  /* count 축은 제형 간 상대 규모로 환산해야 하므로 축별 최대값 확보 */
+  const maxCount = {};
+  Object.keys(P).forEach(k => {
+    maxCount[k] = Math.max(1, ...rows.map(r => r.m[k].reduce((s, x) => s + (x.count || 0), 0)));
+  });
+  /* 2차: 축 점수 → 가중 합(커버리지 재정규화) */
+  const out = rows.map(({ f, m }) => {
+    const comp = {}; let wsum = 0, acc = 0;
+    Object.keys(P).forEach(k => {
+      const hits = m[k];
+      if (!hits.length) { comp[k] = null; return; }
+      const ds = hits.filter(h => typeof h.delta === 'number').map(h => h.delta);
+      const cSum = hits.reduce((s, h) => s + (h.count || 0), 0);
+      const byDelta = ds.length ? deltaToScore(ds.reduce((s, x) => s + x, 0) / ds.length) : null;
+      const byCount = cSum ? clamp100(40 + 55 * (cSum / maxCount[k])) : null;
+      const s = byDelta !== null && byCount !== null ? Math.round((byDelta + byCount) / 2)
+              : byDelta !== null ? byDelta : byCount;
+      comp[k] = { score: s, hits, srcs: [...new Set(hits.map(h => h.src))] };
+      wsum += FORM_WEIGHTS[k]; acc += FORM_WEIGHTS[k] * s;
+    });
+    const score = wsum ? Math.round(acc / wsum) : null;
+    const coverage = Math.round(wsum * 100);
+    const srcCount = new Set(Object.values(comp).filter(Boolean).flatMap(c => c.srcs)).size;
+    /* 커버리지 50% 미만(4축 중 1축 수준)은 점수가 높아도 '데이터 부족'으로 표기·후순위.
+       관측이 얕은 제형이 상위를 차지해 설비 투자 오판을 부르는 것을 막는다. */
+    const thin = coverage < 50;
+    return { ...f, score, coverage, comp, srcCount, thin,
+      grade: score === null ? null : thin ? '데이터 부족'
+           : score >= 80 ? '고성장' : score >= 70 ? '관찰' : score >= 60 ? '유지' : '낮음' };
+  }).filter(r => r.score !== null);
+  out.sort((a, b) => (a.thin - b.thin) || (b.score - a.score) || (b.coverage - a.coverage));
+  return out.length ? out : null;
+}
+
+/* 신호에서 핵심 성분 언급 집계 — 체인의 '성분' 단계 */
+function ingredientSignals() {
+  const pool = [...(window._dlTrends || []), ...(window._newsTrends || []), ...(window._reddit || []),
+                ...(window._expoTrends || []), ...(window._salesTrends || [])];
+  return KEY_INGREDIENTS.map(ing => {
+    const hits = pool.filter(t => String(t.name || '').toLowerCase().includes(ing.toLowerCase()));
+    return { name: ing, hits: hits.length };
+  }).filter(x => x.hits > 0);
+}
+
+const gradeCls = g => g === '고성장' ? 'fg-hi' : g === '관찰' ? 'fg-watch' : g === '유지' ? 'fg-keep' : 'fg-low';
+/* 제형 레이더 표기 정책: 커버리지 50% 미만은 '데이터 부족'으로 낮음 계열 표시 */
+
+function renderFormulationRadar() {
+  const el = document.getElementById('zForm');
+  if (!el) return;
+  const rows = window._formRadar;
+  if (!rows || !rows.length) { el.style.display = 'none'; return; }
+  const top = rows.slice(0, 8);
+  el.innerHTML = `
+    <div class="zone-hd">
+      <div class="zone-title">제형 트렌드 레이더 <span class="ztag">성분 → 제형 → 패키징 → 생산설비(CAPA)</span></div>
+      <button class="btn-hd btn-bt-toggle" onclick="openEvolutionPaths()">제형 진화 경로</button>
+      <span class="zmodel">SNS 35 · 검색 30 · 신제품 25 · 글로벌 10</span>
+    </div>
+    <div class="fr-grid">${top.map(r => `
+      <div class="fr-card" onclick="openFormulationChain('${r.code}')" title="클릭 시 패키징·설비(CAPA)·팀별 액션 확인">
+        <div class="fr-top">
+          <div>
+            <div class="fr-name">${escHtml(r.name)}</div>
+            <div class="fr-en">${escHtml(r.en)} · ${escHtml(r.group)}</div>
+          </div>
+          <div class="fr-score ${gradeCls(r.grade)}">${r.score}</div>
+        </div>
+        <div class="fr-grade ${gradeCls(r.grade)}">${r.grade}</div>
+        <div class="fr-bars">${Object.keys(FORM_WEIGHTS).map(k => {
+          const c = r.comp[k];
+          return `<div class="fr-bar-row" title="${FORM_WLABEL[k]} ${Math.round(FORM_WEIGHTS[k]*100)}%${c ? ` — ${c.score}점 (${c.srcs.join('·')})` : ' — 데이터 없음'}">
+            <span class="fr-bl">${FORM_WLABEL[k]}</span>
+            <span class="fr-bt"><b style="width:${c ? c.score : 0}%"></b></span>
+            <span class="fr-bv">${c ? c.score : '—'}</span>
+          </div>`;
+        }).join('')}</div>
+        <div class="fr-foot">신뢰도 ${r.coverage}% · ${r.srcCount}개 채널 포착 · 설비: ${escHtml(r.capa[0])}</div>
+      </div>`).join('')}</div>
+    <div class="fr-note">※ 점수는 수집된 축만으로 가중 재정규화해 산출하며, 미수집 축은 중립값으로 채우지 않고 신뢰도(커버리지)로 표기합니다. 80↑ 고성장 · 70~79 관찰 · 60~69 유지 · 60↓ 낮음 · 신뢰도 50% 미만은 '데이터 부족'으로 후순위 표기</div>`;
+  el.style.display = '';
+}
+
+/* 제형 → 패키징 → 설비 → 팀별 액션 체인 모달 */
+function openFormulationChain(code) {
+  const r = (window._formRadar || []).find(x => x.code === code) || FORMULATIONS.find(x => x.code === code);
+  if (!r) return;
+  const ings = ingredientSignals().filter(i => r.ing.some(x => x === i.name));
+  const path = EVOLUTION_PATHS.find(p => p.codes.includes(code));
+  const nm = n => (FORMULATIONS.find(f => f.code === n) || {}).name || n;
+  /* 운영 KPI(기획안 9장) */
+  const kpi = r.comp ? [
+    ['Trend Acceleration', r.score, '제형 성장 속도 종합'],
+    ['Product Launch Rate', r.comp.launch ? r.comp.launch.score : null, '신제품·등록 품목 확산'],
+    ['Global Lead Score', r.comp.global ? r.comp.global.score : null, '글로벌 선행시장 신호'],
+    ['Adoption(채널 폭)', r.srcCount ? Math.min(100, r.srcCount * 20) : null, `${r.srcCount || 0}개 채널에서 포착`],
+    ['Trend Confidence', r.coverage, '데이터 커버리지 기반 신뢰도'],
+  ] : [];
+  let body = `<div class="gm-block">
+    <div class="gm-block-title">${escHtml(r.name)} (${escHtml(r.en)}) — 제조 체인</div>
+    <div class="gm-note2">${escHtml(r.hint)}</div>
+    <div class="chain">
+      <div class="chain-step"><span class="cs-lb">성분</span><span class="cs-v">${(ings.length ? ings.map(i => i.name) : r.ing).map(escHtml).join(' · ')}</span></div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-step chain-key"><span class="cs-lb">제형</span><span class="cs-v">${escHtml(r.name)}${r.score !== undefined && r.score !== null ? ` <b>${r.score}점 · ${r.grade}</b>` : ''}</span></div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-step"><span class="cs-lb">패키징</span><span class="cs-v">${r.pkg.map(escHtml).join(' · ')}</span></div>
+      <div class="chain-arrow">↓</div>
+      <div class="chain-step chain-capa"><span class="cs-lb">생산설비</span><span class="cs-v">${r.capa.map(escHtml).join(' · ')}</span></div>
+    </div>
+  </div>`;
+  if (kpi.length) {
+    body += `<div class="gm-block"><div class="gm-block-title">운영 KPI</div><div class="kpi-grid">${
+      kpi.map(([k, v, d]) => `<div class="kpi-c"><div class="kpi-n">${v === null ? '—' : v}</div><div class="kpi-k">${escHtml(k)}</div><div class="kpi-d">${escHtml(d)}</div></div>`).join('')
+    }</div></div>`;
+  }
+  if (r.comp) {
+    body += `<div class="gm-block"><div class="gm-block-title">점수 산출 근거 — 어떤 신호가 이 점수를 만들었나</div><ul class="gm-list">${
+      Object.keys(FORM_WEIGHTS).map(k => {
+        const c = r.comp[k];
+        if (!c) return `<li>${FORM_WLABEL[k]} (가중 ${Math.round(FORM_WEIGHTS[k]*100)}%) — <span style="color:var(--ink3)">수집 데이터 없음 · 가중치에서 제외</span></li>`;
+        const ex = c.hits.slice(0, 3).map(h => `${escHtml(h.name)}${typeof h.delta === 'number' ? ` ${h.delta >= 0 ? '+' : ''}${h.delta}%` : ` ${h.count}건`}`).join(', ');
+        return `<li>${FORM_WLABEL[k]} (가중 ${Math.round(FORM_WEIGHTS[k]*100)}%) — <b>${c.score}점</b> · ${escHtml(c.srcs.join('·'))} · ${ex}</li>`;
+      }).join('')
+    }</ul></div>`;
+  }
+  if (path) {
+    body += `<div class="gm-block"><div class="gm-block-title">제형 진화 경로 — ${escHtml(path.title)}</div>
+      <div class="evo-line">${path.codes.map(c2 => {
+        const s = (window._formRadar || []).find(x => x.code === c2);
+        return `<span class="evo-node${c2 === code ? ' evo-cur' : ''}">${escHtml(nm(c2))}${s ? `<em>${s.score}</em>` : ''}</span>`;
+      }).join('<span class="evo-arr">→</span>')}<span class="evo-arr">→</span><span class="evo-end">${escHtml(path.end)}</span></div>
+      <div class="gm-note2">경로 상 앞 단계가 오르면 뒤 단계와 그 설비 수요가 따라온다 — 선제 CAPA 검토 근거.</div></div>`;
+  }
+  body += `<div class="gm-block"><div class="gm-block-title">팀별 실행 액션</div><ul class="gm-list">
+    <li><b>개발</b> — ${escHtml(r.name)} 처방 선행 개발 (${escHtml(r.ing.join('·'))} 조합 안정성·호환성 검토)</li>
+    <li><b>구매</b> — ${escHtml(r.ing[0] || '핵심')} 원료 확보 및 ${escHtml(r.pkg[0])} 부자재 공급처 이원화</li>
+    <li><b>생산</b> — ${escHtml(r.capa.join(' → '))} 보유 여부 점검 후 CAPA 산정${r.capa.some(c => /자동화|인서트/.test(c)) ? ' · 자동화 투자 검토' : ''}</li>
+    <li><b>경영</b> — ${r.grade === '고성장' ? '설비 투자 우선순위 상위 배치 · 신규 라인 검토' : '분기 재평가 대상으로 관찰'}</li>
+  </ul></div>`;
+  body += `<div class="gm-note">📸 ${new Date().toLocaleString('ko-KR')} 수집 신호 기준 · 최종 CAPA 결정 전 설비 실사 필요</div>`;
+  document.getElementById('sigModalTitle').textContent = `${r.name} — 제형 트렌드 & CAPA 체인`;
+  document.getElementById('sigModalBody').innerHTML = body;
+  document.getElementById('sigOverlay').classList.add('open');
+}
+
+function openEvolutionPaths() {
+  const nm = c => (FORMULATIONS.find(f => f.code === c) || {}).name || c;
+  const body = EVOLUTION_PATHS.map(p => `<div class="gm-block">
+    <div class="gm-block-title">${escHtml(p.title)}</div>
+    <div class="evo-line">${p.codes.map(c => {
+      const s = (window._formRadar || []).find(x => x.code === c);
+      return `<span class="evo-node${s && s.grade === '고성장' ? ' evo-hot' : ''}" onclick="openFormulationChain('${c}')">${escHtml(nm(c))}${s ? `<em>${s.score}</em>` : ''}</span>`;
+    }).join('<span class="evo-arr">→</span>')}<span class="evo-arr">→</span><span class="evo-end">${escHtml(p.end)}</span></div>
+  </div>`).join('') + `<div class="gm-note">경로 앞 단계의 점수 상승은 뒤 단계 제형·설비 수요의 선행 신호입니다. 제형명을 클릭하면 해당 CAPA 체인이 열립니다.</div>`;
+  document.getElementById('sigModalTitle').textContent = '제형 진화 경로 (Formulation Evolution Path)';
+  document.getElementById('sigModalBody').innerHTML = body;
+  document.getElementById('sigOverlay').classList.add('open');
+}
+
+/* 예측 프롬프트용 제형 레이더 블록 */
+function formRadarPromptBlock() {
+  const rows = window._formRadar;
+  if (!rows || !rows.length) return '';
+  const top = rows.slice(0, 10);
+  return `\n[제형 트렌드 레이더 — 제형별 종합 점수 (SNS35·검색30·신제품25·글로벌10 가중, 실측 신호 기반)]\n`
+    + top.map(r => `${r.name}(${r.en}) ${r.score}점/${r.grade} · 신뢰도 ${r.coverage}%${r.thin ? '(관측 얕음 — 참고만)' : ''} · 설비:${r.capa[0]}`).join('\n')
+    + `\n※ 이 시스템의 예측 단위는 성분이 아니라 '제형'이다. 위 점수가 높은 제형을 우선 반영하고, 각 예측의 formulation 필드에는 반드시 위 목록의 제형명을 그대로 적어라. packaging·tech는 그 제형의 실제 포장형태·생산설비와 일치해야 한다.`;
+}
+
 /* ════ 트렌드 라이프사이클 맵 — 모멘텀 스냅샷 누적 → 태동/성장/성숙/쇠퇴 분류 ════
    수집 때마다 키워드 모멘텀(검색·구매·뉴스·수출)을 날짜별로 localStorage에 누적하고,
    현재 수치(레벨)와 이전 스냅샷 대비 변화(기울기)로 4단계를 분류한다.
@@ -2675,15 +2973,15 @@ async function runGeminiPrediction(period) {
   const model = K.model();
   const now = new Date();
   const yr = now.getFullYear();
-  const horizon = period === '2m'
-    ? `향후 1~2개월 이내 (${yr}년 ${now.getMonth()+1}월~${((now.getMonth()+2)%12)+1}월, 즉시 대응·시즌 임박 구간)`
+  const horizon = period === '3m'
+    ? `향후 3개월 이내 (${yr}년 ${now.getMonth()+1}월~${((now.getMonth()+3)%12)+1}월, 즉시 대응·시즌 임박 구간)`
     : period === '6m'
     ? `${yr}년 하반기~${yr+1}년 상반기 (약 6개월 후)`
     : `${yr+1}년 전반 (약 12개월 후)`;
   /* 1~2개월 초단기는 구조적 신호(규제·설비)보다 '이미 움직이는' 빠른 신호(검색·쇼핑클릭·
      뉴스·계절 임박)를 우선한다. 장기(1년)는 반대로 공급·규제 선행신호를 더 크게 본다. */
-  const nearTermNote = period === '2m'
-    ? `\n[초단기(1~2개월) 예측 지침]\n이 구간은 신제품 개발이 아니라 "이미 출시됐거나 임박한" 품목의 단기 수요 급등을 예측한다. 검색·쇼핑클릭 급상승·뉴스 언급·계절 임박(기온/자외선) 신호를 최우선 가중하고, 리드타임이 긴 규제·신규 설비 신호는 참고로만 반영하라. 출시 적기(season)는 반드시 향후 8주 이내로 제시하라.`
+  const nearTermNote = period === '3m'
+    ? `\n[단기(3개월) 예측 지침]\n이 구간은 신제품 개발이 아니라 "이미 출시됐거나 임박한" 품목의 단기 수요 급등을 예측한다. 검색·쇼핑클릭 급상승·뉴스 언급·계절 임박(기온/자외선) 신호를 최우선 가중하고, 리드타임이 긴 규제·신규 설비 신호는 참고로만 반영하라. 출시 적기(season)는 반드시 향후 12주 이내로 제시하라.`
     : '';
   const sigSummary = Object.entries(SIG_DATA)
     .map(([k, v]) => `${k}: ${v?.score || '?'}/5 — ${v?.interpret || '수집 불가'}`)
@@ -2782,20 +3080,20 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
-1. 예측과 사실 분리 — 각 항목에 예측신뢰도(%) 반드시 명시
-2. 제형이 아닌 패키징+충진 설비 관점에서 분석
-3. packaging 필드에 권장 패키징 형태를 구체적으로 기재 (예: "에어리스 펌프 30~50ml", "스틱 몰딩 15g", "소용량 앰플 2ml×7")
+1. 예측 단위는 성분이 아니라 '제형(Formulation)'이다. formulation 필드에 위 제형 레이더 목록의 제형명을 그대로 적고, type은 그 제형을 구체화한 품목명으로 작성하라.
+2. 예측과 사실 분리 — 각 항목에 예측신뢰도(%) 반드시 명시
+3. packaging은 그 제형의 실제 포장형태로, tech는 그 제형에 필요한 생산설비(CAPA) 요건으로 기재 (예: 하이드로겔→"개별 트레이", "겔 캐스팅·성형 + 트레이 인서트")
 4. 한국콜마·코스맥스·코스메카코리아 절대 언급 금지
 5. 스킨케어에 한정하지 말고 색조·향수·맨즈 그루밍·바디케어 등 전 카테고리·전 성별 트렌드를 균형있게 검토
 6. 공급(식약처 보고)·규제 신호는 수요(검색·클릭)보다 선행하므로 더 높게 가중하되, 그 근거를 각 항목의 tech·season에 드러나게 반영
 7. JSON만 출력 (설명 텍스트 없음)
 
 [필수 JSON 형식]
-{"predictions":[{"rank":1,"type":"정확한 화장품 유형명","packaging":"권장 패키징 형태","confidence":88,"tech":"핵심 기술·설비 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
+{"predictions":[{"rank":1,"type":"정확한 화장품 품목명","formulation":"제형명(제형 레이더 목록 중 하나)","packaging":"그 제형의 포장형태","confidence":88,"tech":"생산설비(CAPA) 요건","channel":["유통채널1","유통채널2"],"season":"출시 적기 (예: 2026 하반기)","signals":{"climate":0.3,"society":0.1,"economy":0.2,"culture":0.4}}]}`;
   try {
     /* 앙상블 3관점 — 동일 데이터를 서로 다른 가중 관점으로 독립 분석시켜 합의를 취한다 */
     const PERSPECTIVES = [
@@ -2845,8 +3143,8 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${g
       {rank:4,type:'다기능 세럼 스틱 (올인원 고형)',packaging:'스틱 몰딩 12g 회전식 용기',confidence:70,tech:'고형 세럼 스틱 몰딩 + 활성 성분 안정화',channel:['다이소','무신사','편의점'],season:'2027 1Q',signals:{climate:0.1,society:0.4,economy:0.2,culture:0.3}},
       {rank:5,type:'맞춤형 화장품 키트 (처방 배합)',packaging:'소분 앰플 2ml×5 + 베이스 크림 30ml 세트',confidence:62,tech:'소용량 다품종 혼합 충진 + 개인화 라벨링',channel:['D2C 브랜드','피부과 병원'],season:'2027 2Q',signals:{climate:0.05,society:0.5,economy:0.1,culture:0.35}},
     ];
-    /* 초단기(2m) 폴백 — 이미 시장에 있고 계절·검색이 즉시 미는 품목 위주 */
-    const fallback2m = [
+    /* 단기(3m) 폴백 — 이미 시장에 있고 계절·검색이 즉시 미는 품목 위주 */
+    const fallback3m = [
       {rank:1,type:'쿨링 선세럼·선쿠션 (여름 즉시 대응)',packaging:'에어리스/쿠션 15~50ml',confidence:84,tech:'쿨링 배합 + 고SPF 즉시 충진',channel:['올리브영','다이소'],season:'향후 4~8주',signals:{climate:0.55,society:0.05,economy:0.1,culture:0.3}},
       {rank:2,type:'진정·수분 토너패드 (여름 데일리)',packaging:'토너패드 60~80매 리필형',confidence:78,tech:'패드 자동 투입 + 진정 성분',channel:['올리브영','편의점'],season:'향후 6주',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
       {rank:3,type:'피지·모공 클렌징 (여름 시즌)',packaging:'튜브/펌프 150ml',confidence:72,tech:'저자극 계면활성 배합',channel:['올리브영','드러그스토어'],season:'향후 8주',signals:{climate:0.3,society:0.1,economy:0.2,culture:0.4}},
@@ -2854,7 +3152,7 @@ ${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${g
       {rank:5,type:'미스트·픽서 (지속력·쿨링)',packaging:'스프레이 50~100ml',confidence:60,tech:'분무 충진 + 쿨링·픽싱',channel:['올리브영','다이소'],season:'향후 6주',signals:{climate:0.45,society:0.05,economy:0.1,culture:0.4}},
     ];
     /* 폴백도 품질 상한을 그대로 적용 — 샘플 기반 수치가 실측처럼 보이지 않게 */
-    PREDICTIONS_CACHE[period] = applyQualityCap(period === '1y' ? fallback1y : period === '2m' ? fallback2m : fallback6m);
+    PREDICTIONS_CACHE[period] = applyQualityCap(period === '1y' ? fallback1y : period === '3m' ? fallback3m : fallback6m);
     PREDICTIONS = PREDICTIONS_CACHE[period];
     window._ensembleInfo = null;   /* 앙상블 미수행(샘플) */
     showToast('Gemini 연결 실패 — 샘플 예측 사용');
@@ -2957,6 +3255,9 @@ function renderZ1() {
         : typeof delta === 'number' && delta < 0 ? `<span class="rank-dn">▼${Math.abs(delta)}</span>` : '';
       /* 근거 칩: 합의 · 라이프사이클 단계 · 시즌 앵커 · 품질상한 */
       const chips = [];
+      /* 제형 칩 — 클릭 시 성분→제형→패키징→CAPA 체인. 예측을 제조 실행으로 잇는 고리 */
+      const fm = formulationOfPred(p);
+      if (fm) chips.push(`<span class="pc-chip pcc-form" onclick="event.stopPropagation();openFormulationChain('${fm.code}')" title="제형 ${fm.name} — 클릭 시 패키징·설비(CAPA) 체인">제형 ${escHtml(fm.name)}${fm.score !== undefined && fm.score !== null ? ` ${fm.score}` : ''}</span>`);
       if (p.agree) chips.push(`<span class="pc-chip ${p.agree >= (p.agreeOf || 3) ? 'pcc-strong' : p.agree >= 2 ? 'pcc-mid' : 'pcc-weak'}" title="3관점 독립 분석 중 ${p.agree}개 관점이 같은 유형을 지목">합의 ${p.agree}/${p.agreeOf || 3}</span>`);
       const stg = stageForType(p.type);
       if (stg) chips.push(`<span class="pc-chip ${stg.key === 'grow' || stg.key === 'emerge' ? 'pcc-strong' : stg.key === 'decline' ? 'pcc-bad' : 'pcc-weak'}" title="키워드 모멘텀 기울기 기반 라이프사이클 단계">${stg.label}</span>`);
@@ -2987,6 +3288,17 @@ function renderZ1() {
         <span class="pc-arr">${SEL_IDX === i ? '▼' : '›'}</span>
       </div>`;
     }).join('')}</div>`;
+}
+
+/* 예측 → 제형 매칭 — Gemini의 formulation 필드 우선, 없으면 type/packaging에서 역추론.
+   점수가 있으면(_formRadar) 함께 반환해 카드에 표기한다. */
+function formulationOfPred(p) {
+  if (!p) return null;
+  const cand = FORMULATIONS.find(f => p.formulation && (f.name === p.formulation || f.en === p.formulation))
+    || FORMULATIONS.find(f => formMatches(f, `${p.type || ''} ${p.packaging || ''}`));
+  if (!cand) return null;
+  const scored = (window._formRadar || []).find(r => r.code === cand.code);
+  return scored || cand;
 }
 
 /* 예측 유형 → 라이프사이클 단계 조회 (키워드 포함 매칭) */
@@ -3679,7 +3991,7 @@ async function collectAll() {
   btn.classList.add('running'); btn.disabled = true;
 
   /* 캐시 초기화 */
-  PREDICTIONS_CACHE['2m'] = null;
+  PREDICTIONS_CACHE['3m'] = null;
   PREDICTIONS_CACHE['6m'] = null;
   PREDICTIONS_CACHE['1y'] = null;
   SEL_IDX = -1; currentPkgType = '';
@@ -3744,6 +4056,9 @@ async function collectAll() {
   recordMomentumSnapshot();
   window._lifecycle = computeLifecycle();
   renderLifecycle();
+  /* 제형 레이더: 신호를 제형 단위로 재집계 → 점수·등급·CAPA 체인 (예측 앵커) */
+  window._formRadar = computeFormulationRadar();
+  renderFormulationRadar();
 
   setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인');
   window._expoVerified = await verifyExpoSchedules();
@@ -3762,6 +4077,9 @@ async function collectAll() {
   setStep('⑧ 신제품 레이더 확인 중...', '출시 감지');
   await collectProductRadar();
   renderRadar();
+  /* 출시 보도가 확보됐으므로 신제품 축을 포함해 제형 점수 재산출 */
+  window._formRadar = computeFormulationRadar();
+  renderFormulationRadar();
 
   /* IMP-04: 보고서 자동 생성 */
   genReport();
@@ -3817,6 +4135,12 @@ function genReport() {
     lines.push('');
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
     window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
+  if (window._formRadar && window._formRadar.length) {
+    lines.push('');
+    lines.push('▶ 제형 트렌드 레이더 — 성분→제형→패키징→생산설비(CAPA) [SNS35·검색30·신제품25·글로벌10]');
+    window._formRadar.slice(0, 8).forEach(r =>
+      lines.push(`  • ${r.name}(${r.en}) ${r.score}점 · ${r.grade} · 신뢰도 ${r.coverage}% · 설비: ${r.capa.join(' / ')}`));
   }
   if (window._supplyTrends && window._supplyTrends.length) {
     lines.push('');
@@ -4519,7 +4843,7 @@ function init() {
       /* 24시간 이내 캐시만 복원 — 만료 캐시는 신호·예측 모두 무시 */
       if (d.ts && Date.now() - d.ts < 86400000) {
         if (d.signals) SIG_DATA = d.signals;
-        if (d.predictions_2m) { PREDICTIONS_CACHE['2m'] = d.predictions_2m; }
+        if (d.predictions_3m) { PREDICTIONS_CACHE['3m'] = d.predictions_3m; }
         if (d.predictions_6m) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
         if (d.predictions_1y) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
         /* 현재 기간의 캐시 로드 */
@@ -4541,10 +4865,10 @@ function init() {
 
 /* 24시간 캐시 저장 */
 window.addEventListener('beforeunload', () => {
-  if (PREDICTIONS_CACHE['2m'] || PREDICTIONS_CACHE['6m'] || PREDICTIONS_CACHE['1y']) {
+  if (PREDICTIONS_CACHE['3m'] || PREDICTIONS_CACHE['6m'] || PREDICTIONS_CACHE['1y']) {
     ls('m5_cache', JSON.stringify({
       signals: SIG_DATA,
-      predictions_2m: PREDICTIONS_CACHE['2m'],
+      predictions_3m: PREDICTIONS_CACHE['3m'],
       predictions_6m: PREDICTIONS_CACHE['6m'],
       predictions_1y: PREDICTIONS_CACHE['1y'],
       ts: Date.now()

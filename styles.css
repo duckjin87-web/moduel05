@@ -301,6 +301,60 @@ button { font-family: inherit; cursor: pointer; }
 .sb-bar { height: 6px; border-radius: 3px; background: var(--bg3); margin-top: 6px; overflow: hidden; }
 .sb-bar b { display: block; height: 100%; border-radius: 3px; }
 
+/* ═══ 제형 트렌드 레이더 ═══ */
+.fr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 14px; }
+@media(max-width:1100px){ .fr-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width:640px){ .fr-grid { grid-template-columns: 1fr; } }
+.fr-card {
+  background: var(--w); border: .5px solid var(--bg3); border-radius: var(--r2);
+  padding: 11px 12px; cursor: pointer; transition: box-shadow .14s, transform .14s;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.fr-card:hover { box-shadow: var(--s2); transform: translateY(-1px); }
+.fr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.fr-name { font-size: 13px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
+.fr-en { font-size: 9px; color: var(--ink3); margin-top: 1px; }
+.fr-score { font-size: 25px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.fr-grade { align-self: flex-start; font-size: 9px; font-weight: 800; padding: 1.5px 8px; border-radius: 9px; }
+.fg-hi    { color: var(--grn); }        .fr-grade.fg-hi    { background: #ddeee5; color: #1c5c42; }
+.fg-watch { color: var(--yel); }        .fr-grade.fg-watch { background: #f0ead2; color: #77621a; }
+.fg-keep  { color: var(--ink2); }       .fr-grade.fg-keep  { background: var(--bg3); color: var(--ink2); }
+.fg-low   { color: var(--ink3); }       .fr-grade.fg-low   { background: var(--bg2); color: var(--ink3); }
+.fr-bars { display: flex; flex-direction: column; gap: 3px; }
+.fr-bar-row { display: flex; align-items: center; gap: 6px; font-size: 9px; }
+.fr-bl { width: 54px; flex-shrink: 0; color: var(--ink3); }
+.fr-bt { flex: 1; height: 4px; border-radius: 2px; background: var(--bg3); overflow: hidden; }
+.fr-bt b { display: block; height: 100%; border-radius: 2px; background: var(--acc2); }
+.fr-bv { width: 20px; text-align: right; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.fr-foot { font-size: 9px; color: var(--ink3); border-top: .5px solid var(--bg2); padding-top: 6px; line-height: 1.5; }
+.fr-note { font-size: 9px; color: var(--ink3); padding: 0 14px 11px; line-height: 1.6; }
+
+/* 제형 체인(모달) */
+.chain { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin-top: 8px; }
+.chain-step { display: flex; align-items: baseline; gap: 9px; background: var(--bg2); border-radius: var(--r); padding: 7px 11px; font-size: 11px; }
+.chain-step.chain-key  { background: #e7f1ec; border: .5px solid #b9d5c8; }
+.chain-step.chain-capa { background: #fdf3d9; border: .5px solid #ecd9a8; }
+.cs-lb { font-size: 9px; font-weight: 800; color: var(--ink3); width: 48px; flex-shrink: 0; letter-spacing: .04em; }
+.cs-v  { color: var(--ink); }
+.cs-v b { color: var(--acc); }
+.chain-arrow { text-align: center; font-size: 10px; color: var(--ink3); line-height: 1; }
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 7px; }
+@media(max-width:640px){ .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.kpi-c { background: var(--bg2); border-radius: var(--r); padding: 7px 8px; }
+.kpi-n { font-size: 17px; font-weight: 800; color: var(--acc); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-k { font-size: 9px; font-weight: 700; color: var(--ink2); margin-top: 1px; }
+.kpi-d { font-size: 8.5px; color: var(--ink3); line-height: 1.4; margin-top: 1px; }
+.evo-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+.evo-node { font-size: 10.5px; font-weight: 700; background: var(--bg2); border: .5px solid var(--bg3); border-radius: 14px; padding: 3px 10px; cursor: pointer; }
+.evo-node em { font-style: normal; font-size: 9px; color: var(--acc); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.evo-node.evo-cur { background: var(--acc); color: #fff; border-color: var(--acc); }
+.evo-node.evo-cur em { color: #fff; }
+.evo-node.evo-hot { border-color: var(--grn); }
+.evo-arr { font-size: 10px; color: var(--ink3); }
+.evo-end { font-size: 10px; font-weight: 700; color: #7a4a10; background: #fdf3d9; border-radius: 14px; padding: 3px 10px; }
+.pc-chip.pcc-form { background: #e7f1ec; color: #1c5c42; border: .5px solid #b9d5c8; cursor: pointer; }
+.pc-chip.pcc-form:hover { background: #d7e8df; }
+
 /* ═══ 트렌드 라이프사이클 맵 ═══ */
 .cy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 11px 13px; }
 @media(max-width:900px){ .cy-grid { grid-template-columns: 1fr 1fr; } }
