@@ -328,6 +328,16 @@ button { font-family: inherit; cursor: pointer; }
 .fr-bv { width: 20px; text-align: right; color: var(--ink2); font-variant-numeric: tabular-nums; }
 .fr-foot { font-size: 9px; color: var(--ink3); border-top: .5px solid var(--bg2); padding-top: 6px; line-height: 1.5; }
 .fr-note { font-size: 9px; color: var(--ink3); padding: 0 14px 11px; line-height: 1.6; }
+/* Layer1 글로벌 선행시장 수집 상태 바 */
+.l1-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 14px 9px; padding: 7px 11px; background: var(--bg2); border: .5px solid var(--bg3); border-radius: var(--r); font-size: 10px; color: var(--ink2); }
+.l1-bar b { font-size: 9.5px; font-weight: 800; color: var(--ink); margin-right: 2px; }
+.l1-bar.l1-off { color: var(--ink3); }
+.l1-chip { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px; border: .5px solid transparent; }
+.l1-chip em { font-style: normal; font-weight: 600; opacity: .8; margin-left: 3px; }
+.l1-live  { background: #ddeee5; color: #1c5c42; }
+.l1-proxy { background: var(--bg3); color: var(--ink2); }
+.l1-fail  { background: #f3dede; color: #8f3b3b; }
+.l1-note { margin-left: auto; font-size: 9px; color: var(--ink3); }
 
 /* 제형 체인(모달) */
 .chain { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin-top: 8px; }

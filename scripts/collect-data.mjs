@@ -28,6 +28,8 @@ for (const name of ['SIG_DATA', 'PREDICTIONS', 'MATCH_RESULTS', 'SEL_IDX', 'curr
   src = src.replace(new RegExp(`^let ${name}\\b`, 'm'), `var ${name}`);
 }
 src = src.replace(/^const PREDICTIONS_CACHE/m, 'var PREDICTIONS_CACHE');
+/* 제형 분류를 서버 수집기에서도 재사용(글로벌 리테일 신호를 제형으로 매핑) */
+src = src.replace(/^const FORMULATIONS\b/m, 'var FORMULATIONS');
 
 /* ── DOM·localStorage 스텁 ── */
 function makeEl(id) {
@@ -196,6 +198,106 @@ async function collectReddit() {
   return list.length ? list : null;
 }
 
+/* ══════════ Layer 1: 글로벌 선행시장 (Sephora·Ulta·@cosme·샤오홍슈) ══════════
+   ※ 접근 정책 조사 결과 — 플랫폼을 직접 긁는 방식은 채택하지 않는다.
+     · Sephora / Ulta : Akamai 봇 차단 + 이용약관상 자동수집 금지. 우회는 ToS 위반이며
+       GitHub Actions의 데이터센터 IP는 즉시 차단된다. 정식 경로는 제휴 상품피드
+       (Sephora=Rakuten Advertising, Ulta=Impact) — 승인 후 피드 URL을 받는다.
+     · @cosme        : 이용약관이 프로그램에 의한 기계적 수집을 명시적으로 금지하며,
+       사전 승인 시에만 예외를 허용한다(문의·승인 절차 필요).
+     · 샤오홍슈       : 로그인 필수 + 강력한 봇 차단. 공개 접근 경로 없음.
+
+   따라서 2단 구조로 구현한다.
+     ① 정식 피드(RETAIL_FEEDS)가 등록돼 있으면 그것을 1순위로 수집 —
+        제휴 승인·@cosme 승인을 받으면 코드 수정 없이 즉시 활성화된다.
+     ② 없으면 플랫폼 자체가 아니라, 그 플랫폼을 '다루는' 공개 뉴스 RSS(Google News)로
+        대리 신호를 만든다. 플랫폼 서버에 접근하지 않으므로 정책 위반이 없다.
+   수집 결과는 제형(FORMULATIONS)으로 매핑해 제형 레이더의 글로벌 축에 합류시킨다. */
+const RETAIL_PLATFORMS = [
+  { key: 'sephora', label: 'Sephora',  q: 'Sephora new beauty launch skincare',        hl: 'en-US', gl: 'US', ceid: 'US:en' },
+  { key: 'ulta',    label: 'Ulta',     q: 'Ulta Beauty new arrivals skincare trend',   hl: 'en-US', gl: 'US', ceid: 'US:en' },
+  { key: 'cosme',   label: '@cosme',   q: '@cosme ランキング 新商品 スキンケア',        hl: 'ja',    gl: 'JP', ceid: 'JP:ja' },
+  { key: 'xhs',     label: '샤오홍슈', q: '小红书 美妆 护肤 趋势',                      hl: 'zh-CN', gl: 'CN', ceid: 'CN:zh-Hans' },
+];
+
+/* 정식 제휴/승인 피드 — GitHub Secrets에 RETAIL_FEEDS(JSON 배열)로 등록 시 사용
+   예: [{"platform":"Sephora","url":"https://feed.rakuten.../sephora.xml"}] */
+function parseRetailFeeds() {
+  try {
+    const raw = process.env.RETAIL_FEEDS;
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter(f => f && f.url) : [];
+  } catch { return []; }
+}
+
+async function collectGlobalRetail() {
+  const FORMS = sandbox.FORMULATIONS || [];
+  const matches = (f, text) => {
+    if (!text) return false;
+    if (f.ex && f.ex.test(text)) return false;
+    return f.re.test(text);
+  };
+  const tally = {};            /* code → {name, mentions, platforms:Set} */
+  const sources = [];
+  const addText = (text, platformLabel) => {
+    FORMS.forEach(f => {
+      if (!matches(f, text)) return;
+      const t = tally[f.code] || (tally[f.code] = { code: f.code, name: f.name, mentions: 0, platforms: new Set() });
+      t.mentions++; t.platforms.add(platformLabel);
+    });
+  };
+
+  /* ① 정식 피드 우선 */
+  for (const feed of parseRetailFeeds()) {
+    try {
+      const r = await directFetch(feed.url, { headers: { 'User-Agent': 'cosmedb-collector/1.0' } }, 20000);
+      if (!r.ok) { sources.push({ platform: feed.platform || 'feed', mode: '공식 피드', ok: false, note: `HTTP ${r.status}` }); continue; }
+      const body = await r.text();
+      /* 상품명 추출 — XML(title/name) · JSON(name/title/product_name) 공통 대응 */
+      const titles = [...body.matchAll(/<(?:title|name|product_name)>([^<]{2,120})<\/(?:title|name|product_name)>/gi)].map(m => m[1])
+        .concat([...body.matchAll(/"(?:name|title|product_name)"\s*:\s*"([^"]{2,120})"/gi)].map(m => m[1]));
+      titles.forEach(t => addText(t, feed.platform || '공식 피드'));
+      sources.push({ platform: feed.platform || 'feed', mode: '공식 피드', ok: true, items: titles.length });
+    } catch (e) {
+      sources.push({ platform: feed.platform || 'feed', mode: '공식 피드', ok: false, note: e.message });
+    }
+  }
+  const feedPlatforms = new Set(sources.filter(s => s.ok).map(s => s.platform));
+
+  /* ② 공개 뉴스 RSS 대리 신호 (정식 피드가 없는 플랫폼만) */
+  for (const p of RETAIL_PLATFORMS) {
+    if (feedPlatforms.has(p.label)) continue;
+    try {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(p.q)}&hl=${p.hl}&gl=${p.gl}&ceid=${encodeURIComponent(p.ceid)}`;
+      const r = await directFetch(url, { headers: { 'User-Agent': 'cosmedb-collector/1.0' } }, 15000);
+      if (!r.ok) { sources.push({ platform: p.label, mode: '뉴스 대리', ok: false, note: `HTTP ${r.status}` }); continue; }
+      const xml = await r.text();
+      const titles = [...xml.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>|<title>([^<]+)<\/title>/g)]
+        .map(m => (m[1] || m[2] || '').trim()).filter(Boolean).slice(1);   /* 첫 title은 피드 제목 */
+      titles.forEach(t => addText(t, p.label));
+      sources.push({ platform: p.label, mode: '뉴스 대리', ok: true, items: titles.length });
+      await new Promise(res => setTimeout(res, 700));
+    } catch (e) {
+      sources.push({ platform: p.label, mode: '뉴스 대리', ok: false, note: e.message });
+    }
+  }
+
+  const formulations = Object.values(tally)
+    .map(t => ({ code: t.code, name: t.name, mentions: t.mentions, platforms: [...t.platforms] }))
+    .sort((a, b) => b.mentions - a.mentions);
+  return (formulations.length || sources.length) ? { sources, formulations } : null;
+}
+
+console.log('Layer1 글로벌 선행시장 수집 (정식 피드 → 없으면 공개 뉴스 대리)...');
+const globalRetail = await collectGlobalRetail();
+if (globalRetail) {
+  globalRetail.sources.forEach(s => console.log(` · ${s.platform} [${s.mode}] ${s.ok ? `${s.items}건` : `실패(${s.note})`}`));
+  console.log(` · 제형 매핑: ${globalRetail.formulations.slice(0, 5).map(f => `${f.name}(${f.mentions})`).join(', ') || '없음'}`);
+} else {
+  console.log(' · 글로벌 리테일 신호 없음');
+}
+
 console.log('글로벌 선행신호 수집 (Google Trends·Reddit)...');
 const gtrendsTrends = await collectGoogleTrends();
 const redditTrends = await collectReddit();
@@ -208,6 +310,7 @@ const out = {
   sdots,
   gtrendsTrends,
   redditTrends,
+  globalRetail,
   dlTrends: sandbox.window._dlTrends || null,
   dlErr: sandbox.window._dlErr ?? null,
   salesTrends: sandbox.window._salesTrends || null,

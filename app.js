@@ -1616,6 +1616,7 @@ async function loadServerLeads() {
     if (isNaN(ageDays) || ageDays > 8) return;
     if (Array.isArray(j.gtrendsTrends) && j.gtrendsTrends.length) window._gtrends = j.gtrendsTrends;
     if (Array.isArray(j.redditTrends) && j.redditTrends.length) window._reddit = j.redditTrends;
+    if (j.globalRetail && (j.globalRetail.formulations || j.globalRetail.sources)) window._globalRetail = j.globalRetail;
   } catch {}
 }
 
@@ -2524,6 +2525,9 @@ function radarPools() {
   (window._newsTrends || []).forEach(t => P.launch.push({ name: t.name, count: t.count, src: '뉴스언급' }));
   (window._gtrends || []).forEach(t => P.global.push({ name: t.name, delta: t.delta, src: 'GTrends' }));
   (window._expoTrends || []).forEach(t => P.global.push({ name: t.name, count: t.count, src: '해외박람회' }));
+  /* Layer1 글로벌 리테일(Sephora·Ulta·@cosme·샤오홍슈) — 이미 제형 단위로 집계된 신호 */
+  ((window._globalRetail || {}).formulations || []).forEach(f =>
+    P.global.push({ name: f.name, count: f.mentions, src: `글로벌리테일(${f.platforms.join('·')})` }));
   return P;
 }
 
@@ -2616,8 +2620,26 @@ function renderFormulationRadar() {
         }).join('')}</div>
         <div class="fr-foot">신뢰도 ${r.coverage}% · ${r.srcCount}개 채널 포착 · 설비: ${escHtml(r.capa[0])}</div>
       </div>`).join('')}</div>
+    ${layer1StatusHtml()}
     <div class="fr-note">※ 점수는 수집된 축만으로 가중 재정규화해 산출하며, 미수집 축은 중립값으로 채우지 않고 신뢰도(커버리지)로 표기합니다. 80↑ 고성장 · 70~79 관찰 · 60~69 유지 · 60↓ 낮음 · 신뢰도 50% 미만은 '데이터 부족'으로 후순위 표기</div>`;
   el.style.display = '';
+}
+
+/* Layer1 글로벌 선행시장 수집 상태 — 어떤 플랫폼이 '공식 피드 실측'이고 어떤 것이
+   '공개 보도 대리'인지 화면에서 구분되게 표기(대리 신호를 실측처럼 보이지 않게). */
+function layer1StatusHtml() {
+  const gr = window._globalRetail;
+  if (!gr || !(gr.sources || []).length) {
+    return `<div class="l1-bar l1-off"><b>Layer1 글로벌 선행시장</b> 미수집 — 서버 수집(GitHub Actions) 1회 실행 후 표시됩니다</div>`;
+  }
+  const chips = gr.sources.map(s => {
+    const cls = !s.ok ? 'l1-fail' : s.mode === '공식 피드' ? 'l1-live' : 'l1-proxy';
+    const lbl = !s.ok ? '실패' : s.mode === '공식 피드' ? '공식 피드' : '보도 대리';
+    return `<span class="l1-chip ${cls}" title="${escHtml(s.mode)}${s.ok ? ` · ${s.items}건` : ` · ${escHtml(s.note || '')}`}">${escHtml(s.platform)} <em>${lbl}</em></span>`;
+  }).join('');
+  const anyLive = gr.sources.some(s => s.ok && s.mode === '공식 피드');
+  return `<div class="l1-bar"><b>Layer1 글로벌 선행시장</b>${chips}
+    <span class="l1-note">${anyLive ? '공식 피드는 실측, 보도 대리는 방향성 참고용' : '전부 공개 보도 기반 대리 신호 — 플랫폼 직접수집 아님(정식 피드 등록 시 실측 전환)'}</span></div>`;
 }
 
 /* 제형 → 패키징 → 설비 → 팀별 액션 체인 모달 */
@@ -2894,6 +2916,7 @@ function computeDataQuality() {
     ['YouTube 모멘텀',   !!(window._ytTrends && window._ytTrends.length)],
     ['글로벌 검색(GTrends)', !!(window._gtrends && window._gtrends.length)],
     ['해외 커뮤니티(Reddit)', !!(window._reddit && window._reddit.length)],
+    ['글로벌 리테일(Layer1)', !!((window._globalRetail || {}).formulations || []).length],
   ];
   const real = items.filter(i => i[1]).length;
   return { items, real, total: items.length, ratio: items.length ? real / items.length : 0 };
@@ -3052,6 +3075,12 @@ async function runGeminiPrediction(period) {
     ? `\n[해외 K뷰티 커뮤니티(Reddit) 언급 빈도 — 최근 1개월 (실측)]\n`
       + window._reddit.slice(0, 8).map(t => `${t.name}(${t.count}건)`).join(' · ')
     : '';
+  const gr = window._globalRetail;
+  const retailFeedDetail = (gr && gr.formulations && gr.formulations.length)
+    ? `\n[글로벌 선행시장(Layer1) — Sephora·Ulta·@cosme·샤오홍슈 관련 제형 언급]\n`
+      + gr.formulations.slice(0, 8).map(f => `${f.name} ${f.mentions}건 (${f.platforms.join('·')})`).join(' · ')
+      + `\n※ 한국보다 먼저 형성되는 해외 제형 트렌드. ${(gr.sources || []).some(s => s.mode === '공식 피드' && s.ok) ? '일부는 공식 상품피드 실측이다.' : '플랫폼 직접수집이 아닌 공개 보도 기반 대리 신호이므로 방향성 참고용으로만 가중하라.'}`
+    : '';
   /* 라이프사이클 규칙 — 성장·태동만 후보, 쇠퇴 회피를 명시적 제약으로 주입 */
   const lc = window._lifecycle;
   const lifecycleDetail = lc
@@ -3080,7 +3109,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -4141,6 +4170,13 @@ function genReport() {
     lines.push('▶ 제형 트렌드 레이더 — 성분→제형→패키징→생산설비(CAPA) [SNS35·검색30·신제품25·글로벌10]');
     window._formRadar.slice(0, 8).forEach(r =>
       lines.push(`  • ${r.name}(${r.en}) ${r.score}점 · ${r.grade} · 신뢰도 ${r.coverage}% · 설비: ${r.capa.join(' / ')}`));
+  }
+  if (window._globalRetail && (window._globalRetail.formulations || []).length) {
+    const gr = window._globalRetail;
+    lines.push('');
+    lines.push('▶ Layer1 글로벌 선행시장 — Sephora·Ulta·@cosme·샤오홍슈 제형 언급');
+    gr.formulations.slice(0, 8).forEach(f => lines.push(`  • ${f.name}: ${f.mentions}건 (${f.platforms.join('·')})`));
+    lines.push(`  ※ 수집 방식: ${(gr.sources||[]).map(s => `${s.platform}=${s.ok ? s.mode : '실패'}`).join(', ')}`);
   }
   if (window._supplyTrends && window._supplyTrends.length) {
     lines.push('');
