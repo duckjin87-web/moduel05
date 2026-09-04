@@ -1,15 +1,17 @@
 {
-  "collectedAt": "2026-09-04T07:48:37.040Z",
+  "collectedAt": "2026-09-04T13:14:21.090Z",
   "sig": {
     "climate": {
-      "score": 3.8,
-      "interpret": "가을철 고온(28℃) 지속 → 선케어·쿨링·에어리스 밀폐 패키징 수요 증가",
+      "score": 3.4,
+      "interpret": "가을철 기온 하강 → 선케어 수요 둔화, 보습·리페어 라인 전환 수요 증가 · 평년 기준 전망: 1개월 후(10월) 평균최고 20.8℃ · 3개월 후(12월) 평균최고 4.9℃ · 6개월 후(3월) 평균최고 7.4℃",
       "chips": [
-        "기온 28℃",
+        "기온 21.3℃",
         "에어코리아: 키 필요",
-        "습도 47%",
-        "UV 2.4",
-        "16일추세 +0.6℃"
+        "습도 69%",
+        "UV 0",
+        "평년대비 -0.5℃",
+        "16일추세 -0.4℃",
+        "평년전망 1m 20.8℃/3m 4.9℃/6m 7.4℃"
       ],
       "_sample": false
     },
@@ -60,25 +62,25 @@
         "platform": "Sephora",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 80
+        "items": 79
       },
       {
         "platform": "Ulta",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 80
+        "items": 79
       },
       {
         "platform": "@cosme",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 50
+        "items": 49
       },
       {
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 61
+        "items": 64
       }
     ],
     "formulations": [
@@ -124,9 +126,9 @@
   "climateTrend": {
     "trend16": {
       "week1": 26.7,
-      "week2": 27.3,
-      "delta": 0.6
+      "week2": 26.3,
+      "delta": -0.4
     },
-    "deviation": null
+    "deviation": -0.5
   }
 }
