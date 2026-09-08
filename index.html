@@ -154,57 +154,81 @@
 <!-- ── 워치독 배너: 모멘텀 문턱 초과 시 접속 알림 ── -->
 <div class="watchdog-bar" id="watchdogBar" style="display:none"></div>
 
-<!-- ══ 메인 그리드: 결과(예측)가 첫 화면 — 좌측 히어로 + 우측 신뢰 레일 ══ -->
-<div class="main-grid">
-  <div class="mg-left">
-    <!-- ── ZONE 1: 예측 TOP5 (히어로) ── -->
-    <div class="z1">
-      <div class="zone-hd">
-        <div class="zone-title">예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
-        <div class="pred-period-tabs" id="predPeriodTabs">
-          <button class="pred-period-tab" data-period="3m">3개월</button>
-          <button class="pred-period-tab active" data-period="6m">6개월</button>
-          <button class="pred-period-tab" data-period="1y">12개월</button>
-        </div>
-        <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">정확도·실적 원장</button>
-        <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
-      </div>
-      <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>
-      <div id="z1body">
-        <div class="z1-placeholder">
-          [전체 수집 실행]을 누르면 15종 신호 수집 후 3관점 교차검증으로 예측 TOP5가 도출됩니다.
-        </div>
-      </div>
-      <div id="radarStrip" class="radar-strip" style="display:none"></div>
-    </div>
+<!-- ══ 1. 트렌드 라이프사이클 — 4대 영역 분석 → 태동·성장 단계 분류 ══
+     의사결정 순서대로 배치: 무엇이 움직이는가(신호) → 어느 단계인가(라이프사이클)
+     → 어떤 제형인가(레이더) → 무엇을 만들 것인가(예측 TOP5) -->
+<section class="stage">
+  <div class="stage-hd">
+    <span class="stage-no">01</span>
+    <span class="stage-t">트렌드 라이프사이클</span>
+    <span class="stage-s">4대 영역 분석 → 태동·성장 단계 분류</span>
   </div>
 
-  <aside class="mg-rail">
-    <!-- 예측 스코어보드: 적중률·데이터 품질·앙상블 합의·판정 대기 -->
-    <div class="scoreboard" id="scoreboard" style="display:none"></div>
-    <!-- 수집 상태 -->
-    <div class="status-bar" id="statusBar">
-      <span class="sitem"><span class="sdot off" id="sd-climate"></span>기상청</span>
-      <span class="sitem"><span class="sdot off" id="sd-air"></span>에어코리아</span>
-      <span class="sitem"><span class="sdot off" id="sd-ecos"></span>ECOS</span>
-      <span class="sitem"><span class="sdot off" id="sd-datalab"></span>DataLab</span>
-      <span class="sitem"><span class="sdot off" id="sd-news"></span>네이버 뉴스</span>
-      <span class="sitem"><span class="sdot off" id="sd-kosis"></span>KOSIS</span>
-      <span class="sitem"><span class="sdot off" id="sd-export"></span>관세청</span>
-      <span class="sitem"><span class="sdot off" id="sd-kipris"></span>KIPRIS</span>
-      <span class="status-summary" id="statusSummary">수집 전</span>
+  <!-- 1-1. 4대 영역 분석 (카드 클릭 시 분석 근거 자료 모달) -->
+  <div class="stage-sub">1-1 · 4대 영역 분석 <em>기후·환경 / 사회·인구 / 경제·리테일 / 문화·팝트렌드</em></div>
+  <div class="z0" id="z0"></div>
+
+  <!-- 1-2. 단계 분류 맵 -->
+  <div class="stage-sub">1-2 · 단계 분류 <em>태동기 · 성장기만 예측 후보 · 쇠퇴기 회피</em></div>
+  <div class="z1 z-cycle" id="zCycle" style="display:none"></div>
+</section>
+
+<!-- ══ 2. 제형 트렌드 레이더 — 성분→제형→패키징→생산설비(CAPA) ══ -->
+<section class="stage">
+  <div class="stage-hd">
+    <span class="stage-no">02</span>
+    <span class="stage-t">제형 트렌드 레이더</span>
+    <span class="stage-s">어떤 제형이 오르는가 · 그 제형에 어떤 설비가 필요한가</span>
+  </div>
+  <div class="z1 z-form" id="zForm" style="display:none"></div>
+</section>
+
+<!-- ══ 3. 예측 TOP5 — 좌측 히어로 + 우측 신뢰 레일 ══ -->
+<section class="stage">
+  <div class="stage-hd">
+    <span class="stage-no">03</span>
+    <span class="stage-t">예측 결과</span>
+    <span class="stage-s">위 분석을 3관점 교차검증으로 종합한 최종 후보</span>
+  </div>
+  <div class="main-grid">
+    <div class="mg-left">
+      <div class="z1">
+        <div class="zone-hd">
+          <div class="zone-title">예측 화장품 유형 TOP5 <span class="ztag">대형3사 제외</span></div>
+          <div class="pred-period-tabs" id="predPeriodTabs">
+            <button class="pred-period-tab" data-period="3m">3개월</button>
+            <button class="pred-period-tab active" data-period="6m">6개월</button>
+            <button class="pred-period-tab" data-period="1y">12개월</button>
+          </div>
+          <button class="btn-hd btn-bt-toggle" id="btnBtDash" style="display:none">정확도·실적 원장</button>
+          <span class="zmodel" id="geminiModelLabel">Gemini 미실행</span>
+        </div>
+        <div id="btDashPanel" class="bt-dash-panel" style="display:none"></div>
+        <div id="z1body">
+          <div class="z1-placeholder">
+            [전체 수집 실행]을 누르면 15종 신호 수집 후 3관점 교차검증으로 예측 TOP5가 도출됩니다.
+          </div>
+        </div>
+        <div id="radarStrip" class="radar-strip" style="display:none"></div>
+      </div>
     </div>
-  </aside>
-</div>
 
-<!-- ── 제형 트렌드 레이더: 성분→제형→패키징→생산설비(CAPA) 조기경보 ── -->
-<div class="z1 z-form" id="zForm" style="display:none"></div>
-
-<!-- ── 트렌드 라이프사이클 맵: 태동→성장→성숙→쇠퇴 (수집 시 자동 분류) ── -->
-<div class="z1 z-cycle" id="zCycle" style="display:none"></div>
-
-<!-- ── ZONE 0: 4대 신호 (카드 클릭 시 분석 근거 자료 모달 표시) ── -->
-<div class="z0" id="z0"></div>
+    <aside class="mg-rail">
+      <div class="scoreboard" id="scoreboard" style="display:none"></div>
+      <div class="status-bar" id="statusBar">
+        <span class="sitem"><span class="sdot off" id="sd-climate"></span>기상청</span>
+        <span class="sitem"><span class="sdot off" id="sd-air"></span>에어코리아</span>
+        <span class="sitem"><span class="sdot off" id="sd-ecos"></span>ECOS</span>
+        <span class="sitem"><span class="sdot off" id="sd-datalab"></span>DataLab</span>
+        <span class="sitem"><span class="sdot off" id="sd-news"></span>네이버 뉴스</span>
+        <span class="sitem"><span class="sdot off" id="sd-kosis"></span>KOSIS</span>
+        <span class="sitem"><span class="sdot off" id="sd-export"></span>관세청</span>
+        <span class="sitem"><span class="sdot off" id="sd-kipris"></span>KIPRIS</span>
+        <span class="status-summary" id="statusSummary">수집 전</span>
+      </div>
+    </aside>
+  </div>
+</section>
 
 <!-- ── ZONE 2: 제조사 매칭 ── -->
 <div class="z2">

@@ -30,6 +30,8 @@ for (const name of ['SIG_DATA', 'PREDICTIONS', 'MATCH_RESULTS', 'SEL_IDX', 'curr
 src = src.replace(/^const PREDICTIONS_CACHE/m, 'var PREDICTIONS_CACHE');
 /* 제형 분류를 서버 수집기에서도 재사용(글로벌 리테일 신호를 제형으로 매핑) */
 src = src.replace(/^const FORMULATIONS\b/m, 'var FORMULATIONS');
+src = src.replace(/^const SOCIETY_ANCHORS\b/m, 'var SOCIETY_ANCHORS');
+src = src.replace(/^const KW_AXIS\b/m, 'var KW_AXIS');
 
 /* ── DOM·localStorage 스텁 ── */
 function makeEl(id) {
@@ -318,6 +320,8 @@ const out = {
   exportTrends: sandbox.window._exportTrends || null,
   exportErr: sandbox.window._exportErr ?? null,
   newsTrends: sandbox.window._newsTrends || null,
+  kwVolume: sandbox.window._kwVolume || null,
+  kwSurge: sandbox.window._kwSurge || null,
   rssText: sandbox.window._rssText || '',
   climateTrend: sandbox.window._climateTrend || null,
 };

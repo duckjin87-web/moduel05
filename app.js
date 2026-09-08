@@ -786,8 +786,12 @@ const SIG_SOURCE_LINKS = {
     {label:'에어코리아(대기질)', url:'https://www.airkorea.or.kr'},
   ],
   society: [
-    {label:'KOSIS 국가통계포털', url:'https://kosis.kr'},
-    {label:'한국은행 ECOS(소비자심리지수)', url:'https://ecos.bok.or.kr'},
+    {label:'통계청 인구총조사(1인가구·가구구조)', url:'https://kosis.kr'},
+    {label:'행안부 주민등록 인구통계(연령·성별)', url:'https://jumin.mois.go.kr'},
+    {label:'통계청 인구동향(혼인·초혼연령)', url:'https://kosis.kr'},
+    {label:'통계청 온라인쇼핑동향(화장품 거래액)', url:'https://kosis.kr'},
+    {label:'한국관광공사 출입국관광통계(방한객)', url:'https://datalab.visitkorea.or.kr'},
+    {label:'한국은행 ECOS(소비자심리·실업률·소매판매)', url:'https://ecos.bok.or.kr'},
   ],
   economy: [
     {label:'한국은행 ECOS(물가·CPI)', url:'https://ecos.bok.or.kr'},
@@ -796,7 +800,7 @@ const SIG_SOURCE_LINKS = {
   culture: [
     {label:'네이버 데이터랩(검색·쇼핑인사이트)', url:'https://datalab.naver.com'},
     {label:'네이버 뉴스 검색', url:'https://search.naver.com/search.naver?where=news'},
-    {label:'뷰티 전문지 RSS(코스인코리아·장업신문·코스모닝·뷰티누리)', url:'https://www.cosinkorea.com'},
+    {label:'뷰티 전문지 RSS 7종(코스인코리아·장업신문·코스모닝·뷰티누리·뷰티경제·CMN·뷰티한국)', url:'https://www.cosinkorea.com'},
   ],
 };
 const SIG_NAME_KO = {climate:'기후·환경', society:'사회·인구', economy:'경제·리테일', culture:'문화·팝트렌드'};
@@ -871,17 +875,37 @@ function buildSigDetailHtml(key) {
        처리한다 — economy 신호와 같은 API 호출을 1회만 공유해 추가 호출 비용 없이 확장.
        KOSIS 자체 API 연동(혼인율·고령화율 등)은 별도 인증키가 필요해 v1에는 포함하지 않았다. */
     body += `<div class="gm-block">
+      <div class="gm-block-title">인구 구조 앵커 — 무엇이 어떤 제품 요건을 만드는가</div>
+      <ul class="gm-list">${SOCIETY_ANCHORS.map(a =>
+        `<li><b>${escHtml(a.k)} ${escHtml(a.v)}</b> <span style="color:var(--ink3)">(${escHtml(a.src)}${a.note ? ' · ' + escHtml(a.note) : ''})</span><br>→ ${escHtml(a.impl)}</li>`).join('')}</ul>
+    </div>`;
+    body += `<div class="gm-block">
       <div class="gm-block-title">자동 수집 vs 정적 참조 구분</div>
       <ul class="gm-list">
         <li><b>실시간 자동 수집</b>: 한국은행 ECOS 100대 통계지표 — 소비자심리지수(CCSI)·실업률·소매판매액지수·가계신용(확인된 항목만 반영, 매 수집 시 API 호출)</li>
-        <li><b>정적 참조값</b>: "1인가구 36.1%(역대 최대)"·"전 연령·性 그루밍 수요 확산" — 통계청 2024 인구주택총조사를 코드에 반영한 값(연 단위 갱신 필요). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요해 v1에는 포함하지 않았다.</li>
+        <li><b>정적 참조값</b>: 위 인구 구조 앵커 6종 — 통계청·행안부·관광공사 공표 통계를 코드에 반영한 값(연 1회 수준 갱신). KOSIS Open API 실시간 연동은 별도 인증키 발급이 필요하다.</li>
       </ul>
     </div>`;
   }
   if (key === 'culture') {
     body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
     body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
-    body += trendListHtml('뉴스·RSS 최다 언급 키워드', window._newsTrends, 'count');
+    if (window._kwSurge && window._kwSurge.length) {
+      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 최근 30일 vs 직전 30일 (기사 5건 이상 · 증가율 20% 이상)</div>
+        <ul class="gm-list">${window._kwSurge.slice(0, 10).map(t =>
+          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — 최근 30일 ${t.count}건 (직전 ${t.prior}건) <b style="color:var(--grn)">+${t.delta}%</b></li>`).join('')}</ul>
+        <div class="gm-note2">언급이 많은 것보다 <b>늘고 있는 것</b>이 예측 대상입니다. 이 목록이 문화 신호 점수의 가산 근거입니다.</div>
+      </div>`;
+    }
+    if (window._kwVolume && window._kwVolume.length) {
+      const ax = {};
+      window._kwVolume.forEach(r => { ax[r.axis || '기타'] = (ax[r.axis || '기타'] || 0) + r.count; });
+      body += `<div class="gm-block"><div class="gm-block-title">언급 축 분포 — 어느 축에서 움직이는가</div>
+        <ul class="gm-list">${Object.entries(ax).sort((a,b)=>b[1]-a[1]).map(([a2,c]) =>
+          `<li><b>${escHtml(a2)}</b> ${c}건 — ${escHtml(window._kwVolume.filter(r=>(r.axis||'기타')===a2).slice(0,6).map(r=>`${r.name}(${r.count})`).join(', '))}</li>`).join('')}</ul>
+      </div>`;
+    }
+    body += trendListHtml('뉴스·RSS 언급 키워드 — 최근 30일 기사 건수', window._newsTrends, 'count');
     body += articleListHtml('네이버 뉴스 분석 근거 기사', window._newsArticles);
     body += articleListHtml('뷰티 전문지 RSS 분석 근거 기사', window._rssArticles);
   }
@@ -940,7 +964,22 @@ function buildPredEvidenceHtml(idx) {
     if (c.key === 'culture') {
       body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
       body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
-      body += trendListHtml('뉴스·RSS 최다 언급 키워드', window._newsTrends, 'count');
+      if (window._kwSurge && window._kwSurge.length) {
+      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 최근 30일 vs 직전 30일 (기사 5건 이상 · 증가율 20% 이상)</div>
+        <ul class="gm-list">${window._kwSurge.slice(0, 10).map(t =>
+          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — 최근 30일 ${t.count}건 (직전 ${t.prior}건) <b style="color:var(--grn)">+${t.delta}%</b></li>`).join('')}</ul>
+        <div class="gm-note2">언급이 많은 것보다 <b>늘고 있는 것</b>이 예측 대상입니다. 이 목록이 문화 신호 점수의 가산 근거입니다.</div>
+      </div>`;
+    }
+    if (window._kwVolume && window._kwVolume.length) {
+      const ax = {};
+      window._kwVolume.forEach(r => { ax[r.axis || '기타'] = (ax[r.axis || '기타'] || 0) + r.count; });
+      body += `<div class="gm-block"><div class="gm-block-title">언급 축 분포 — 어느 축에서 움직이는가</div>
+        <ul class="gm-list">${Object.entries(ax).sort((a,b)=>b[1]-a[1]).map(([a2,c]) =>
+          `<li><b>${escHtml(a2)}</b> ${c}건 — ${escHtml(window._kwVolume.filter(r=>(r.axis||'기타')===a2).slice(0,6).map(r=>`${r.name}(${r.count})`).join(', '))}</li>`).join('')}</ul>
+      </div>`;
+    }
+    body += trendListHtml('뉴스·RSS 언급 키워드 — 최근 30일 기사 건수', window._newsTrends, 'count');
     }
     if (c.key === 'climate' && window._climateTrend) {
       const ct = window._climateTrend;
@@ -1522,12 +1561,31 @@ const DATALAB_GROUPS = [
 
 /* 뷰티 트렌드 키워드 — 성분·제형·패키징·타깃 전반 (RSS·뉴스 언급빈도 분석 공용)
    ※ 스킨케어 편중 방지 — 색조·향수·맨즈그루밍·바디케어 키워드 포함, 전 성별·카테고리 커버 */
-const TREND_KEYWORDS = [
-  '에어리스','비건','클린뷰티','선세럼','선스틱','선케어','앰플','마이크로바이옴','PDRN','엑소좀',
-  '펩타이드','콜라겐','레티놀','시카','판테놀','세라마이드','토너패드','패드','멀티밤','스틱',
-  '클렌징','리필','수분크림','쿨링','두피','남성','쿠션',
-  '메이크업','틴트','립밤','향수','쉐이빙','바디케어','헤어왁스',
-];
+/* 뷰티·화장품 트렌드 키워드 사전 — 기사 본문 스캔·언급량 집계·급증 판정의 기준.
+   제형/성분/기능/포맷/채널·소비층 5개 축으로 나눠 놓아, 언급이 잡히면 어느 축에서
+   움직이는지 바로 읽힌다. (기존 33개 → 확대: 상위 3개만 1건씩 잡히던 문제 해소) */
+const KW_AXIS = {
+  제형: ['앰플','세럼','에센스','토너','로션','수분크림','크림','밤','오일','미스트','스틱','쿠션',
+        '토너패드','패드','마스크팩','시트마스크','하이드로겔','바이오셀룰로오스','슬리핑팩','아이패치',
+        '겔패드','파우더','캡슐','필오프','클렌징오일','클렌징폼','클렌징밤','젤','무스','스프레이'],
+  성분: ['PDRN','엑소좀','펩타이드','콜라겐','레티놀','레티날','나이아신아마이드','비타민C','세라마이드',
+        '히알루론산','판테놀','시카','센텔라','마데카소사이드','아젤라익','살리실산','AHA','BHA','PHA',
+        '글루타치온','스피큘','병풀','쌀','녹차','어성초','달팽이','프로바이오틱스','마이크로바이옴'],
+  기능: ['선케어','선크림','선세럼','선스틱','자외선차단','미백','주름개선','탄력','모공','각질','진정',
+        '보습','장벽','트러블','여드름','피지','모발','두피','탈모','제모','쉐이빙','디오더런트',
+        '슬리밍','부기','다크서클','속건조','광채','글로우','톤업'],
+  포맷: ['에어리스','리필','대용량','소용량','미니','휴대용','파우치','앰플캡슐','듀얼','2종세트','키트',
+        '기획세트','트래블','스포이드','펌프','튜브','자','블리스터','트레이','모노머티리얼','지속가능'],
+  소비: ['비건','클린뷰티','더마','코스메슈티컬','이너뷰티','남성','맨즈','그루밍','시니어','키즈','베이비',
+        '올리브영','다이소','무신사','쿠팡','면세','H&B','편의점','수출','역직구','틱톡','숏폼','유튜브',
+        '인디브랜드','K뷰티','메이크업','틴트','립밤','향수','퍼퓸','바디케어','헤어왁스','헤어에센스'],
+};
+const TREND_KEYWORDS = [...new Set(Object.values(KW_AXIS).flat())];
+const KW_OF_AXIS = (() => {
+  const m = {};
+  Object.entries(KW_AXIS).forEach(([ax, arr]) => arr.forEach(k => { if (!m[k]) m[k] = ax; }));
+  return m;
+})();
 
 /* 네이버 데이터랩(검색트렌드/쇼핑인사이트) 호출 실패 사유 — 트렌드 모멘텀 패널·수집결과 보기에 표시 */
 const NAVER_ERR_MSG = {
@@ -1789,6 +1847,40 @@ async function collectExportTrend(pubKey) {
   return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
 }
 
+/* ════ 키워드별 뉴스 볼륨·급증률 실측 (네이버 뉴스 API) ════
+   기존에는 고정 쿼리 몇 개로 기사를 받아 키워드를 세다 보니 키워드당 1~3건밖에 잡히지
+   않았다. 여기서는 후보 키워드를 '화장품'과 조합해 직접 조회해 ① 전체 기사 수(total)와
+   ② 최근 30일 vs 직전 30일 건수를 얻는다. 50~100건대의 실제 언급 규모와 급증 여부가
+   함께 나오므로, 단순 최다언급이 아니라 '지금 뜨는 키워드'를 판별할 수 있다.
+   호출은 상위 후보 KW_PROBE_MAX개로 제한(네이버 일 25,000회 대비 여유). */
+const KW_PROBE_MAX = 18;
+async function probeKeywordNews(nid, nsec, candidates) {
+  const now = Date.now(), D30 = 30 * 86400000;
+  const probe = async (kw) => {
+    const j = await fetchNaverAPI(
+      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kw + ' 화장품')}&display=100&sort=date`,
+      nid, nsec, 9000);
+    if (!j || j._error || !Array.isArray(j.items)) return null;
+    let recent = 0, prior = 0;
+    j.items.forEach(it => {
+      const ts = it.pubDate ? new Date(it.pubDate).getTime() : NaN;
+      if (isNaN(ts)) return;
+      const age = now - ts;
+      if (age <= D30) recent++;
+      else if (age <= 2 * D30) prior++;
+    });
+    const delta = prior > 0 ? Math.round((recent - prior) / prior * 100) : (recent > 0 ? 100 : 0);
+    return { name: kw, total: j.total || 0, count: recent, prior, delta, axis: KW_OF_AXIS[kw] || '기타' };
+  };
+  const out = [];
+  /* 4개씩 묶어 순차 — 동시 호출 폭주로 인한 429 회피 */
+  for (let i = 0; i < candidates.length; i += 4) {
+    const batch = await Promise.all(candidates.slice(i, i + 4).map(kw => probe(kw).catch(() => null)));
+    batch.forEach(r => { if (r && r.count > 0) out.push(r); });
+  }
+  return out;
+}
+
 async function collectCulture() {
   setSdot('sd-datalab', 'warn');
   setSdot('sd-news', 'warn');
@@ -1820,11 +1912,21 @@ async function collectCulture() {
     setSdot('sd-datalab', 'off');
     if (rssData.count > 0) {
       const ranked = Object.entries(rssData.kwMap || {}).sort((a,b)=>b[1]-a[1]);
-      window._newsTrends = ranked.length ? ranked.slice(0,3).map(([name,count])=>({name,count})) : null;
+      const feedsUsed = rssData.okFeeds || 0;
+      window._newsTrends = ranked.length
+        ? ranked.slice(0,12).map(([name,count])=>({name,count,axis:KW_OF_AXIS[name]||'기타'})) : null;
+      window._kwVolume = window._newsTrends;
+      window._kwSurge = null;   /* 급증 판정은 네이버 뉴스 기간 비교가 있어야 가능 */
+      const axisCount = {};
+      (window._newsTrends || []).forEach(r => { axisCount[r.axis] = (axisCount[r.axis]||0) + r.count; });
+      const axisTop = Object.entries(axisCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
       SIG_DATA.culture = {
-        score: rssData.count > 50 ? 3.8 : 3.4,
-        interpret: `뷰티미디어 RSS ${rssData.count}건 수집 — 네이버 키 입력 시 뉴스·DataLab 추가 분석`,
-        chips: [`RSS ${rssData.count}건`, ...rssData.keywords.slice(0, 3)]
+        score: rssData.count > 300 ? 4.0 : rssData.count > 100 ? 3.8 : 3.4,
+        interpret: `뷰티미디어 ${feedsUsed}개 매체 RSS ${rssData.count}건 · 키워드 ${ranked.length}종 언급 집계`
+          + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a,c])=>`${a} ${c}건`).join('·')}` : '')
+          + (ranked.length ? ` · 최다 "${ranked.slice(0,5).map(([n])=>n).join('·')}"` : '')
+          + ' — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가',
+        chips: [`RSS ${rssData.count}건`, ...ranked.slice(0, 4).map(([n,c]) => `${n} ${c}건`)]
       };
     } else {
       setSdot('sd-datalab', 'off');
@@ -1854,12 +1956,23 @@ async function collectCulture() {
      연결된 것처럼 보이는 오표시가 발생한다 */
   setSdot('sd-datalab', dlResult.trends ? 'ok' : 'warn');
 
-  /* 뉴스 + RSS 키워드 언급빈도 합산 → "자주 언급" 트렌드 (단일 키워드 편향 제거) */
+  /* 뉴스 + RSS 키워드 언급빈도 합산 → 상위 후보 선별 */
   const combinedKw = {};
   Object.entries(newsTrends.kwMap || {}).forEach(([k,v]) => combinedKw[k] = (combinedKw[k]||0) + v);
   Object.entries(rssData.kwMap || {}).forEach(([k,v]) => combinedKw[k] = (combinedKw[k]||0) + v);
-  const topMentioned = Object.entries(combinedKw).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  window._newsTrends = topMentioned.length ? topMentioned.map(([name,count])=>({name,count})) : null;
+  const candidates = Object.entries(combinedKw).sort((a,b)=>b[1]-a[1]).slice(0, KW_PROBE_MAX).map(([k])=>k);
+
+  /* 후보를 네이버 뉴스로 직접 조회해 실제 기사 건수·급증률을 측정 (1건씩 잡히던 문제 해소) */
+  const probed = candidates.length ? await probeKeywordNews(nid, nsec, candidates) : [];
+  window._kwVolume = probed.length ? probed.slice().sort((a,b)=>b.count-a.count) : null;
+  window._kwSurge  = probed.length
+    ? probed.filter(r => r.count >= 5 && r.delta >= 20).sort((a,b)=>b.delta-a.delta)
+    : null;
+  /* 최다언급 트렌드 = 실측 기사 건수 기준 상위 12 (기존 3건 → 확대) */
+  window._newsTrends = probed.length
+    ? probed.slice().sort((a,b)=>b.count-a.count).slice(0,12).map(r=>({name:r.name, count:r.count, delta:r.delta, axis:r.axis}))
+    : (candidates.length ? candidates.slice(0,12).map(k=>({name:k, count:combinedKw[k]})) : null);
+  const topMentioned = (window._newsTrends || []).map(t => [t.name, t.count]);
 
   const totalNews = (newsTrends.total || 0) + rssData.count;
   const top = dlResult.trends?.[0];
@@ -1868,21 +1981,35 @@ async function collectCulture() {
   const dlChip = top ? `검색 ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
   const salesChip = sTop ? `구매 ${sTop.name} ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : null;
   const exportChip = xTop ? `수출 ${xTop.name} ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : null;
-  const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]})` : null;
+  const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]}건)` : null;
   let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
   if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
   /* 구매의도(쇼핑클릭)·수출(실판매) 급등은 가장 강한 선행 신호 — 추가 가산 */
   if (sTop && sTop.delta >= 20) score = Math.min(5, score + 0.3);
   if (xTop && xTop.delta >= 15) score = Math.min(5, score + 0.3);
+  /* 언급이 어느 축에서 움직이는지 — 제형/성분/기능/포맷/소비 분포 */
+  const axisCount = {};
+  (window._kwVolume || []).forEach(r => { axisCount[r.axis] = (axisCount[r.axis] || 0) + r.count; });
+  const axisTop = Object.entries(axisCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const surge = window._kwSurge || [];
+  if (surge.length) score = Math.min(5, score + 0.3);
   SIG_DATA.culture = {
     score,
     interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
-      + (topMentioned.length ? ` · 최다 언급 "${topMentioned.map(([n])=>n).join('·')}"` : '')
+      + (window._kwVolume ? ` · 키워드 ${window._kwVolume.length}종 실측(최근 30일)` : '')
+      + (surge.length ? ` · 급증 "${surge.slice(0,3).map(r=>`${r.name} +${r.delta}%`).join('·')}"` : '')
+      + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a,c])=>`${a} ${c}건`).join('·')}` : '')
+      + (topMentioned.length ? ` · 최다 언급 "${topMentioned.slice(0,5).map(([n])=>n).join('·')}"` : '')
       + (top ? ` · 검색 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
       + (sTop ? ` · 구매(쇼핑클릭) 급상승 "${sTop.name}" ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : '')
       + (xTop ? ` · 수출(실판매) 급상승 "${xTop.name}" ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : '')
       + ' — 전체 유형 트렌드 종합',
-    chips: [`뉴스 ${totalNews.toLocaleString()}건`, ...(exportChip ? [exportChip] : []), ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []), ...(mentionChip ? [mentionChip] : [])].slice(0, 4),
+    chips: [
+      `뉴스 ${totalNews.toLocaleString()}건`,
+      ...surge.slice(0, 2).map(r => `급증 ${r.name} +${r.delta}%`),
+      ...(window._kwVolume || []).slice(0, 2).map(r => `${r.name} ${r.count}건`),
+      ...(exportChip ? [exportChip] : []), ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []),
+    ].slice(0, 6),
     _sample: totalNews === 0 && !top && !xTop
   };
 }
@@ -1899,6 +2026,40 @@ async function fetchEcosKeyStats(ekey) {
     }
   } catch {}
   return [];
+}
+
+/* ════ 사회·인구 구조 앵커 — 공표 통계 기반 정적 참조 ════
+   1인가구 하나로는 "소용량"밖에 못 읽는다. 인구 구조가 바꾸는 제품 요건을 축별로 나눠
+   두면, 예측이 어느 인구 변화에 기대고 있는지 근거 모달에서 바로 확인된다.
+   연 1회 공표 시 이 상수만 갱신한다(REGS·RETAIL_ANCHORS와 동일 운영). */
+const SOCIETY_ANCHORS = [
+  { k:'1인가구', v:'36.1%', src:'통계청 인구총조사 2024', note:'역대 최대',
+    impl:'소용량·편의형 패키징 · 대용량 리필 수요 분화' },
+  { k:'65세 이상', v:'20.3%', src:'행안부 주민등록 2025', note:'초고령사회 진입',
+    impl:'저자극·탄력·볼륨 소구 · 큰 글씨 표기 · 개봉 용이 캡' },
+  { k:'평균 초혼연령', v:'남 34.2 / 여 31.6세', src:'통계청 인구동향 2024', note:'지속 상승',
+    impl:'안티에이징 진입 연령 상향 · 20대 후반 예방 케어 확대' },
+  { k:'남성 그루밍', v:'시장 확대', src:'대한화장품산업연구원 동향', note:'전 연령 확산',
+    impl:'맨즈 전용 라인 · 올인원 포맷 · 쉐이빙·두피 인접 카테고리' },
+  { k:'온라인 화장품 거래', v:'비중 상승', src:'통계청 온라인쇼핑동향', note:'모바일 우위',
+    impl:'단품 소구력·상세페이지 성분 표기 · 배송 내구 포장' },
+  { k:'방한 외국인', v:'증가 구간', src:'한국관광공사 출입국관광통계', note:'면세·H&B 직결',
+    impl:'소용량 기획세트 · 다국어 표시 · 휴대 규격' },
+];
+
+/* 행안부 주민등록 인구통계(data.go.kr, PUBLIC_KEY 공용) — 연령 구조 실데이터.
+   실패해도 조용히 null을 반환해 정적 앵커만으로 동작한다. */
+async function collectPopulationStructure(pub) {
+  if (!pub) return null;
+  try {
+    const t = await fetchProxy(
+      `https://apis.data.go.kr/1741000/admmSexdAgePpltn/selectAdmmSexdAgePpltn?serviceKey=${encodeURIComponent(pub)}&numOfRows=100&pageNo=1&type=json`, 11000);
+    if (!t) return null;
+    const j = JSON.parse(t);
+    const rows = j?.admmSexdAgePpltn?.[1]?.row || j?.response?.body?.items?.item || [];
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return { rows: rows.length };
+  } catch { return null; }
 }
 
 async function collectSociety() {
@@ -1927,7 +2088,9 @@ async function collectSociety() {
   if (!isNaN(u)) { if (u <= 2.8) score += 0.1; else if (u >= 4) score -= 0.1; }
   score = Math.min(Math.max(score, 1), 5);
 
-  const parts = ['1인가구 36.1%(통계청 2024, 역대 최대) · 전 연령·性 그루밍 수요 확산 → 소용량·편의형 패키징 수요 증가'];
+  /* 인구 구조 앵커를 축별로 펼쳐 해석에 싣는다 — 1인가구 단일 서술에서 벗어난다 */
+  const parts = [SOCIETY_ANCHORS.slice(0, 3).map(a => `${a.k} ${a.v}(${a.note})`).join(' · ')
+    + ' → ' + SOCIETY_ANCHORS[0].impl.split(' · ')[0] + ' / ' + SOCIETY_ANCHORS[1].impl.split(' · ')[0]];
   if (ccsi !== '—') parts.push(`소비자심리지수 ${ccsi}${!isNaN(c) ? (c >= 100 ? ' (소비 낙관)' : ' (소비 신중)') : ''}`);
   if (unemploy !== '—') parts.push(`실업률 ${unemploy}%${!isNaN(u) ? (u <= 2.8 ? ' (고용 안정 → 구매력 양호)' : u >= 4 ? ' (고용 둔화 → 가성비 수요 우위)' : '') : ''}`);
   if (retailVal !== '—') parts.push(`${retailName || 'ECOS 소매판매 지표'} ${retailVal}`);
@@ -1937,11 +2100,11 @@ async function collectSociety() {
     score,
     interpret: parts.join(' · '),
     chips: [
-      '1인가구 36.1%', '그루밍 수요↑',
+      ...SOCIETY_ANCHORS.slice(0, 3).map(a => `${a.k} ${a.v}`),
       ccsi !== '—' ? `CCSI ${ccsi}` : 'ECOS 키 필요',
       unemploy !== '—' ? `실업률 ${unemploy}%` : '',
       retailVal !== '—' ? `${retailName || '소매판매'} ${retailVal}` : '',
-    ].filter(Boolean).slice(0, 5),
+    ].filter(Boolean).slice(0, 6),
     _sample: ccsi === '—'
   };
 }
@@ -2267,6 +2430,9 @@ async function collectBeautyRSS() {
     { url:'https://www.jangup.com/rss/allArticle.xml',     name:'장업신문' },
     { url:'https://www.cosmorning.com/rss/allArticle.xml', name:'코스모닝' },
     { url:'https://www.beautynury.com/rss',                name:'뷰티누리' },
+    { url:'https://www.thebk.co.kr/rss/allArticle.xml',     name:'뷰티경제' },
+    { url:'https://www.cmn.co.kr/rss/allArticle.xml',       name:'CMN' },
+    { url:'https://www.kbanker.co.kr/rss/allArticle.xml',   name:'뷰티한국' },
   ];
   let count = 0;
   const keywords = [];
@@ -2275,8 +2441,10 @@ async function collectBeautyRSS() {
   const articles = [];          /* ZONE 0 문화 카드 클릭 시 "RSS 분석 근거 자료"로 노출할 기사 제목+링크 */
   /* 병렬 수집 — 순차 수집 시 프록시 체인 누적 지연(피드당 최대 ~40초) 방지 */
   const texts = await Promise.all(feeds.map(f => fetchProxy(f.url, 7000).catch(() => null)));
+  let okFeeds = 0;
   texts.forEach((t, fi) => {
     if (!t || !t.includes('<')) return;
+    okFeeds++;
     try {
       /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
       const titles = [
@@ -2290,14 +2458,17 @@ async function collectBeautyRSS() {
       count += titles.length;
       const allText = [...titles, ...descs].join(' ');
       companyMentions.push(allText.slice(0, 2000));
-      titles.forEach(tt => {
+      /* 제목만 훑으면 키워드당 1건씩밖에 안 잡힌다 — 제목+요약을 '기사 단위'로 합쳐 스캔한다.
+         한 기사 안에서 같은 키워드가 여러 번 나와도 1로 세어 중복 가중을 막는다. */
+      const units = titles.map((tt, i) => `${tt} ${descs[i] || ''}`);
+      units.forEach(u => {
         TREND_KEYWORDS.forEach(kw => {
-          if (tt.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
+          if (u.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
         });
       });
       /* <item> 단위로 제목+링크를 짝지어 근거 기사 목록 구성 */
       const itemBlocks = [...t.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => m[1]);
-      itemBlocks.slice(0, 6).forEach(blk => {
+      itemBlocks.slice(0, 12).forEach(blk => {
         const tm = blk.match(/<title>(?:<!\[CDATA\[)?([^<\]]+)/);
         const lm = blk.match(/<link>([^<]+)<\/link>/);
         if (tm && lm) articles.push({ title: tm[1].trim(), link: lm[1].trim(), source: feeds[fi].name });
@@ -2305,8 +2476,8 @@ async function collectBeautyRSS() {
     } catch {}
   });
   const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
-  sorted.slice(0,3).forEach(([k]) => keywords.push(k+' 언급'));
-  return { count, keywords, kwMap, articles, text: companyMentions.join(' ').slice(0, 4000) };
+  sorted.slice(0,3).forEach(([k]) => keywords.push(`${k} ${kwMap[k]}건`));
+  return { count, keywords, kwMap, articles, feeds: feeds.length, okFeeds, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
 /* 식약처 화장품제조업 등록현황 — Track A/B 제조사 실재성(식약처 등록 여부) 검증용.
@@ -2917,6 +3088,7 @@ function computeDataQuality() {
     ['글로벌 검색(GTrends)', !!(window._gtrends && window._gtrends.length)],
     ['해외 커뮤니티(Reddit)', !!(window._reddit && window._reddit.length)],
     ['글로벌 리테일(Layer1)', !!((window._globalRetail || {}).formulations || []).length],
+    ['급증 키워드(뉴스 실측)', !!(window._kwSurge && window._kwSurge.length)],
   ];
   const real = items.filter(i => i[1]).length;
   return { items, real, total: items.length, ratio: items.length ? real / items.length : 0 };
@@ -3014,9 +3186,16 @@ async function runGeminiPrediction(period) {
       + window._dlTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
     : '';
   const newsDetail = (window._newsTrends && window._newsTrends.length)
-    ? `\n[뷰티 뉴스·미디어 최다 언급 키워드 — 실측]\n`
-      + window._newsTrends.map(t => `${t.name}(${t.count}건)`).join(' · ')
+    ? `\n[뷰티 뉴스·미디어 언급 키워드 — 최근 30일 기사 건수 실측 (축: 제형/성분/기능/포맷/소비)]\n`
+      + window._newsTrends.map(t => `${t.name}${t.axis ? `[${t.axis}]` : ''} ${t.count}건${typeof t.delta === 'number' ? ` ${t.delta >= 0 ? '+' : ''}${t.delta}%` : ''}`).join(' · ')
     : '';
+  const surgeDetail = (window._kwSurge && window._kwSurge.length)
+    ? `\n[급증 키워드 — 최근 30일 vs 직전 30일 기사 증가 (문화 신호의 핵심)]\n`
+      + window._kwSurge.slice(0, 8).map(t => `${t.name}[${t.axis}] ${t.count}건 +${t.delta}%`).join(' · ')
+      + `\n※ 언급량이 큰 것보다 '늘고 있는 것'이 예측 대상이다. 위 급증 키워드를 우선 반영하라.`
+    : '';
+  const societyDetail = `\n[사회·인구 구조 앵커 — 공표 통계 기반 제품 요건]\n`
+    + SOCIETY_ANCHORS.map(a => `${a.k} ${a.v}(${a.src}) → ${a.impl}`).join('\n');
   const salesDetail = (window._salesTrends && window._salesTrends.length)
     ? `\n[네이버쇼핑 클릭 트렌드 — 구매의도 실측 · 선행지표(LEAD) · 검색보다 판매에 근접]\n`
       + window._salesTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
@@ -3109,7 +3288,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${surgeDetail}${societyDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -4007,6 +4186,8 @@ function applyPrecollected(pre) {
   window._exportTrends = pre.exportTrends || null;
   window._exportErr = pre.exportErr ?? null;
   window._newsTrends = pre.newsTrends || null;
+  window._kwVolume = pre.kwVolume || pre.newsTrends || null;
+  window._kwSurge = pre.kwSurge || null;
   window._rssText = pre.rssText || '';
   window._climateTrend = pre.climateTrend || null;
   window._gtrends = pre.gtrendsTrends || null;
@@ -4165,6 +4346,14 @@ function genReport() {
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
     window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
   }
+  if (window._kwSurge && window._kwSurge.length) {
+    lines.push('');
+    lines.push('▶ 급증 키워드 — 최근 30일 vs 직전 30일 기사 증가');
+    window._kwSurge.slice(0, 10).forEach(t => lines.push(`  • ${t.name}[${t.axis}]: ${t.count}건 (직전 ${t.prior}건) +${t.delta}%`));
+  }
+  lines.push('');
+  lines.push('▶ 사회·인구 구조 앵커');
+  SOCIETY_ANCHORS.forEach(a => lines.push(`  • ${a.k} ${a.v} (${a.src}) → ${a.impl}`));
   if (window._formRadar && window._formRadar.length) {
     lines.push('');
     lines.push('▶ 제형 트렌드 레이더 — 성분→제형→패키징→생산설비(CAPA) [SNS35·검색30·신제품25·글로벌10]');
