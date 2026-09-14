@@ -320,6 +320,7 @@ const out = {
   exportTrends: sandbox.window._exportTrends || null,
   exportErr: sandbox.window._exportErr ?? null,
   newsTrends: sandbox.window._newsTrends || null,
+  rssFeedStatus: sandbox.window._rssFeedStatus || null,
   kwVolume: sandbox.window._kwVolume || null,
   kwSurge: sandbox.window._kwSurge || null,
   rssText: sandbox.window._rssText || '',
@@ -336,6 +337,10 @@ Object.entries(out.sig).forEach(([k, v]) => {
 });
 if (out.salesTrends) console.log(` · 구매 모멘텀 ${out.salesTrends.length}건`);
 else console.log(` · 구매 모멘텀 없음 (${out.salesErr ?? '-'})`);
+if (out.rssFeedStatus) {
+  console.log(' · RSS 매체별 응답:');
+  out.rssFeedStatus.forEach(f => console.log(`    - ${f.name}: ${f.ok ? f.items + '건' : '응답 없음'}`));
+}
 if (out.dlTrends) console.log(` · 검색 모멘텀 ${out.dlTrends.length}건`);
 else console.log(` · 검색 모멘텀 없음 (${out.dlErr ?? '-'})`);
 if (out.exportTrends) console.log(` · 수출 모멘텀 ${out.exportTrends.length}건`);

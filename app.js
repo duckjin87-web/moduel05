@@ -908,6 +908,14 @@ function buildSigDetailHtml(key) {
     body += trendListHtml('뉴스·RSS 언급 키워드 — 최근 30일 기사 건수', window._newsTrends, 'count');
     body += articleListHtml('네이버 뉴스 분석 근거 기사', window._newsArticles);
     body += articleListHtml('뷰티 전문지 RSS 분석 근거 기사', window._rssArticles);
+    if (window._rssFeedStatus && window._rssFeedStatus.length) {
+      const ok = window._rssFeedStatus.filter(f => f.ok);
+      body += `<div class="gm-block"><div class="gm-block-title">RSS 매체별 수집 상태 — ${ok.length}/${window._rssFeedStatus.length}개 매체 응답</div>
+        <ul class="gm-list">${window._rssFeedStatus.map(f =>
+          `<li>${escHtml(f.name)} — ${f.ok ? `<b style="color:var(--grn)">${f.items}건</b>` : '<b style="color:var(--red)">응답 없음</b> (피드 주소 변경·차단 가능)'}</li>`).join('')}</ul>
+        <div class="gm-note2">응답 없는 매체가 많으면 언급 집계가 과소 산출됩니다. 주소 교체가 필요한지 여기서 확인하세요.</div>
+      </div>`;
+    }
   }
   body += sourceLinksHtml(key);
   return body;
@@ -2442,8 +2450,9 @@ async function collectBeautyRSS() {
   /* 병렬 수집 — 순차 수집 시 프록시 체인 누적 지연(피드당 최대 ~40초) 방지 */
   const texts = await Promise.all(feeds.map(f => fetchProxy(f.url, 7000).catch(() => null)));
   let okFeeds = 0;
+  const feedStatus = [];          /* 매체별 진단 — 어느 피드가 죽었는지 화면·로그에서 확인 */
   texts.forEach((t, fi) => {
-    if (!t || !t.includes('<')) return;
+    if (!t || !t.includes('<')) { feedStatus.push({ name: feeds[fi].name, ok: false, items: 0 }); return; }
     okFeeds++;
     try {
       /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
@@ -2468,16 +2477,18 @@ async function collectBeautyRSS() {
       });
       /* <item> 단위로 제목+링크를 짝지어 근거 기사 목록 구성 */
       const itemBlocks = [...t.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => m[1]);
+      feedStatus.push({ name: feeds[fi].name, ok: true, items: titles.length });
       itemBlocks.slice(0, 12).forEach(blk => {
         const tm = blk.match(/<title>(?:<!\[CDATA\[)?([^<\]]+)/);
         const lm = blk.match(/<link>([^<]+)<\/link>/);
         if (tm && lm) articles.push({ title: tm[1].trim(), link: lm[1].trim(), source: feeds[fi].name });
       });
-    } catch {}
+    } catch { feedStatus.push({ name: feeds[fi].name, ok: false, items: 0, err: 'parse' }); }
   });
+  window._rssFeedStatus = feedStatus;
   const sorted = Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
   sorted.slice(0,3).forEach(([k]) => keywords.push(`${k} ${kwMap[k]}건`));
-  return { count, keywords, kwMap, articles, feeds: feeds.length, okFeeds, text: companyMentions.join(' ').slice(0, 4000) };
+  return { count, keywords, kwMap, articles, feedStatus, feeds: feeds.length, okFeeds, text: companyMentions.join(' ').slice(0, 4000) };
 }
 
 /* 식약처 화장품제조업 등록현황 — Track A/B 제조사 실재성(식약처 등록 여부) 검증용.
