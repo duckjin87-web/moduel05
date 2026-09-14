@@ -32,6 +32,8 @@ src = src.replace(/^const PREDICTIONS_CACHE/m, 'var PREDICTIONS_CACHE');
 src = src.replace(/^const FORMULATIONS\b/m, 'var FORMULATIONS');
 src = src.replace(/^const SOCIETY_ANCHORS\b/m, 'var SOCIETY_ANCHORS');
 src = src.replace(/^const KW_AXIS\b/m, 'var KW_AXIS');
+src = src.replace(/^const TREND_KEYWORDS\b/m, 'var TREND_KEYWORDS');
+src = src.replace(/^const KW_OF_AXIS\b/m, 'var KW_OF_AXIS');
 
 /* ── DOM·localStorage 스텁 ── */
 function makeEl(id) {
@@ -291,6 +293,93 @@ async function collectGlobalRetail() {
   return (formulations.length || sources.length) ? { sources, formulations } : null;
 }
 
+/* ══════════ 트렌드 리포트 레이더 — 무료 공개 발행물만 취합 ══════════
+   업계 트렌드 리포트 발행처는 대부분 유료 구독 상품을 함께 운영한다. 여기서는
+   ① 공개 RSS/Atom 피드와 ② 그 발행을 다룬 공개 뉴스만 수집한다.
+   구독 전용 본문은 가져오지 않으며, 제목·링크·발행일만 모아 원문으로 링크한다.
+
+   피드 주소는 사이트마다 달라 표준 경로 후보를 순서대로 시도하고, 어느 경로가
+   응답했는지 진단으로 남긴다(rssFeedStatus와 동일한 방식). 피드가 없으면
+   해당 발행처를 다루는 공개 뉴스 RSS로 대체해 '발행 사실'만 감지한다. */
+const TREND_PUBLISHERS = [
+  { key:'trendier', name:'트렌디어 라이브러리', base:'https://library.trendier.ai',
+    paths:['/rss','/feed','/rss.xml','/feed.xml','/index.xml','/atom.xml','/ko/rss','/ko/feed','/ko/rss.xml'],
+    news:'트렌디어 뷰티 트렌드 리포트', site:'https://library.trendier.ai/ko/' },
+  { key:'hwahae', name:'화해 비즈니스 인사이트', base:'https://business.hwahae.co.kr',
+    paths:['/rss','/feed','/rss.xml','/insight/rss','/insight/feed'],
+    news:'화해 뷰티 트렌드 리포트', site:'https://business.hwahae.co.kr/insight/' },
+  { key:'oliveyoung', name:'올리브영 인사이트 스튜디오', base:'https://corp.oliveyoung.com',
+    paths:['/rss','/feed','/ko/trend/rss'],
+    news:'올리브영 어워즈 인사이트 트렌드', site:'https://corp.oliveyoung.com/ko/trend/insight-studio/8' },
+  { key:'kcii', name:'대한화장품산업연구원', base:'https://www.kcii.re.kr',
+    paths:['/rss','/rss/allArticle.xml','/board/rss'],
+    news:'대한화장품산업연구원 화장품 산업 보고서', site:'https://www.kcii.re.kr' },
+];
+
+function parseFeedItems(xml, cap = 15) {
+  const blocks = [...xml.matchAll(/<(?:item|entry)[\s>][\s\S]*?<\/(?:item|entry)>/g)].map(m => m[0]);
+  const out = [];
+  for (const b of blocks.slice(0, cap)) {
+    const tm = b.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+    const lm = b.match(/<link[^>]*href=["']([^"']+)["']/) || b.match(/<link[^>]*>([^<]+)<\/link>/);
+    const dm = b.match(/<(?:pubDate|published|updated|dc:date)[^>]*>([^<]+)</);
+    const title = tm ? tm[1].replace(/<[^>]+>/g, '').trim() : '';
+    if (!title) continue;
+    out.push({ title: title.slice(0, 160), link: (lm ? lm[1] : '').trim(), date: dm ? dm[1].trim() : '' });
+  }
+  return out;
+}
+
+async function collectTrendReports() {
+  const sources = [], items = [];
+  for (const pub of TREND_PUBLISHERS) {
+    let hit = null;
+    /* ① 공개 피드 경로 탐색 */
+    for (const path of pub.paths) {
+      try {
+        const r = await directFetch(pub.base + path, { headers: { 'User-Agent': 'cosmedb-collector/1.0 (+feed reader)' } }, 10000);
+        if (!r.ok) continue;
+        const body = await r.text();
+        if (!/<(rss|feed|rdf:RDF)[\s>]/i.test(body)) continue;   /* HTML 폴백 페이지 제외 */
+        const parsed = parseFeedItems(body);
+        if (parsed.length) { hit = { path, parsed }; break; }
+      } catch { /* 다음 후보 경로 */ }
+    }
+    if (hit) {
+      sources.push({ publisher: pub.name, mode: '공개 피드', ok: true, path: hit.path, items: hit.parsed.length, site: pub.site });
+      hit.parsed.forEach(it => items.push({ ...it, publisher: pub.name, via: 'feed' }));
+      continue;
+    }
+    /* ② 피드가 없으면 발행을 다룬 공개 뉴스로 '발행 사실'만 감지 */
+    try {
+      const url = `https://news.google.com/rss/search?q=${encodeURIComponent(pub.news)}&hl=ko&gl=KR&ceid=KR:ko`;
+      const r = await directFetch(url, { headers: { 'User-Agent': 'cosmedb-collector/1.0' } }, 12000);
+      if (!r.ok) { sources.push({ publisher: pub.name, mode: '뉴스 대리', ok: false, note: `HTTP ${r.status}`, site: pub.site }); continue; }
+      const parsed = parseFeedItems(await r.text(), 8);
+      sources.push({ publisher: pub.name, mode: '뉴스 대리', ok: parsed.length > 0, items: parsed.length, site: pub.site });
+      parsed.forEach(it => items.push({ ...it, publisher: pub.name, via: 'news' }));
+      await new Promise(res => setTimeout(res, 600));
+    } catch (e) {
+      sources.push({ publisher: pub.name, mode: '뉴스 대리', ok: false, note: e.message, site: pub.site });
+    }
+  }
+  /* 리포트 제목에서 트렌드 키워드를 집계 — 문화 신호의 보조 근거 */
+  const KWS = sandbox.TREND_KEYWORDS || [];
+  const kw = {};
+  items.forEach(it => KWS.forEach(k => { if (it.title.includes(k)) kw[k] = (kw[k] || 0) + 1; }));
+  const keywords = Object.entries(kw).sort((a, b) => b[1] - a[1]).slice(0, 12)
+    .map(([name, count]) => ({ name, count, axis: (sandbox.KW_OF_AXIS || {})[name] || '기타' }));
+  return (sources.length || items.length) ? { sources, items: items.slice(0, 40), keywords } : null;
+}
+
+console.log('트렌드 리포트 레이더 (공개 피드 → 없으면 공개 뉴스)...');
+const trendReports = await collectTrendReports();
+if (trendReports) {
+  trendReports.sources.forEach(s =>
+    console.log(` · ${s.publisher} [${s.mode}${s.path ? ' ' + s.path : ''}] ${s.ok ? s.items + '건' : '없음' + (s.note ? '(' + s.note + ')' : '')}`));
+  console.log(` · 리포트 키워드: ${trendReports.keywords.map(k => `${k.name}(${k.count})`).join(', ') || '없음'}`);
+}
+
 console.log('Layer1 글로벌 선행시장 수집 (정식 피드 → 없으면 공개 뉴스 대리)...');
 const globalRetail = await collectGlobalRetail();
 if (globalRetail) {
@@ -321,6 +410,7 @@ const out = {
   exportErr: sandbox.window._exportErr ?? null,
   newsTrends: sandbox.window._newsTrends || null,
   rssFeedStatus: sandbox.window._rssFeedStatus || null,
+  trendReports,
   kwVolume: sandbox.window._kwVolume || null,
   kwSurge: sandbox.window._kwSurge || null,
   rssText: sandbox.window._rssText || '',

@@ -908,6 +908,25 @@ function buildSigDetailHtml(key) {
     body += trendListHtml('뉴스·RSS 언급 키워드 — 최근 30일 기사 건수', window._newsTrends, 'count');
     body += articleListHtml('네이버 뉴스 분석 근거 기사', window._newsArticles);
     body += articleListHtml('뷰티 전문지 RSS 분석 근거 기사', window._rssArticles);
+    if (window._trendReports && ((window._trendReports.items||[]).length || (window._trendReports.sources||[]).length)) {
+      const tr = window._trendReports;
+      const live = (tr.sources||[]).filter(x=>x.ok && x.mode==='공개 피드');
+      body += `<div class="gm-block"><div class="gm-block-title">업계 트렌드 리포트 — 공개 발행물만 취합</div>
+        <ul class="gm-list">${(tr.sources||[]).map(x =>
+          `<li><b>${escHtml(x.publisher)}</b> — ${x.ok
+            ? `${escHtml(x.mode)}${x.path ? ` <span style="color:var(--ink3)">(${escHtml(x.path)})</span>` : ''} · ${x.items}건`
+            : `<span style="color:var(--ink3)">공개 피드 없음${x.note ? ' · ' + escHtml(x.note) : ''}</span>`}
+            ${x.site ? ` — <a class="gm-link" href="${escHtml(x.site)}" target="_blank">원문 →</a>` : ''}</li>`).join('')}</ul>
+        ${(tr.keywords||[]).length ? `<div class="gm-p" style="margin-top:8px"><b>리포트 제목 키워드</b>: ${
+          tr.keywords.map(k=>`${escHtml(k.name)}(${k.count})`).join(' · ')}</div>` : ''}
+        <div class="gm-note2">구독 전용 본문은 수집하지 않습니다. 제목·링크·발행일만 모아 원문으로 연결하며,
+          ${live.length ? '공개 피드가 확인된 발행처는 실제 발행물, ' : ''}그 외는 발행을 다룬 공개 보도 기준입니다.
+          리포트는 <b>선행 신호가 아니라 업계 합의 확인</b>용으로만 가중합니다.</div>
+      </div>`;
+      if ((tr.items||[]).length) {
+        body += articleListHtml('최근 발행 리포트·보도', tr.items.slice(0, 10).map(i => ({ title: `[${i.publisher}] ${i.title}`, link: i.link, source: i.via === 'feed' ? '공개 피드' : '공개 보도' })));
+      }
+    }
     if (window._rssFeedStatus && window._rssFeedStatus.length) {
       const ok = window._rssFeedStatus.filter(f => f.ok);
       body += `<div class="gm-block"><div class="gm-block-title">RSS 매체별 수집 상태 — ${ok.length}/${window._rssFeedStatus.length}개 매체 응답</div>
@@ -1683,6 +1702,8 @@ async function loadServerLeads() {
     if (Array.isArray(j.gtrendsTrends) && j.gtrendsTrends.length) window._gtrends = j.gtrendsTrends;
     if (Array.isArray(j.redditTrends) && j.redditTrends.length) window._reddit = j.redditTrends;
     if (j.globalRetail && (j.globalRetail.formulations || j.globalRetail.sources)) window._globalRetail = j.globalRetail;
+    if (j.trendReports && (j.trendReports.items || j.trendReports.sources)) window._trendReports = j.trendReports;
+    if (!window._rssFeedStatus && Array.isArray(j.rssFeedStatus)) window._rssFeedStatus = j.rssFeedStatus;
   } catch {}
 }
 
@@ -2705,6 +2726,7 @@ function radarPools() {
   (window._supplyTrends || []).forEach(t => P.launch.push({ name: t.name, count: t.count, src: '식약처 등록' }));
   (window._productRadar || []).forEach(t => P.launch.push({ name: t.title, count: 1, src: '출시보도' }));
   (window._newsTrends || []).forEach(t => P.launch.push({ name: t.name, count: t.count, src: '뉴스언급' }));
+  ((window._trendReports || {}).keywords || []).forEach(k => P.launch.push({ name: k.name, count: k.count, src: '트렌드리포트' }));
   (window._gtrends || []).forEach(t => P.global.push({ name: t.name, delta: t.delta, src: 'GTrends' }));
   (window._expoTrends || []).forEach(t => P.global.push({ name: t.name, count: t.count, src: '해외박람회' }));
   /* Layer1 글로벌 리테일(Sephora·Ulta·@cosme·샤오홍슈) — 이미 제형 단위로 집계된 신호 */
@@ -3100,6 +3122,7 @@ function computeDataQuality() {
     ['해외 커뮤니티(Reddit)', !!(window._reddit && window._reddit.length)],
     ['글로벌 리테일(Layer1)', !!((window._globalRetail || {}).formulations || []).length],
     ['급증 키워드(뉴스 실측)', !!(window._kwSurge && window._kwSurge.length)],
+    ['업계 트렌드 리포트', !!((window._trendReports || {}).items || []).length],
   ];
   const real = items.filter(i => i[1]).length;
   return { items, real, total: items.length, ratio: items.length ? real / items.length : 0 };
@@ -3205,6 +3228,12 @@ async function runGeminiPrediction(period) {
       + window._kwSurge.slice(0, 8).map(t => `${t.name}[${t.axis}] ${t.count}건 +${t.delta}%`).join(' · ')
       + `\n※ 언급량이 큰 것보다 '늘고 있는 것'이 예측 대상이다. 위 급증 키워드를 우선 반영하라.`
     : '';
+  const tr = window._trendReports;
+  const reportDetail = (tr && (tr.keywords || []).length)
+    ? `\n[업계 트렌드 리포트 — 공개 발행물 제목 키워드 집계 (${(tr.sources||[]).filter(s=>s.ok).map(s=>s.publisher).join('·')})]\n`
+      + tr.keywords.slice(0, 10).map(k => `${k.name}[${k.axis}] ${k.count}건`).join(' · ')
+      + `\n※ 리포트 발행은 업계가 이미 주목하고 있다는 뜻이다. 선행 신호가 아니라 '합의 확인' 용도로 쓰고, 리포트에만 있고 우리 선행 신호에 없는 항목은 후행일 수 있으니 가중하지 마라.`
+    : '';
   const societyDetail = `\n[사회·인구 구조 앵커 — 공표 통계 기반 제품 요건]\n`
     + SOCIETY_ANCHORS.map(a => `${a.k} ${a.v}(${a.src}) → ${a.impl}`).join('\n');
   const salesDetail = (window._salesTrends && window._salesTrends.length)
@@ -3299,7 +3328,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${surgeDetail}${societyDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${surgeDetail}${reportDetail}${societyDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -4199,6 +4228,8 @@ function applyPrecollected(pre) {
   window._newsTrends = pre.newsTrends || null;
   window._kwVolume = pre.kwVolume || pre.newsTrends || null;
   window._kwSurge = pre.kwSurge || null;
+  window._trendReports = pre.trendReports || null;
+  window._rssFeedStatus = pre.rssFeedStatus || null;
   window._rssText = pre.rssText || '';
   window._climateTrend = pre.climateTrend || null;
   window._gtrends = pre.gtrendsTrends || null;
@@ -4356,6 +4387,13 @@ function genReport() {
     lines.push('');
     lines.push('▶ 네이버 검색트렌드 (최근 3개월 카테고리 상승률)');
     window._dlTrends.forEach(t => lines.push(`  • ${t.name}: ${t.delta >= 0 ? '+' : ''}${t.delta}%`));
+  }
+  if (window._trendReports && ((window._trendReports.keywords||[]).length)) {
+    const tr = window._trendReports;
+    lines.push('');
+    lines.push('▶ 업계 트렌드 리포트 — 공개 발행물 키워드 (합의 확인용 · 선행 아님)');
+    tr.keywords.slice(0, 10).forEach(k => lines.push(`  • ${k.name}[${k.axis}]: ${k.count}건`));
+    lines.push(`  ※ 수집: ${(tr.sources||[]).map(x => `${x.publisher}=${x.ok ? x.mode : '없음'}`).join(', ')}`);
   }
   if (window._kwSurge && window._kwSurge.length) {
     lines.push('');
