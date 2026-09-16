@@ -29,6 +29,16 @@ const HOST_RULES = {
   'kipo-api.kipi.or.kr':                { env: 'KIPRIS_KEY' },
   'api.open-meteo.com':                 { env: null },
   'archive-api.open-meteo.com':         { env: null },
+  /* 뷰티 전문지 RSS — 키가 필요 없는 공개 피드. 허용목록에 없으면 백엔드 모드에서도
+     403을 맞고 외부 CORS 프록시로 폴백해, 내부망처럼 프록시가 막힌 환경에서 문화
+     신호(기사 수집)가 통째로 비게 된다. */
+  'www.cosinkorea.com':                 { env: null },
+  'www.jangup.com':                     { env: null },
+  'www.cosmorning.com':                 { env: null },
+  'www.beautynury.com':                 { env: null },
+  'www.thebk.co.kr':                    { env: null },
+  'www.cmn.co.kr':                      { env: null },
+  'www.kbanker.co.kr':                  { env: null },
 };
 
 export default async function handler(req, res) {
