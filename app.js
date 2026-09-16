@@ -253,7 +253,11 @@ const K = {
   /* 백엔드 모드에선 미입력 키를 센티널로 대체 — 모든 키 가드를 통과시키고
      실제 값은 서버가 주입한다 */
   gemini:  () => ls('gemini_key')  || (BK.on() ? '__BK__' : ''),
-  model:   () => ls('gemini_model') || 'gemini-2.5-flash-lite',
+  /* 예측(다중 신호 교차검증)은 추론 부담이 크고, 나머지 용도(행사·업체명 추출)는 단순
+     JSON 추출이다. 같은 모델을 쓸 이유가 없어 분리했다 — 예측만 상위 모델로 올리고
+     보조 작업은 경량 모델로 두면 품질은 올리면서 무료 쿼터 소모를 줄일 수 있다. */
+  model:   () => ls('gemini_model') || 'gemini-2.5-flash-lite',          /* 보조: 추출·테스트 */
+  modelPredict: () => ls('gemini_model_predict') || ls('gemini_model') || 'gemini-2.5-flash-lite',
   public:  () => ls('public_key')  || (BK.on() ? '__BK__' : ''),
   naverID: () => ls('naver_id')    || (BK.on() ? '__BK__' : ''),
   naverSec:() => ls('naver_sec')   || (BK.on() ? '__BK__' : ''),
@@ -346,6 +350,8 @@ function loadKeys() {
   if (BK.base()) { setStatus('st-backend', '연결됨', true); const bi = document.getElementById('k-backend'); if (bi) bi.value = ls('backend_url') || BK.base(); }
   const mSel = document.getElementById('gemini-model');
   if (mSel && K.model()) mSel.value = K.model();
+  const pSel = document.getElementById('gemini-model-predict');
+  if (pSel && K.modelPredict()) pSel.value = K.modelPredict();
 }
 
 function toggleApiPanel() {
@@ -3384,9 +3390,26 @@ function mergeEnsemble(runs) {
 
 /* ════ Gemini 공통 호출 — 모든 호출부(예측·TRACK B·행사 발견·테스트)가 이 하나를 쓴다.
    백엔드 모드면 서버가 키를 주입해 대신 호출. 성공 시 텍스트, 실패 시 status 포함 throw. */
-async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000 } = {}) {
+async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000, model, fallback = true } = {}) {
   const key = K.gemini();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${K.model()}:generateContent?key=${encodeURIComponent(key.trim())}`;
+  const useModel = model || K.model();
+  try {
+    return await geminiCall(useModel, key, promptText, maxTokens, temperature, timeout);
+  } catch (e) {
+    /* 상위 모델이 없거나(404) 쿼터를 넘으면(429) 보조 모델로 한 번 재시도한다.
+       모델 라인업은 수시로 바뀌므로 잘못된 모델명 하나로 기능 전체가 멈추지 않게 한다. */
+    const retryable = e.status === 404 || e.status === 429 || e.status === 400;
+    const alt = K.model();
+    if (fallback && retryable && alt && alt !== useModel) {
+      window._geminiFellBack = { from: useModel, to: alt, reason: e.status };
+      return await geminiCall(alt, key, promptText, maxTokens, temperature, timeout);
+    }
+    throw e;
+  }
+}
+
+async function geminiCall(modelId, key, promptText, maxTokens, temperature, timeout) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(key.trim())}`;
   const body = JSON.stringify({ contents: [{ role: 'user', parts: [{ text: promptText }] }],
     generationConfig: { maxOutputTokens: maxTokens, temperature } });
   let r;
@@ -3406,7 +3429,7 @@ async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, ti
 
 /* Gemini 예측 1회 — predictions 배열 반환, 빈 응답은 throw */
 async function callGeminiPredict(fullPrompt) {
-  const txt = await geminiGenerate(fullPrompt, { maxTokens: 1800, temperature: 0.3, timeout: 30000 });
+  const txt = await geminiGenerate(fullPrompt, { maxTokens: 1800, temperature: 0.3, timeout: 30000, model: K.modelPredict() });
   const preds = JSON.parse(txt).predictions || [];
   if (!preds.length) throw new Error('빈 예측 응답');
   return preds;
@@ -3691,7 +3714,7 @@ function renderZ1() {
     el.innerHTML = '<div class="z1-placeholder">예측 데이터 없음</div>';
     return;
   }
-  const model = K.model() || 'gemini-2.0-flash';
+  const model = K.modelPredict() || 'gemini-2.5-flash-lite';
   const periodLabel = (PERIOD_LABEL[currentPeriod] || '6개월') + ' 예측';
   document.getElementById('geminiModelLabel').textContent =
     model + ' · ' + new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + ' 생성';
@@ -5117,6 +5140,53 @@ async function testEcos() {
   }
 }
 
+/* ════ 사용 가능한 Gemini 모델 실시간 조회 ════
+   모델 라인업은 수시로 바뀌고 계정·지역·요금제에 따라 접근 가능한 것이 다르다.
+   목록을 코드에 박아두면 곧 틀린 값이 되므로, 키로 ListModels를 호출해
+   generateContent를 지원하는 모델만 골라 드롭다운을 채운다. */
+async function loadGeminiModels() {
+  const key = K.gemini();
+  const el = document.getElementById('r-gemini');
+  if (!key) { showToast('Gemini 키를 먼저 입력 후 저장하세요'); return; }
+  el.textContent = '계정에서 사용 가능한 모델 조회 중...'; el.style.color = 'var(--ink3)';
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key.trim())}&pageSize=200`;
+    const r = key === '__BK__' ? await bkFetch(url, {}, 15000) : await fetch(url);
+    const j = await r.json();
+    if (!r.ok) {
+      el.textContent = `모델 조회 실패 (${r.status}): ${j?.error?.message || ''}`;
+      el.style.color = 'var(--red)'; return;
+    }
+    const models = (j.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => ({
+        id: (m.name || '').replace(/^models\//, ''),
+        label: m.displayName || '',
+        inTok: m.inputTokenLimit || 0,
+      }))
+      .filter(m => m.id && !/embedding|aqa|imagen|veo|tts/i.test(m.id))
+      .sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+    if (!models.length) { el.textContent = '사용 가능한 생성 모델이 없습니다.'; el.style.color = 'var(--yel)'; return; }
+    window._geminiModels = models;
+    ['gemini-model', 'gemini-model-predict'].forEach(selId => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = models.map(m =>
+        `<option value="${escHtml(m.id)}">${escHtml(m.id)}${m.label && m.label !== m.id ? ` — ${escHtml(m.label)}` : ''}</option>`).join('');
+      if (models.some(m => m.id === cur)) sel.value = cur;
+    });
+    el.textContent = `사용 가능한 모델 ${models.length}종 — 드롭다운에 반영됨\n`
+      + models.slice(0, 12).map(m => `  · ${m.id}`).join('\n')
+      + (models.length > 12 ? `\n  … 외 ${models.length - 12}종` : '')
+      + `\n\n※ 예측용은 추론이 필요하므로 상위(Pro/Flash) 모델을, 보조용은 경량(Lite) 모델을 권장합니다.`;
+    el.style.color = 'var(--grn)';
+  } catch (e) {
+    el.textContent = '모델 조회 실패: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
 async function testYoutube() {
   const key = K.youtube();
   if (!key) { showToast('YouTube 키를 먼저 입력 후 저장하세요'); return; }
@@ -5298,6 +5368,10 @@ function init() {
   document.getElementById('btnTestEcos').addEventListener('click', testEcos);
   document.getElementById('btnSaveKipris').addEventListener('click', () => saveKey('kipris'));
   document.getElementById('btnTestKipris').addEventListener('click', testKipris);
+  document.getElementById('btnLoadModels').addEventListener('click', loadGeminiModels);
+  document.getElementById('gemini-model-predict').addEventListener('change', e => {
+    ls('gemini_model_predict', e.target.value); showToast('예측용 모델: ' + e.target.value);
+  });
   document.getElementById('btnSaveYoutube').addEventListener('click', () => saveKey('youtube'));
   document.getElementById('btnTestYoutube').addEventListener('click', testYoutube);
   document.getElementById('btnSaveBackend').addEventListener('click', () => saveKey('backend'));

@@ -55,14 +55,18 @@
             <button class="ap-btn ap-save" id="btnSaveGemini">저장</button>
             <button class="ap-btn ap-test" id="btnTestGemini">테스트</button>
           </div>
-          <select class="ap-select" id="gemini-model">
-            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (권장 · AQ키 무료 지원)</option>
+          <button class="ap-btn ap-test" id="btnLoadModels" style="width:100%;margin:4px 0">내 계정에서 사용 가능한 모델 불러오기</button>
+          <div class="ap-sub">예측용 <span class="ap-sub-n">신호 교차검증 — 상위 모델 권장</span></div>
+          <select class="ap-select" id="gemini-model-predict">
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
             <option value="gemini-2.5-flash">gemini-2.5-flash</option>
-            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
-            <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
           </select>
-          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 무료 15req/분 · AQ 시작 신규 키 지원</div>
+          <div class="ap-sub">보조용 <span class="ap-sub-n">행사·업체명 추출 — 경량 모델로 충분</span></div>
+          <select class="ap-select" id="gemini-model">
+            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+            <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+          </select>
+          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 목록은 계정·지역마다 다르므로 위 버튼으로 실제 가능한 모델을 조회하세요. 예측용 모델이 없거나 한도를 넘으면 보조용으로 자동 재시도합니다.</div>
           <div id="r-gemini" class="ap-result"></div>
         </div>
         <div class="ap-sec">
