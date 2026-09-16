@@ -1592,17 +1592,17 @@ const DATALAB_GROUPS = [
    제형/성분/기능/포맷/채널·소비층 5개 축으로 나눠 놓아, 언급이 잡히면 어느 축에서
    움직이는지 바로 읽힌다. (기존 33개 → 확대: 상위 3개만 1건씩 잡히던 문제 해소) */
 const KW_AXIS = {
-  제형: ['앰플','세럼','에센스','토너','로션','수분크림','크림','밤','오일','미스트','스틱','쿠션',
+  제형: ['앰플','세럼','에센스','토너','로션','수분크림','크림','립밤','밤 타입','오일','미스트','스틱','쿠션',
         '토너패드','패드','마스크팩','시트마스크','하이드로겔','바이오셀룰로오스','슬리핑팩','아이패치',
-        '겔패드','파우더','캡슐','필오프','클렌징오일','클렌징폼','클렌징밤','젤','무스','스프레이'],
+        '겔패드','파우더','캡슐','필오프','클렌징오일','클렌징폼','클렌징밤','젤 타입','무스','스프레이'],
   성분: ['PDRN','엑소좀','펩타이드','콜라겐','레티놀','레티날','나이아신아마이드','비타민C','세라마이드',
         '히알루론산','판테놀','시카','센텔라','마데카소사이드','아젤라익','살리실산','AHA','BHA','PHA',
-        '글루타치온','스피큘','병풀','쌀','녹차','어성초','달팽이','프로바이오틱스','마이크로바이옴'],
+        '글루타치온','스피큘','병풀','쌀 추출','녹차','어성초','달팽이','프로바이오틱스','마이크로바이옴'],
   기능: ['선케어','선크림','선세럼','선스틱','자외선차단','미백','주름개선','탄력','모공','각질','진정',
         '보습','장벽','트러블','여드름','피지','모발','두피','탈모','제모','쉐이빙','디오더런트',
         '슬리밍','부기','다크서클','속건조','광채','글로우','톤업'],
   포맷: ['에어리스','리필','대용량','소용량','미니','휴대용','파우치','앰플캡슐','듀얼','2종세트','키트',
-        '기획세트','트래블','스포이드','펌프','튜브','자','블리스터','트레이','모노머티리얼','지속가능'],
+        '기획세트','트래블','스포이드','펌프','튜브','유리용기','자(Jar)','블리스터','트레이','모노머티리얼','지속가능'],
   소비: ['비건','클린뷰티','더마','코스메슈티컬','이너뷰티','남성','맨즈','그루밍','시니어','키즈','베이비',
         '올리브영','다이소','무신사','쿠팡','면세','H&B','편의점','수출','역직구','틱톡','숏폼','유튜브',
         '인디브랜드','K뷰티','메이크업','틴트','립밤','향수','퍼퓸','바디케어','헤어왁스','헤어에센스'],
@@ -2452,57 +2452,75 @@ function toggleMomentumArchive() {
   el.style.display = '';
 }
 
+/* 뷰티 전문지 피드 — 매체마다 경로가 달라지므로 후보를 순서대로 시도한다.
+   응답이 RSS/Atom이 아니면(오류 HTML 등) 건너뛴다. 이 검증이 없어서 HTML 오류 페이지의
+   <title> 하나가 '1건'으로 집계되던 문제가 있었다. */
+const BEAUTY_FEEDS = [
+  { name:'코스인코리아', urls:[
+      'https://www.cosinkorea.com/rss/allArticle.xml',
+      'https://www.cosinkorea.com/rss/S1N1.xml',
+      'https://www.cosinkorea.com/rss/clickTop.xml',
+      'https://www.cosinkorea.com/rss' ] },
+  { name:'장업신문',   urls:['https://www.jangup.com/rss/allArticle.xml','https://www.jangup.com/rss'] },
+  { name:'코스모닝',   urls:[
+      'https://www.cosmorning.com/rss/allArticle.xml',
+      'https://www.cosmorning.com/rss/S1N1.xml',
+      'https://www.cosmorning.com/rss' ] },
+  { name:'뷰티누리',   urls:['https://www.beautynury.com/rss','https://www.beautynury.com/rss/allArticle.xml'] },
+  { name:'뷰티경제',   urls:['https://www.thebk.co.kr/rss/allArticle.xml','https://www.thebk.co.kr/rss'] },
+  { name:'CMN',        urls:[
+      'https://www.cmn.co.kr/rss/allArticle.xml',
+      'https://www.cmn.co.kr/rss/S1N1.xml',
+      'https://www.cmn.co.kr/rss' ] },
+  { name:'뷰티한국',   urls:['https://www.kbanker.co.kr/rss/allArticle.xml','https://www.kbanker.co.kr/rss'] },
+];
+/* 응답이 실제 피드인지 — HTML 폴백 페이지를 걸러낸다 */
+const isFeedXml = t => !!t && /<(rss|feed|rdf:RDF)[\s>]/i.test(t) && /<(item|entry)[\s>]/i.test(t);
+
 async function collectBeautyRSS() {
-  /* 한국 뷰티 전문지 — 표준 RSS 경로(/rss/allArticle.xml)는 ndsoft CMS 공통 패턴 */
-  const feeds = [
-    { url:'https://www.cosinkorea.com/rss/allArticle.xml', name:'코스인코리아' },
-    { url:'https://www.jangup.com/rss/allArticle.xml',     name:'장업신문' },
-    { url:'https://www.cosmorning.com/rss/allArticle.xml', name:'코스모닝' },
-    { url:'https://www.beautynury.com/rss',                name:'뷰티누리' },
-    { url:'https://www.thebk.co.kr/rss/allArticle.xml',     name:'뷰티경제' },
-    { url:'https://www.cmn.co.kr/rss/allArticle.xml',       name:'CMN' },
-    { url:'https://www.kbanker.co.kr/rss/allArticle.xml',   name:'뷰티한국' },
-  ];
+  const feeds = BEAUTY_FEEDS;
   let count = 0;
   const keywords = [];
   const kwMap = {};
   const companyMentions = [];   /* TRACK B 연동용 업체명 언급 텍스트 */
   const articles = [];          /* ZONE 0 문화 카드 클릭 시 "RSS 분석 근거 자료"로 노출할 기사 제목+링크 */
-  /* 병렬 수집 — 순차 수집 시 프록시 체인 누적 지연(피드당 최대 ~40초) 방지 */
-  const texts = await Promise.all(feeds.map(f => fetchProxy(f.url, 7000).catch(() => null)));
+  /* 매체는 병렬, 매체 안 후보 URL은 순차 — 첫 성공에서 멈춘다 */
+  const usedUrl = [];
+  const texts = await Promise.all(feeds.map(async (f) => {
+    for (const u of f.urls) {
+      const t = await fetchProxy(u, 7000).catch(() => null);
+      if (isFeedXml(t)) { usedUrl[feeds.indexOf(f)] = u; return t; }
+    }
+    return null;
+  }));
   let okFeeds = 0;
   const feedStatus = [];          /* 매체별 진단 — 어느 피드가 죽었는지 화면·로그에서 확인 */
   texts.forEach((t, fi) => {
     if (!t || !t.includes('<')) { feedStatus.push({ name: feeds[fi].name, ok: false, items: 0 }); return; }
     okFeeds++;
     try {
-      /* CDATA 방식 + 일반 텍스트 방식 모두 파싱 */
-      const titles = [
-        ...[...t.matchAll(/<title><!\[CDATA\[([^\]]+)\]\]><\/title>/g)].map(m => m[1]),
-        ...[...t.matchAll(/<title>([^<]{2,})<\/title>/g)].map(m => m[1]).filter(s => !s.includes('<?xml'))
-      ];
-      const descs = [
-        ...[...t.matchAll(/<description><!\[CDATA\[([^\]]{5,500})\]\]><\/description>/g)].map(m => m[1]),
-        ...[...t.matchAll(/<description>([^<]{5,500})<\/description>/g)].map(m => m[1])
-      ];
-      count += titles.length;
-      const allText = [...titles, ...descs].join(' ');
-      companyMentions.push(allText.slice(0, 2000));
-      /* 제목만 훑으면 키워드당 1건씩밖에 안 잡힌다 — 제목+요약을 '기사 단위'로 합쳐 스캔한다.
-         한 기사 안에서 같은 키워드가 여러 번 나와도 1로 세어 중복 가중을 막는다. */
-      const units = titles.map((tt, i) => `${tt} ${descs[i] || ''}`);
-      units.forEach(u => {
-        TREND_KEYWORDS.forEach(kw => {
-          if (u.includes(kw)) kwMap[kw] = (kwMap[kw]||0)+1;
-        });
+      /* 기사(item/entry) 단위로 먼저 쪼갠 뒤 제목·요약을 짝지어 파싱한다.
+         이전에는 문서 전체에서 <title>을 긁어 채널 제목까지 기사로 셌고, 오류 HTML의
+         <title> 하나가 '1건'으로 잡히는 원인이 됐다. */
+      const blocks = [...t.matchAll(/<(item|entry)[\s>][\s\S]*?<\/\1>/g)].map(m => m[0]);
+      const items = blocks.map(blk => {
+        const tm = blk.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+        const dm = blk.match(/<(?:description|summary|content)[^>]*>(?:<!\[CDATA\[)?([\s\S]{0,600}?)(?:\]\]>)?<\/(?:description|summary|content)>/);
+        const lm = blk.match(/<link[^>]*href=["']([^"']+)["']/) || blk.match(/<link[^>]*>([^<]+)<\/link>/);
+        const title = tm ? tm[1].replace(/<[^>]+>/g, '').trim() : '';
+        const desc  = dm ? dm[1].replace(/<[^>]+>/g, '').trim() : '';
+        return { title, desc, link: lm ? lm[1].trim() : '' };
+      }).filter(x => x.title);
+      count += items.length;
+      companyMentions.push(items.map(x => `${x.title} ${x.desc}`).join(' ').slice(0, 2000));
+      /* 제목+요약을 기사 단위로 스캔 — 한 기사 내 중복은 1로 계수 */
+      items.forEach(x => {
+        const unit = `${x.title} ${x.desc}`;
+        TREND_KEYWORDS.forEach(kw => { if (unit.includes(kw)) kwMap[kw] = (kwMap[kw] || 0) + 1; });
       });
-      /* <item> 단위로 제목+링크를 짝지어 근거 기사 목록 구성 */
-      const itemBlocks = [...t.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(m => m[1]);
-      feedStatus.push({ name: feeds[fi].name, ok: true, items: titles.length });
-      itemBlocks.slice(0, 12).forEach(blk => {
-        const tm = blk.match(/<title>(?:<!\[CDATA\[)?([^<\]]+)/);
-        const lm = blk.match(/<link>([^<]+)<\/link>/);
-        if (tm && lm) articles.push({ title: tm[1].trim(), link: lm[1].trim(), source: feeds[fi].name });
+      feedStatus.push({ name: feeds[fi].name, ok: items.length > 0, items: items.length, url: usedUrl[fi] || '' });
+      items.slice(0, 12).forEach(x => {
+        if (x.link) articles.push({ title: x.title, link: x.link, source: feeds[fi].name });
       });
     } catch { feedStatus.push({ name: feeds[fi].name, ok: false, items: 0, err: 'parse' }); }
   });
@@ -2931,6 +2949,206 @@ function formRadarPromptBlock() {
   return `\n[제형 트렌드 레이더 — 제형별 종합 점수 (SNS35·검색30·신제품25·글로벌10 가중, 실측 신호 기반)]\n`
     + top.map(r => `${r.name}(${r.en}) ${r.score}점/${r.grade} · 신뢰도 ${r.coverage}%${r.thin ? '(관측 얕음 — 참고만)' : ''} · 설비:${r.capa[0]}`).join('\n')
     + `\n※ 이 시스템의 예측 단위는 성분이 아니라 '제형'이다. 위 점수가 높은 제형을 우선 반영하고, 각 예측의 formulation 필드에는 반드시 위 목록의 제형명을 그대로 적어라. packaging·tech는 그 제형의 실제 포장형태·생산설비와 일치해야 한다.`;
+}
+
+/* ════════════ 누적 추이 차트 (data/history.json) ════════════
+   trends.json은 매 수집마다 덮어써 '지금'만 남으므로, 수집기가 일자별 지표를
+   history.json에 따로 누적한다. 여기서는 그 누적본을 세 형태로 보여준다.
+
+   형태 선택 — 데이터의 일이 형태를 정한다:
+     ① 4대 신호 점수: 같은 0~5 척도의 4개 계열이 시간축을 따라 움직인다 → 다중 꺾은선.
+        척도가 다른 지표와 절대 한 축에 섞지 않는다(이중 축 금지).
+     ② 수집 규모: 단일 계열의 증감 → 면적 + 끝점 강조. 계열이 하나라 범례를 두지 않는다.
+     ③ 키워드 등장 빈도: 순위·크기 비교 → 가로 막대.
+
+   색은 계열 식별용(categorical)이며 검증기로 통과시킨 값이다. 색맹 구간 분리가
+   경계값이라 각 선 끝에 이름을 직접 붙여 색에만 의존하지 않게 했다. */
+const HIST_SERIES = [
+  { key:'climate', name:'기후·환경',   color:'#2f6bb0' },
+  { key:'society', name:'사회·인구',   color:'#9c4a86' },
+  { key:'economy', name:'경제·리테일', color:'#9a7d14' },
+  { key:'culture', name:'문화·팝트렌드', color:'#0f7a55' },
+];
+
+async function loadHistory() {
+  try {
+    const r = await fetch('data/history.json', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j) && j.length ? j : null;
+  } catch { return null; }
+}
+
+const shortDate = d => d.slice(5).replace('-', '/');
+
+/* ── ① 4대 신호 점수 추이 — 다중 꺾은선 ── */
+function chartSignals(hist) {
+  const W = 790, H = 210, ML = 30, MR = 130, MT = 12, MB = 26;
+  const iw = W - ML - MR, ih = H - MT - MB;
+  const n = hist.length;
+  const x = i => ML + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+  const y = v => MT + ih - (v / 5) * ih;
+  let g = '';
+  for (let v = 0; v <= 5; v++) {
+    g += `<line class="ch-grid" x1="${ML}" y1="${y(v)}" x2="${ML + iw}" y2="${y(v)}"></line>`
+       + `<text class="ch-ytick" x="${ML - 6}" y="${y(v) + 3}">${v}</text>`;
+  }
+  /* x축 눈금 — 최대 6개만 찍어 라벨 충돌 방지 */
+  const step = Math.max(1, Math.ceil(n / 6));
+  const ticks = new Set();
+  for (let i = 0; i < n; i += step) ticks.add(i);
+  ticks.add(n - 1);                       /* 최신 날짜는 항상 표시 */
+  [...ticks].sort((a, b) => a - b).forEach(i => {
+    g += `<text class="ch-xtick" x="${x(i)}" y="${H - 8}">${shortDate(hist[i].date)}</text>`;
+  });
+  let lines = '';
+  const ends = [];
+  HIST_SERIES.forEach(sr => {
+    const pts = hist.map((h, i) => ({ i, v: h.sig?.[sr.key], s: h.sample?.[sr.key] }))
+                    .filter(p => typeof p.v === 'number');
+    if (!pts.length) return;
+    const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i)},${y(p.v)}`).join(' ');
+    const allSample = pts.every(p => p.s);
+    lines += `<path class="ch-line${allSample ? ' ch-sample' : ''}" d="${d}" stroke="${sr.color}"></path>`;
+    const last = pts[pts.length - 1];
+    ends.push({ sr, last, allSample, cy: y(last.v) });
+  });
+  /* 값이 같으면 라벨이 겹쳐 글자가 뭉개진다 — y로 정렬해 최소 간격만큼 벌린다 */
+  const GAP = 12;
+  ends.sort((a, b) => a.cy - b.cy);
+  ends.forEach((e, k) => {
+    e.ly = k === 0 ? e.cy : Math.max(e.cy, ends[k - 1].ly + GAP);
+  });
+  /* 아래로만 밀면 축을 벗어날 수 있으므로 넘치면 위로 되돌린다 */
+  const over = ends.length ? ends[ends.length - 1].ly - (MT + ih) : 0;
+  if (over > 0) ends.forEach(e => { e.ly -= over; });
+  ends.forEach(e => {
+    const px = x(e.last.i), py = e.cy, ly = e.ly;
+    lines += `<circle class="ch-end" cx="${px}" cy="${py}" r="3.5" fill="${e.sr.color}"></circle>`;
+    /* 라벨을 밀었으면 점과 라벨을 가는 선으로 잇는다 */
+    if (Math.abs(ly - py) > 1) lines += `<line class="ch-leader" x1="${px + 4}" y1="${py}" x2="${px + 7}" y2="${ly - 3.5}" stroke="${e.sr.color}"></line>`;
+    lines += `<text class="ch-dlabel" x="${px + 9}" y="${ly}" fill="${e.sr.color}">${e.sr.name} ${e.last.v}${e.allSample ? ' (샘플)' : ''}</text>`;
+  });
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" class="ch-svg" role="img"
+      aria-label="4대 신호 점수 추이. ${hist[0].date}부터 ${hist[n-1].date}까지 ${n}일간, 0~5점 척도.">
+      ${g}${lines}</svg>`, W, H, ML, MR, MT, MB, iw, ih, n };
+}
+
+/* ── ② 수집 규모 추이 — 단일 계열 면적 ── */
+function chartVolume(hist, field, label) {
+  const W = 760, H = 150, ML = 40, MR = 60, MT = 12, MB = 26;
+  const iw = W - ML - MR, ih = H - MT - MB;
+  const n = hist.length;
+  const vals = hist.map(h => h.volume?.[field] ?? 0);
+  const max = Math.max(1, ...vals);
+  const x = i => ML + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+  const y = v => MT + ih - (v / max) * ih;
+  let g = '';
+  [0, Math.round(max / 2), max].forEach(v => {
+    g += `<line class="ch-grid" x1="${ML}" y1="${y(v)}" x2="${ML + iw}" y2="${y(v)}"></line>`
+       + `<text class="ch-ytick" x="${ML - 6}" y="${y(v) + 3}">${v.toLocaleString()}</text>`;
+  });
+  const stepV = Math.max(1, Math.ceil(n / 6));
+  const tickV = new Set();
+  for (let i = 0; i < n; i += stepV) tickV.add(i);
+  tickV.add(n - 1);
+  [...tickV].sort((a, b) => a - b).forEach(i => { g += `<text class="ch-xtick" x="${x(i)}" y="${H - 8}">${shortDate(hist[i].date)}</text>`; });
+  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ');
+  const area = `M${x(0)},${y(0)} ` + vals.map((v, i) => `L${x(i)},${y(v)}`).join(' ') + ` L${x(n - 1)},${y(0)} Z`;
+  const lv = vals[n - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" class="ch-svg" role="img" aria-label="${label} 추이. 최신 ${lv}건.">
+    ${g}<path class="ch-area" d="${area}"></path><path class="ch-line ch-vol" d="${line}"></path>
+    <circle class="ch-end" cx="${x(n - 1)}" cy="${y(lv)}" r="4"></circle>
+    <text class="ch-dlabel ch-volabel" x="${x(n - 1) + 9}" y="${y(lv) + 4}">${lv.toLocaleString()}건</text>
+  </svg>`;
+}
+
+/* ── ③ 키워드 등장 빈도 — 가로 막대 ── */
+function chartKeywords(hist) {
+  /* 누적 이력에는 과거 사전 기준으로 집계된 키워드가 섞여 있다.
+     현재 사전에 없는 항목('자'처럼 한 글자라 과대매칭되던 것)과 자기참조어(발행처명)는
+     제외해야 순위가 왜곡되지 않는다. */
+  const valid = new Set(TREND_KEYWORDS);
+  const SELF_REF = new Set(['올리브영', '화해', '다이소', '무신사', '쿠팡']);
+  const tally = {};
+  hist.forEach(h => (h.topKeywords || []).forEach(k => {
+    if (!valid.has(k.n) || SELF_REF.has(k.n)) return;
+    tally[k.n] = (tally[k.n] || 0) + (k.c || 1);
+  }));
+  const rows = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!rows.length) return '<div class="ch-empty">누적된 키워드가 아직 없습니다.</div>';
+  const max = rows[0][1];
+  return `<div class="kbars">${rows.map(([name, v]) => `
+    <div class="kbar-row" title="${escHtml(name)} — 누적 ${v}건">
+      <span class="kbar-l">${escHtml(name)}</span>
+      <span class="kbar-t"><b style="width:${Math.max(2, (v / max) * 100)}%"></b></span>
+      <span class="kbar-v">${v}</span>
+    </div>`).join('')}</div>`;
+}
+
+function renderHistory() {
+  const el = document.getElementById('zHist');
+  if (!el) return;
+  const hist = window._history;
+  if (!hist || !hist.length) { el.style.display = 'none'; return; }
+  const n = hist.length;
+  const first = hist[0], last = hist[n - 1];
+  const sig = chartSignals(hist);
+  const avg = k => {
+    const v = hist.map(h => h.sig?.[k]).filter(x => typeof x === 'number');
+    return v.length ? (v.reduce((s, x) => s + x, 0) / v.length).toFixed(1) : '—';
+  };
+  el.innerHTML = `
+    <div class="zone-hd">
+      <div class="zone-title">누적 추이 <span class="ztag">${first.date} ~ ${last.date} · ${n}일</span></div>
+      <button class="btn-hd btn-bt-toggle" onclick="toggleHistTable()">표로 보기</button>
+      <span class="zmodel">하루 1회 수집 · 자동 누적</span>
+    </div>
+
+    <div class="ch-tiles">
+      <div class="ch-tile"><div class="ch-tile-n">${n}<em>일</em></div><div class="ch-tile-l">누적 수집일</div></div>
+      <div class="ch-tile"><div class="ch-tile-n">${last.real}<em>/4</em></div><div class="ch-tile-l">최신 실데이터 신호</div></div>
+      <div class="ch-tile"><div class="ch-tile-n">${(last.volume?.rss ?? 0).toLocaleString()}<em>건</em></div><div class="ch-tile-l">최신 RSS 기사</div></div>
+      <div class="ch-tile"><div class="ch-tile-n">${avg('culture')}</div><div class="ch-tile-l">문화 신호 평균</div></div>
+    </div>
+
+    <div class="ch-block">
+      <div class="ch-hd"><span class="ch-t">4대 신호 점수 추이</span><span class="ch-s">0~5점 · 점선은 샘플값(키 미등록 구간)</span></div>
+      <div class="ch-legend">${HIST_SERIES.map(s2 =>
+        `<span class="ch-lg"><i style="background:${s2.color}"></i>${s2.name}</span>`).join('')}
+        <span class="ch-lg ch-lg-note"><i class="ch-lg-dash"></i>샘플값</span></div>
+      <div class="ch-wrap">${sig.svg}</div>
+    </div>
+
+    <div class="ch-block">
+      <div class="ch-hd"><span class="ch-t">수집 규모 추이 — 뷰티 전문지 기사</span><span class="ch-s">RSS 매체에서 실제로 받아온 기사 수</span></div>
+      <div class="ch-wrap">${chartVolume(hist, 'rss', 'RSS 기사 수')}</div>
+    </div>
+
+    <div class="ch-block">
+      <div class="ch-hd"><span class="ch-t">누적 최다 언급 키워드</span><span class="ch-s">기간 전체 합산 · 상위 8종</span></div>
+      ${chartKeywords(hist)}
+    </div>
+
+    <div class="ch-table" id="histTable" style="display:none">
+      <div class="tablewrap"><table class="ht">
+        <thead><tr><th>날짜</th><th>기후</th><th>사회</th><th>경제</th><th>문화</th><th>실데이터</th><th>RSS</th><th>키워드</th></tr></thead>
+        <tbody>${hist.slice().reverse().map(h => `<tr>
+          <td>${h.date}</td>
+          ${HIST_SERIES.map(s2 => `<td class="num">${h.sig?.[s2.key] ?? '—'}${h.sample?.[s2.key] ? '*' : ''}</td>`).join('')}
+          <td class="num">${h.real}/4</td>
+          <td class="num">${(h.volume?.rss ?? 0).toLocaleString()}</td>
+          <td class="num">${h.volume?.news ?? 0}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div class="ch-s" style="padding:6px 2px">* 표시는 샘플값 — 해당 신호의 API 키가 등록되지 않아 참조값으로 대체된 날입니다.</div>
+    </div>`;
+  el.style.display = '';
+}
+
+function toggleHistTable() {
+  const t = document.getElementById('histTable');
+  if (t) t.style.display = t.style.display === 'none' ? '' : 'none';
 }
 
 /* ════ 트렌드 라이프사이클 맵 — 모멘텀 스냅샷 누적 → 태동/성장/성숙/쇠퇴 분류 ════
@@ -4311,6 +4529,8 @@ async function collectAll() {
   /* 제형 레이더: 신호를 제형 단위로 재집계 → 점수·등급·CAPA 체인 (예측 앵커) */
   window._formRadar = computeFormulationRadar();
   renderFormulationRadar();
+  window._history = await loadHistory();
+  renderHistory();
 
   setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인');
   window._expoVerified = await verifyExpoSchedules();
@@ -5048,6 +5268,8 @@ function showCollectedData() {
 /* ════ INIT ════ */
 function init() {
   loadKeys();
+  /* 누적 추이는 수집과 무관하게 접속 즉시 보여준다 — 과거 기록은 이미 저장소에 있다 */
+  loadHistory().then(h => { window._history = h; renderHistory(); });
   renderZ0();
   renderZ1();
   renderZ3();

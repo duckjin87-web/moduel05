@@ -363,8 +363,14 @@ async function collectTrendReports() {
       sources.push({ publisher: pub.name, mode: '뉴스 대리', ok: false, note: e.message, site: pub.site });
     }
   }
-  /* 리포트 제목에서 트렌드 키워드를 집계 — 문화 신호의 보조 근거 */
-  const KWS = sandbox.TREND_KEYWORDS || [];
+  /* 리포트 제목에서 트렌드 키워드를 집계 — 문화 신호의 보조 근거.
+     ※ 뉴스 대리 검색어에 쓴 단어(발행처명 등)는 결과 전건에 당연히 등장하므로 제외한다.
+       (예: '올리브영 어워즈 인사이트'로 검색하면 '올리브영'이 8/8건에 잡혀 신호가 아니다) */
+  const selfRefs = new Set();
+  TREND_PUBLISHERS.forEach(pub => {
+    `${pub.news} ${pub.name}`.split(/[\s·]+/).forEach(w => { if (w.length >= 2) selfRefs.add(w); });
+  });
+  const KWS = (sandbox.TREND_KEYWORDS || []).filter(k => !selfRefs.has(k));
   const kw = {};
   items.forEach(it => KWS.forEach(k => { if (it.title.includes(k)) kw[k] = (kw[k] || 0) + 1; }));
   const keywords = Object.entries(kw).sort((a, b) => b[1] - a[1]).slice(0, 12)
@@ -418,6 +424,58 @@ const out = {
 };
 
 fs.mkdirSync(path.join(root, 'data'), { recursive: true });
+/* ══════════ 누적 이력 적재 — data/history.json ══════════
+   trends.json은 매 실행마다 덮어써서 '지금'만 남는다. 추이를 보려면 별도 누적이 필요하다.
+   하루 1회 수집이므로 날짜 1건 = 레코드 1건. 같은 날 재실행하면 최신으로 교체한다.
+   용량 관리를 위해 지표만 압축 저장하고 730일(2년)치를 유지한다. */
+function buildHistoryRecord(o) {
+  const sig = o.sig || {};
+  const num = v => (typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null);
+  const rssItems = (o.rssFeedStatus || []).reduce((n, f) => n + (f.items || 0), 0);
+  const topKw = (o.kwVolume || []).slice(0, 5).map(k => ({ n: k.name, c: k.count }));
+  const topSurge = (o.kwSurge || []).slice(0, 5).map(k => ({ n: k.name, d: k.delta }));
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    ts: Date.now(),
+    /* 4대 신호 점수 + 실데이터 여부 */
+    sig: {
+      climate: num(sig.climate?.score), society: num(sig.society?.score),
+      economy: num(sig.economy?.score), culture: num(sig.culture?.score),
+    },
+    real: ['climate', 'society', 'economy', 'culture'].filter(k => sig[k] && !sig[k]._sample).length,
+    /* 신호별 샘플 여부 — 차트에서 샘플 구간을 점선으로 구분해 실데이터와 섞이지 않게 한다 */
+    sample: {
+      climate: !!sig.climate?._sample, society: !!sig.society?._sample,
+      economy: !!sig.economy?._sample, culture: !!sig.culture?._sample,
+    },
+    /* 수집 규모 */
+    volume: {
+      rss: rssItems,
+      rssFeeds: (o.rssFeedStatus || []).filter(f => f.ok).length,
+      news: (o.newsTrends || []).length,
+      layer1: ((o.globalRetail || {}).formulations || []).length,
+      reports: ((o.trendReports || {}).items || []).length,
+    },
+    /* 모멘텀 */
+    topKeywords: topKw,
+    surge: topSurge,
+    export: (o.exportTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),
+    search: (o.dlTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),
+  };
+}
+
+const histPath = path.join(root, 'data', 'history.json');
+let history = [];
+try { history = JSON.parse(fs.readFileSync(histPath, 'utf8')); if (!Array.isArray(history)) history = []; } catch {}
+const rec = buildHistoryRecord(out);
+history = history.filter(h => h.date !== rec.date);   /* 같은 날 재실행 → 최신으로 교체 */
+history.push(rec);
+history.sort((a, b) => (a.date < b.date ? -1 : 1));
+if (history.length > 730) history = history.slice(-730);
+fs.writeFileSync(histPath, JSON.stringify(history));
+console.log(`누적 이력: ${history.length}일치 (오늘 ${rec.date} · 실데이터 ${rec.real}/4 · RSS ${rec.volume.rss}건)`);
+
+
 fs.writeFileSync(path.join(root, 'data', 'trends.json'), JSON.stringify(out, null, 2));
 
 const realCount = Object.values(out.sig).filter(v => v && !v._sample).length;

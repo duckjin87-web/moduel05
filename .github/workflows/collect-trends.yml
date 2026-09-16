@@ -1,6 +1,6 @@
 # 트렌드 데이터 서버사이드 자동 수집
 # ─────────────────────────────────────────────
-# 6시간마다 4대 신호(기후·사회·경제·문화)를 GitHub 러너에서 직접 수집해
+# 하루 1회(KST 06시) 4대 신호(기후·사회·경제·문화)를 GitHub 러너에서 직접 수집해
 # data/trends.json으로 커밋한다. 프론트엔드는 이 파일을 same-origin으로
 # 읽으므로 내부망에서 외부 CORS 프록시가 차단돼도 실데이터가 표시된다.
 #
@@ -24,7 +24,7 @@ name: Collect trend data
 
 on:
   schedule:
-    - cron: '0 21,3,9,15 * * *'   # UTC 기준 — KST 06시·12시·18시·24시
+    - cron: '0 21 * * *'          # UTC 21시 = KST 06시 — 하루 1회
   workflow_dispatch:               # Actions 탭에서 수동 실행 가능
 
 permissions:
@@ -60,7 +60,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/trends.json data/trackb-fallback.json
+          git add data/trends.json data/trackb-fallback.json data/history.json
           if git diff --cached --quiet; then
             echo "변경 없음 — 커밋 생략"
             exit 0
