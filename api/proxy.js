@@ -65,19 +65,44 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  /* 헬스체크 — 어떤 키가 서버에 등록돼 있는지(값은 노출하지 않음) */
+  /* 헬스체크 — 어떤 키가 서버에 등록돼 있는지(값은 절대 노출하지 않음).
+     "미등록"만 알려주면 원인을 추측해야 하므로, 어떤 이름을 찾았고 그중 무엇이
+     잡혔는지, 그리고 이 배포가 어느 커밋인지까지 함께 돌려준다.
+     · names  : 이 키로 인정하는 환경변수 이름들
+     · found  : 실제로 값이 있던 이름(없으면 null)
+     · deploy : 배포 커밋·환경 — 환경변수를 추가하고 재배포하지 않은 경우를 구분한다 */
   if (!req.query.url) {
+    const probe = (label, names) => {
+      const found = names.find(n => process.env[n]) || null;
+      return { label, names, found, ok: !!found };
+    };
+    const checked = {
+      naver:   (() => {
+        const id = !!process.env.NAVER_CLIENT_ID, sec = !!process.env.NAVER_CLIENT_SECRET;
+        return { label: '네이버', names: ['NAVER_CLIENT_ID', 'NAVER_CLIENT_SECRET'],
+                 found: id && sec ? 'NAVER_CLIENT_ID+SECRET' : null, ok: id && sec,
+                 note: id && !sec ? 'SECRET 누락' : (!id && sec ? 'ID 누락' : '') };
+      })(),
+      public:  probe('공공데이터', ENV_ALIASES.DATAGO_KEY),
+      ecos:    probe('ECOS', ['ECOS_KEY']),
+      gemini:  probe('Gemini', ['GEMINI_KEY']),
+      youtube: probe('YouTube', ['YOUTUBE_KEY']),
+      kipris:  probe('KIPRIS', ['KIPRIS_KEY']),
+    };
+    /* 이름은 맞는데 값이 공백뿐인 경우도 잡아낸다 */
+    const blank = Object.keys(process.env)
+      .filter(k => /_KEY$|_SECRET$|_ID$|^RETAIL_FEEDS$/.test(k) && String(process.env[k]).trim() === '');
     return res.status(200).json({
       ok: true,
       service: 'cosmedb-proxy',
-      keys: {
-        naver:   !!(process.env.NAVER_CLIENT_ID && process.env.NAVER_CLIENT_SECRET),
-        public:  !!readEnv('DATAGO_KEY'),
-        ecos:    !!process.env.ECOS_KEY,
-        gemini:  !!process.env.GEMINI_KEY,
-        youtube: !!process.env.YOUTUBE_KEY,
-        kipris:  !!process.env.KIPRIS_KEY,
+      deploy: {
+        commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || 'unknown',
+        env: process.env.VERCEL_ENV || 'unknown',
+        supportsDatago: true,          /* 이 값이 없으면 구버전 배포 */
       },
+      keys: Object.fromEntries(Object.entries(checked).map(([k, v]) => [k, v.ok])),
+      checked,
+      blankValues: blank,
     });
   }
 

@@ -321,9 +321,22 @@ async function testBackend() {
     const j = await r.json();
     if (!j.ok) throw new Error('응답 형식 오류');
     const lbl = { naver: '네이버', public: '공공데이터', ecos: 'ECOS', gemini: 'Gemini', youtube: 'YouTube', kipris: 'KIPRIS' };
-    const lines = Object.entries(j.keys).map(([k, on]) => `  · ${lbl[k] || k}: ${on ? '서버 키 등록됨 ✓' : '미등록 — Vercel 환경변수에 추가 필요'}`);
-    el.textContent = `백엔드 연결 성공\n${lines.join('\n')}\n※ 등록된 키의 API는 브라우저 키 입력 없이 바로 동작합니다`;
-    el.style.color = 'var(--grn)';
+    /* 미등록일 때는 '무엇을 찾았는지'까지 보여줘야 원인을 추측하지 않는다 */
+    const lines = Object.entries(j.keys).map(([k, on]) => {
+      const c = (j.checked || {})[k];
+      if (on) return `  · ${lbl[k] || k}: 등록됨 ✓${c && c.found ? ` (${c.found})` : ''}`;
+      const names = c && c.names ? c.names.join(' / ') : '';
+      return `  · ${lbl[k] || k}: 미등록 — ${names ? `${names} 중 어느 것도 서버에 없음` : '환경변수 없음'}`
+           + (c && c.note ? ` · ${c.note}` : '');
+    });
+    const d = j.deploy || {};
+    const stale = !d.supportsDatago;
+    el.textContent = `백엔드 연결 성공\n${lines.join('\n')}\n`
+      + `\n배포: ${d.commit || '?'} (${d.env || '?'})`
+      + (stale ? `\n⚠ 구버전 배포입니다 — DATAGO_KEY를 아직 인식하지 못합니다. Deployments에서 Redeploy 하세요.` : '')
+      + ((j.blankValues || []).length ? `\n⚠ 값이 비어 있는 변수: ${j.blankValues.join(', ')}` : '')
+      + `\n\n※ 환경변수를 추가·수정한 뒤에는 반드시 Redeploy 해야 반영됩니다.`;
+    el.style.color = Object.values(j.keys).every(v => v) ? 'var(--grn)' : 'var(--yel)';
     setStatus('st-backend', '연결됨', true);
   } catch (e) {
     el.textContent = `연결 실패: ${e.message}\n\n확인:\n① Vercel에 이 저장소를 배포했는지 (api/proxy.js 포함)\n② URL이 https://프로젝트명.vercel.app 형식인지`;
