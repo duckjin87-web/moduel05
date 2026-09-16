@@ -45,7 +45,9 @@ function makeEl(id) {
 }
 const els = {};
 const lsStore = {
-  public_key: process.env.PUBLIC_KEY || '',
+  /* Vercel이 PUBLIC_ 접두사를 공개 변수로 취급해 DATAGO_KEY를 정식 이름으로 쓴다.
+     GitHub Secrets에는 접두사 제약이 없으므로 기존 PUBLIC_KEY도 그대로 인식한다. */
+  public_key: process.env.DATAGO_KEY || process.env.PUBLIC_KEY || '',
   naver_id: process.env.NAVER_CLIENT_ID || '',
   naver_sec: process.env.NAVER_CLIENT_SECRET || '',
   ecos_key: process.env.ECOS_KEY || '',

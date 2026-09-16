@@ -7,7 +7,7 @@
 # 리포지토리 Settings → Secrets and variables → Actions 에 등록:
 #   NAVER_CLIENT_ID / NAVER_CLIENT_SECRET  (네이버 뉴스·DataLab·쇼핑인사이트)
 #   ECOS_KEY                               (한국은행)
-#   PUBLIC_KEY                             (data.go.kr 공공데이터)
+#   DATAGO_KEY (또는 기존 PUBLIC_KEY)      (data.go.kr 공공데이터)
 #   GEMINI_KEY                             (선택 — TRACK B 사전수집 시 업체명 추출 품질 향상)
 #   RETAIL_FEEDS                           (선택 — Layer1 글로벌 선행시장 '공식 상품피드')
 #     └ Sephora·Ulta·@cosme는 직접 스크래핑이 이용약관·봇차단으로 불가하다.
@@ -52,6 +52,7 @@ jobs:
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
           PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+          DATAGO_KEY: ${{ secrets.DATAGO_KEY }}
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           RETAIL_FEEDS: ${{ secrets.RETAIL_FEEDS }}
         run: node scripts/collect-data.mjs
