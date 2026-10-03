@@ -1,17 +1,17 @@
 {
-  "collectedAt": "2026-10-02T00:36:26.548Z",
+  "collectedAt": "2026-10-03T00:15:11.932Z",
   "sig": {
     "climate": {
-      "score": 2.8,
-      "interpret": "가을철 기온 하강 → 선케어 수요 둔화, 보습·리페어 라인 전환 수요 증가 · 평년 대비 -3.2℃ → 시즌 지연 가능성 · 평년 기준 전망: 1개월 후(11월) 평균최고 17.7℃ · 3개월 후(1월) 평균최고 2.5℃ · 6개월 후(4월) 평균최고 15.5℃",
+      "score": 3,
+      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 기준 전망: 1개월 후(11월) 평균최고 17.3℃ · 3개월 후(1월) 평균최고 2.3℃ · 6개월 후(4월) 평균최고 15.8℃",
       "chips": [
-        "기온 15.2℃",
+        "기온 13.2℃",
         "PM10 —",
-        "습도 49%",
-        "UV 3.15",
-        "평년대비 -3.2℃",
-        "16일추세 +1.6℃",
-        "평년전망 1m 17.7℃/3m 2.5℃/6m 15.5℃"
+        "습도 64%",
+        "UV 1.5",
+        "평년대비 -1.2℃",
+        "16일추세 -1.9℃",
+        "평년전망 1m 17.3℃/3m 2.3℃/6m 15.8℃"
       ],
       "_sample": false
     },
@@ -37,13 +37,13 @@
     },
     "culture": {
       "score": 3.8,
-      "interpret": "뷰티미디어 4개 매체 RSS 160건 · 키워드 50종 언급 집계 · 축 분포 소비 35건·기능 15건·제형 10건 · 최다 \"메이크업·수출·크림·올리브영·두피\" — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가",
+      "interpret": "뷰티미디어 4개 매체 RSS 160건 · 키워드 43종 언급 집계 · 축 분포 소비 41건·제형 8건·기능 8건 · 최다 \"메이크업·수출·올리브영·더마·크림\" — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가",
       "chips": [
         "RSS 160건",
         "메이크업 11건",
-        "수출 9건",
-        "크림 8건",
-        "올리브영 7건"
+        "수출 8건",
+        "올리브영 7건",
+        "더마 5건"
       ]
     }
   },
@@ -64,7 +64,7 @@
         "platform": "Sephora",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 88
+        "items": 93
       },
       {
         "platform": "Ulta",
@@ -76,19 +76,27 @@
         "platform": "@cosme",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 49
+        "items": 48
       },
       {
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 77
+        "items": 76
       }
     ],
     "formulations": [
       {
         "code": "HYD",
         "name": "하이드로겔 마스크",
+        "mentions": 1,
+        "platforms": [
+          "Ulta"
+        ]
+      },
+      {
+        "code": "TON",
+        "name": "토너",
         "mentions": 1,
         "platforms": [
           "Ulta"
@@ -101,7 +109,7 @@
   "salesTrends": null,
   "salesErr": null,
   "exportTrends": null,
-  "exportErr": "network",
+  "exportErr": "auth",
   "newsTrends": [
     {
       "name": "메이크업",
@@ -110,13 +118,8 @@
     },
     {
       "name": "수출",
-      "count": 9,
-      "axis": "소비"
-    },
-    {
-      "name": "크림",
       "count": 8,
-      "axis": "제형"
+      "axis": "소비"
     },
     {
       "name": "올리브영",
@@ -124,28 +127,28 @@
       "axis": "소비"
     },
     {
-      "name": "두피",
+      "name": "더마",
       "count": 5,
-      "axis": "기능"
+      "axis": "소비"
     },
     {
-      "name": "모발",
+      "name": "크림",
+      "count": 5,
+      "axis": "제형"
+    },
+    {
+      "name": "글로우",
       "count": 4,
       "axis": "기능"
     },
     {
-      "name": "향수",
-      "count": 3,
+      "name": "K뷰티",
+      "count": 4,
       "axis": "소비"
     },
     {
       "name": "보습",
-      "count": 3,
-      "axis": "기능"
-    },
-    {
-      "name": "탄력",
-      "count": 3,
+      "count": 4,
       "axis": "기능"
     },
     {
@@ -154,13 +157,18 @@
       "axis": "소비"
     },
     {
-      "name": "캡슐",
-      "count": 2,
+      "name": "엑소좀",
+      "count": 3,
+      "axis": "성분"
+    },
+    {
+      "name": "오일",
+      "count": 3,
       "axis": "제형"
     },
     {
-      "name": "퍼퓸",
-      "count": 2,
+      "name": "향수",
+      "count": 3,
       "axis": "소비"
     }
   ],
@@ -273,13 +281,6 @@
         "via": "news"
       },
       {
-        "title": "트렌디어, 인터참 코리아서 'K-뷰티' 트렌드·기술 알려 - zdnet.co.kr",
-        "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE4xdDJ3RVRYUXV5TlFzSV9tNERxX1VwSVZlRTAzTjYtMnFFOVJRaUxZV2ZicjY3TkVJaGdaT0F6NFFlazF6S1lOendlWmM3QXhSbTNLWmJB?oc=5",
-        "date": "Mon, 29 Jul 2024 07:00:00 GMT",
-        "publisher": "트렌디어 라이브러리",
-        "via": "news"
-      },
-      {
         "title": "K-뷰티 시장 검증, AI가 바꾼다… 트렌디어AI ‘트렌드 검증 AI’ 공개 - 뉴스와이어",
         "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE5UWHJxVVVGUTFFR0JNRjVnTDFHY0xQUEtvT2JWaHBKZFhGc2NzREdBaUhDT1lyck9ibjRYWkZYLUZydWYySjF4RlFzRC1JM2t0aWM4UGdHZ1FlQl9OcWtZ?oc=5",
         "date": "Thu, 05 Mar 2026 08:00:00 GMT",
@@ -290,6 +291,13 @@
         "title": "2025 K-뷰티 트렌드 : Trend - 리테일톡",
         "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE82a3Mzb25fZm8yelFNaTY2UmI0ekhXTmZSZ1Zjd3U3R0JTN3JOUmhpcmVETmVGWExUS3VRU1ZJTy05U0ZVOGdnSTAzTnVPU2lWVEh5UDlRcUxJcDR4anVNcF9KVDI1Zkk?oc=5",
         "date": "Wed, 11 Jun 2025 07:00:00 GMT",
+        "publisher": "트렌디어 라이브러리",
+        "via": "news"
+      },
+      {
+        "title": "[뷰티누리×트렌디어] 효능주의 소비자 선택은 '스킨 부스터' - 약업닷컴",
+        "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE13cml4ekdhcjlnQUVoWm1FdDgzZk50MThFRktsendDZms1ZVlFekJ1ellnM2R0LTFsVzRhMTd5bVNmNEpfOEwwWV9pZjBPTFlOc3l3S1kzN3JkelI2Rm0zWFdIWm9Hdw?oc=5",
+        "date": "Thu, 16 Jan 2025 08:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -308,16 +316,16 @@
         "via": "news"
       },
       {
-        "title": "정밀 검색·슬로우에이징…화해, 2026 뷰티 트렌드 공개 - 소셜밸류",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1QMVowM1lHOWg3dF9abWVXUUgtQ3QxanhscV8xSElTanE0dGdwUnI0eXlrSzlEbjlSemNOdFkzZThNaUl6MXpBVTh6OTdGYS1GdDJUYjltaURYMnlGMWJCbm9iVdIBbEFVX3lxTE0yMGJkQzd0X2c3VXFhQWRRSFZnd0dHaDV6eWxSUTYtNzhKNE4zQ05XaWxLeGQzdGUtMm03cDA2cVlVMXZqNHFWZmphY2ZCU2YzOTFOR0RuY3RiS25mOGVvUkRuQ3JlOHhMMkctcw?oc=5",
-        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
+        "title": "[최초공개] 화해 2026 트렌드리포트: The New Edition - newneek.co",
+        "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBBa0gxdVVTaXQzUW9GWi01NFBmMU5ZR25YYV9qalRmYXV0X3dKVTAtaFI0R3JtWkl6REM3Y0toZVptY2k2NUhqeUgxYWxaQ1cxMV9OWXRB?oc=5",
+        "date": "Mon, 23 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
       {
-        "title": "[최초공개] 화해 2026 트렌드리포트: The New Edition - 뉴닉",
-        "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBBa0gxdVVTaXQzUW9GWi01NFBmMU5ZR25YYV9qalRmYXV0X3dKVTAtaFI0R3JtWkl6REM3Y0toZVptY2k2NUhqeUgxYWxaQ1cxMV9OWXRB?oc=5",
-        "date": "Mon, 23 Feb 2026 08:00:00 GMT",
+        "title": "정밀 검색·슬로우에이징…화해, 2026 뷰티 트렌드 공개 - 소셜밸류",
+        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1QMVowM1lHOWg3dF9abWVXUUgtQ3QxanhscV8xSElTanE0dGdwUnI0eXlrSzlEbjlSemNOdFkzZThNaUl6MXpBVTh6OTdGYS1GdDJUYjltaURYMnlGMWJCbm9iVdIBbEFVX3lxTE0yMGJkQzd0X2c3VXFhQWRRSFZnd0dHaDV6eWxSUTYtNzhKNE4zQ05XaWxLeGQzdGUtMm03cDA2cVlVMXZqNHFWZmphY2ZCU2YzOTFOR0RuY3RiS25mOGVvUkRuQ3JlOHhMMkctcw?oc=5",
+        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -371,7 +379,7 @@
         "via": "news"
       },
       {
-        "title": "CJ올리브영, 뷰티 축제 '2023 어워즈&amp;페스타' 개막 - zdnet.co.kr",
+        "title": "CJ올리브영, 뷰티 축제 '2023 어워즈&amp;페스타' 개막 - 지디넷코리아",
         "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFB2alBqbHlDTDlGdGxlbFN0RW5Qb0pSSzJjV20xZ1dJWHhZT1JYUWFHWDVWdGN1MFZCcXRSVUEyZWhmRjJOVXJLTE1tc01vazQyb0hBVG5R?oc=5",
         "date": "Wed, 13 Dec 2023 08:00:00 GMT",
         "publisher": "올리브영 인사이트 스튜디오",
@@ -420,6 +428,13 @@
         "via": "news"
       },
       {
+        "title": "글로벌 코스메틱 포커스 배당표에 나오는 기호 설명 - Calgary Roughnecks",
+        "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNYjdkVVZXcENtUHdnYm1FZ2g4SGtyc1FGazcxb2pwWi1VT3NCVDdLN25Ed1JmXzRUU2tmWl9MRG1FaWxaaWFXQ2NISmlpUExSVENDS2VHXzYxZFhMS2hSbmxaMXBXbVBkY3lfbUp2QWgzSlhLLUVmTzFHb0V6RVpWRzk3WWltU0hMX0VVd3BjMDVseEFCWUkxVjZpdUdOdnFsTVh6WU1CRjdXYUJTMXlQMG1GTUNaLXlIcnJZd1g5aVJMOUJ6Sk1J?oc=5",
+        "date": "Thu, 01 Oct 2026 10:54:31 GMT",
+        "publisher": "대한화장품산업연구원",
+        "via": "news"
+      },
+      {
         "title": "대한화장품산업연구원 2026년 사업계획 프리뷰 - 코스모닝",
         "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE14X2FnSHpNUkF2ZXVSRXJwT01qZHV1MlNmV1hlTzNSUEVmY2QxSGJqVk9jTEVHemdFTEZqdWxlTUNjWlJlcnBMdEhyaXVPbWJORDBVek1SeldlLWlUS25vU1lPTQ?oc=5",
         "date": "Mon, 26 Jan 2026 08:00:00 GMT",
@@ -444,13 +459,6 @@
         "title": "2026 화장품 안전성 평가 정규교육 1차 개설 - THE K BEAUTY SCIENCE",
         "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1WSnl4MlVjWGE3VGRFeXJUejQ5ZUZDbTlXS29yTE8tWjlNZHFXdTl1bmxUT2YtRzZVa1Q1ampqdmpLTkJ3ZlloQzYyQUtPTFlxNkp1LWN3dmJPajNNMmtIX1FCelBQRTdGSVE?oc=5",
         "date": "Sat, 28 Mar 2026 07:00:00 GMT",
-        "publisher": "대한화장품산업연구원",
-        "via": "news"
-      },
-      {
-        "title": "다른 슬롯과 비교할 때 보는 글로벌 코스메틱 포커스 릴 구성 - Calgary Roughnecks",
-        "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQWmFjZnpYNy1BT3JsQVAxSEY1ZHZDNndpZ0RMQ01lZ05hNWpIWThrVGpGb0JjdFhtc1g1ZWtBS3NzeHNTMkYyZDl4cFlDcW9VV0pyTmZqRm1HVktVR0VMbzFEQ2VxT19QRlZZUUh0THZsLUU3RTRPaVNXRkIzXzhDV3NjYzg3a0lydy16NUNxYmpwcE54LWxEOHNRZ3ZBS0NzOU1jQmxoQmE1ZnY0ampQZWd3?oc=5",
-        "date": "Thu, 24 Sep 2026 23:51:51 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       },
@@ -488,13 +496,8 @@
     },
     {
       "name": "수출",
-      "count": 9,
-      "axis": "소비"
-    },
-    {
-      "name": "크림",
       "count": 8,
-      "axis": "제형"
+      "axis": "소비"
     },
     {
       "name": "올리브영",
@@ -502,28 +505,28 @@
       "axis": "소비"
     },
     {
-      "name": "두피",
+      "name": "더마",
       "count": 5,
-      "axis": "기능"
+      "axis": "소비"
     },
     {
-      "name": "모발",
+      "name": "크림",
+      "count": 5,
+      "axis": "제형"
+    },
+    {
+      "name": "글로우",
       "count": 4,
       "axis": "기능"
     },
     {
-      "name": "향수",
-      "count": 3,
+      "name": "K뷰티",
+      "count": 4,
       "axis": "소비"
     },
     {
       "name": "보습",
-      "count": 3,
-      "axis": "기능"
-    },
-    {
-      "name": "탄력",
-      "count": 3,
+      "count": 4,
       "axis": "기능"
     },
     {
@@ -532,24 +535,29 @@
       "axis": "소비"
     },
     {
-      "name": "캡슐",
-      "count": 2,
+      "name": "엑소좀",
+      "count": 3,
+      "axis": "성분"
+    },
+    {
+      "name": "오일",
+      "count": 3,
       "axis": "제형"
     },
     {
-      "name": "퍼퓸",
-      "count": 2,
+      "name": "향수",
+      "count": 3,
       "axis": "소비"
     }
   ],
   "kwSurge": null,
-  "rssText": "글로벌 시장에서 K-브랜드 보호 중기부-지재처 협업 체계 가동 중소벤처기업부(장관 이소영, 이하 중기부)와 지식재산처(처장 김용선, 이하 지재처)는 10월 2일(금) 오후 정부대전청사에서 ‘중소기업 K-브랜드 지식재산 보호 협의체’ 운영을 위한 착수 회의를 개최한다고 밝혔다.최근 한류 열풍 등에 힘입어, K-뷰티, K-푸드, K-패션 등 K-브랜드의 인기가 높아지면서, 우리 제품의 상표나 디자인 등이 무단으로 도용되거나 모방된 제품들이 글로벌플랫폼이나 오프라인 매장을 통해 유통되는 사례가 급증하여 수출 중소기업들의 피해가 적지 않은 상황이다.이러한 피해 최소화를 위해, 중소기업 수출 전반을 지 코이코, 2026코스모뷰티 인도네시아 한국관 성공 운영 해외전시 전문 주관사 코이코(KOECO, 대표 조완수)는 10월 1일부터 3일까지 3일간 인도네시아 탕에랑 ICE(Indonesia Convention Exhibition, BSD City)에서 개최하는 2026 코스모뷰티 인도네시아 미용 박람회(Cosmobeauté Indonesia 2026)에서 한국 공식 주관사로서 K-뷰티 한국관을 성공적으로 운영했다.올해로 19회를 맞은 코스모뷰티 인도네시아 화장품·미용 박람회는 유명 국제전시 주최사 인포마 마켓(Informa Markets)이 주최하는 인도네시아 최대 규모의 B2B 뷰티 전 (사)한메직협, ‘페이스 오브 몽골리아 2026’ 심사위원 참여 (사)한국메이크업전문가직업교류협회 안미려 회장이 아시아모델페스티벌 ‘페이스 오브 아시아’의 몽골 국가별 모델 선발 프로그램인 ‘페이스 오브 몽골리아(Face of Mongolia) 2026’ 20주년 기념행사에 심사위원으로 참여하며 한국과 몽골 간 뷰티·모델 분야의 국제교류에 힘을 보탰다.이번 행사는 아시아모델페스티벌조직위원회(회장 양의식)가 주최하고 몽골 모델스 아카데미 대표 빌군(Bilguun Otgonbaatar)이 주관했으며, 몽골의 신인 모델을 발굴하고 한국을 비롯한 아시아 각국의 모델·패션·뷰티 분야 전문가들이 함께하는 라부르켓, 첫 브랜드 파트너로 보이그룹 ‘롱샷’ 발탁 신세계인터내셔날이 수입·판매하는 스웨디시 내추럴 웰니스 라이프스타일 브랜드 라부르켓(L:A BRUKET)이 보이그룹 ‘롱샷(LNGSHOT)’을 첫 브랜드 파트너로 발탁하고 고객들과의 접점 확대에 나선다고 1일 밝혔다.롱샷은 가수 겸 프로듀서 박재범이 처음 선보인 아이돌 그룹으로 올해 1월 데뷔 후 빠르게 글로벌 팬덤을 넓혀가고 있다. 지난 7월 ‘KMA 2026(KM 차트 어워즈 2026)’에서 신인상과 글로벌 라이징 스타상을 수상했으며, 8월에는 데뷔 타이틀곡 ‘Moonwalkin’(문워킨)’이 글로벌 음원 플랫폼 스포티파이 누적 메이크업 넘어 헤어까지…뷰티업계 ‘얼굴 비율’ 맞춤 트렌드 확산 중안부 축소 메이크업, 인중 단축 메이크업처럼 얼굴의 세로 비율을 조정해 보이게 하는 뷰티 트렌드가 주목받는 가운데, 이러한 관심이 헤어 디자인으로도 확장되고 있다. 단순히 얼굴을 작아 보이게 만드는 것이 아니라 앞머리와 사이드 뱅, 레이어의 흐름, 볼륨의 위치를 조절해 개인의 얼굴 비율과 두상에 맞는 균형을 찾는 방식이다.아모스프로페셔널은 이러한 흐름을 반영해 2026 F/W 트렌드 캡슐 시즌 3로 ‘테일러드 밸런스(Tailored Balance)’를 제안한다. 얼굴형만으로 스타일을 결정하기보다 얼굴의 가로·세로 비율과 두상, 모 마티에 프리미에르, 바디 컬렉션 리뉴얼 프랑스 니치 퍼퓸 브랜드 마티에 프리미에르(MATIERE PREMIERE)가 10월, 새롭게 단장한 바디 컬렉션을 선보인다. 브랜드의 시그니처 향수 보틀에서 영감을 받은 디자인을 적용해, 한층 우아하고 프리미엄한 감성으로 재탄생했다.마티에 프리미에르의 창립자이자 세계적인 마스터 조향사 오렐리앙 기샤르(Aurélien Guichard)는 스킨케어 제품을 설계할 때도 향수를 조향하는 것과 같은 섬세하고 엄격한 기준을 적용한다. 피부에 닿는 감촉부터 물과 만나는 순간 풍성하게 피어나는 향까지 세심하게 설계된 핸드 앤 바디 레인지는 단순한 클라랑스, 유씨엘, 2027 헤어케어 트렌드로 ‘본드 리페어·두피 롱제비티’ 제시  폴라(POLA), ﻿‘B.A 아이존 크림’  글로벌 출시  아모레퍼시픽, 세계면세박람회서 유통사 협력 확대  마리엔메이, 그레이스와 글로벌 유통 확대  [뷰티누리×민텔] '바이브'가 향수 쇼핑을 바꾼다  눈꺼풀 수술, 2025년 글로벌 시술건수 1위 고수  [기업분석] 아이큐어, 상반기 매출 80%↑…영업익 흑자전환  英 부츠, ‘틱톡’ 이커머스 플랫폼 ‘틱톡 샵’ 입점  대봉엘에스, ‘적채 엑소좀’ 산학협력으로 교육부장관상  바이오스펙트럼, 화장품 원료 75종 인도네시아 할랄 인증  한메직협·몽골 시티대, 지속가능한 K-뷰티 교육 협력 추진 사단법인 한국메이크업전문가직업교류협회(한메직협)와 몽골 시티대학교가 지속 가능한 K-뷰티 교육 협력 체계 구축에 나섰다.K-뷰티는 글로벌 시장에서 영향력을 확대하는데 이어 교육 콘텐츠와 전문 기술, 인재 양성 분야로 영역을 넓히고 있다. 이번 협력은 K-뷰티 교육 콘텐츠의 해외 확산과 양국 뷰티 인재 교류 기반 마련의 일환으로 추진됐다.한메직협은 최근 몽골 시티대학교에서 '퍼스널컬러 진단 및 K-BEAUTY 메이크업 세미나'를 개최한 데 이어 츠. 바이갈마(Ts. Baigalmaa) 총장과 별도 회의를 갖고 양국 간 뷰티 교육 협력 오휘, 임지연과 글로벌 프리미엄 스킨케어 시장 공략 LG생활건강의 디에이징(De-Aging) 솔루션 뷰티 브랜드 오휘(OHUI)가 배우 임지연을 브랜드 앰배서더로 발탁하고 국내외 프리미엄 스킨케어 시장 공략에 나섰다.디에이징 전문성과 프리미엄 브랜드 이미지를 강화하는 동시에 대표 제품 마케팅을 확대해 국내외 소비자와의 접점을 넓히겠다는 전략이다.최근 글로벌 프리미엄 스킨케어 시장에서는 제품의 성분과 효능뿐 아니라 브랜드 스토리와 모델의 상징성이 소비자 선택에 중요한 요소로 부상하고 있다.오휘는 이번 앰배서더 선정이 기능성 중심의 브랜드 경쟁력을 보다 감성적이고 프리미엄한 이미지로 확 사상 최대 K-뷰티 수출에도 ODM 희비…외국인 자금 코스메카로 집중 K-뷰티 수출은 올해 1~9월 누적 111억3900만달러로 지난해 연간 실적의 97.6%에 달하며 사상 최대치를 향해 질주하고 있다.그러나 수출 호황의 과실이 국내 중견 ODM 업계 전반으로 확산된 것은 아니었다. 국내 상당수 화장품 브랜드가 자체 생산시설 없이 ODM에 의존하고 있음에도 불구하고 중견 ODM 기업들의 주가는 오히려 하락했고 외국인 투자자들의 이탈도 이어졌다.네이버증권 자료를 바탕으로 코스메카코리아, 잉글우드랩, 씨앤씨인터내셔널, 한국화장품제조, 제닉 등 주요 ODM 5개 기업의 최근 1년간(2025년 9월 30일~ K-Beauty Shifts Focus From Growth to Profitability as Industry Leaders Gather at IMPACT 2026 As K-beauty brands accelerate their global expansion, industry leaders are increasingly focusing on a new challenge: transforming international growth into sustainable revenue and profitability.Against this backdrop, IMPACT 2026, a global marketing conference bringing together executives from Google K-Beauty Children's Cosmetics Exports Surge as Demand Expands Across Asia South Korea's children's cosmetics exports recorded one of the fastest growth rates among K-beauty categories in August 2026, driven by expanding demand across China and emerging Asian markets.According to Korea ",
+  "rssText": "화장품 수출 3분기 누적 111억달러, 전년 금액 규모로 성장 식품의약품안전처(처장 오유경)는 2026년 3분기 누계 수출액이 전년 동기 대비 31.1% 증가한 111억 달러(잠정)를 기록하며, 3분기 누계 기준 역대 최대 수출 실적을 경신했다고 밝혔다. 이는 종전 최고치였던 2025년 연간 수출액(114억 달러)에 육박하는 규모로, 올해 9개월 만에 달성한 것이다. 연도별 3분기 누계 수출액, 증감률(억 달러, 전년 동기 대비 %)은 2022년 60억달러에서 2023년 62억달러(+3.3%), 2024년 74억달러(+19.4%), 2025년 85억달러(+14.9%)로 가파르게 성장했고 올해 日 수입시장 1위 K-뷰티, 프리미엄·성분 차별화로 고공행진 일본, 미국, 러시아, K-뷰티가 현지 화장품 수입시장 점유율 1위를 기록 중인 대표적인 국가들이다. 화장품 수출은 2025년 100억 달러를 넘어선 후(114억 달러), 올해도 8월까지 수출액이 벌써 96억 달러로 전년 동기 대비 31% 급증세다.특히 일본에서는 4년 연속 수입 화장품시장 1위를 지키고 있는 가운데, 프리미엄 차별화 전략을 앞세워 고부가가치 시장 공략에도 나서고 있다. 대한무역투자진흥공사(이하 코트라, 사장 강경성)는 K-뷰티 63개사가 대거 참가한 가운데, 9월 30일부터 3일간 오사카에서 개최된 ‘일본 대표 화 이미지컬러하우스, 경성대학교 퍼스널 컬러 특강 진행 (사)한국뷰티스타일리스트직업기능협회(회장 안미려) 산하 기관인 이미지컬러하우스(Image Color House)가 지난 9월 21일(월) 경성대학교 예술종합대학 패션디자인학과 학생들을 대상으로 퍼스널 컬러 특강을 진행했다.이번 특강은 패션디자인을 전공하는 학생들이 퍼스널 컬러의 기본 원리를 이해하고, 색채를 패션과 뷰티 및 이미지 스타일링에 활용할 수 있도록 이론과 실습을 연계한 과정으로 마련됐다.강의는 (사)한국뷰티스타일리스트직업기능협회 최민령 부회장과 신미선 교육이사가 퍼스널 컬러의 기초 이론을 시작으로 사계절 컬러의 특징과 1 아모레퍼시픽, ‘2026 세계면세박람회’서 글로벌 파트너십 강화 아모레퍼시픽이 9월 27일부터 10월 1일까지 프랑스 칸에서 열린 ‘2026 세계면세박람회(TFWA World Exhibition & Conference)’에 참가해 글로벌 면세 파트너십 강화에 나섰다. 2012년 첫 참가 이후 올해로 13회째다.세계면세협회(TFWA, Tax Free World Association)가 주관하는 세계면세박람회는 글로벌 브랜드와 주요 유통사, 공항, 항공사 등 면세 업계 관계자들이 한자리에 모여 새로운 사업 기회와 협력 방안을 논의하는 세계 최대 규모의 면세 비즈니스 행사다.아모레퍼시픽은 이번 박람회 대봉엘에스, 인천대와 ‘적채 엑소좀’ 산학협력 성과로 교육부장관상 수상 화장품∙의약∙바이오 소재 플랫폼 기업 대봉엘에스(대표 박진오)가 ‘2026년 산학협력 우수사례 경진대회’ 기술협력 분야 교육부장관상을 수상했다.인천대학교 생명공학전공 이원종 교수 연구팀과 공동 수행한 적채 유래 엑소좀 연구 성과를 인정받은 결과다. 교육부가 주최하고 한국연구재단이 주관하는 이번 경진대회는 우수한 산학협력 사례를 발굴하고 기술이전 및 사업화 성과를 확산하기 위해 마련됐다.이번 수상은 대학의 원천기술에 대봉엘에스의 연구개발과 사업화 역량을 더해 연구 성과를 실제 제품화와 산업 적용으로 이어낸 점을 높이 평가받았다.대봉엘 아모레퍼시픽, 세계화장품학회서 AI기반 미래뷰티 연구성과 공개 아모레퍼시픽이 세계 최대 화장품 학회인 &#39;IFSCC Congress 2026&#39;에서 AI와 디지털 기술을 활용한 피부과학 및 소비자 연구 성과를 발표했다. 현장에서 피부 노화 예측, 디지털 사용감 평가, 글로벌 소비자 연구 등을 공개하며 예측과 정량화, 데이터 기반 소비자 이해로 확장하는 미래 뷰티 연구 방향을 제시했다.올해 IFSCC(International Federation of Societies of Cosmetic Chemists)는 &#39;Solving the Sustainable B 미국 부작용 실시간 공개, 캐나다 알레르겐 81종 표기  선케어도 '올인원' 시대  뷰티 브랜드, 소비자 일상 속으로 더 깊이  아모레퍼시픽, IFSCC서 AI 기반 뷰티 연구 공개  유씨엘, 2027 헤어케어 트렌드로 ‘본드 리페어·두피 롱제비티’ 제시  폴라(POLA), ﻿‘B.A 아이존 크림’  글로벌 출시  아모레퍼시픽, 세계면세박람회서 유통사 협력 확대  마리엔메이, 그레이스와 글로벌 유통 확대  [뷰티누리×민텔] '바이브'가 향수 쇼핑을 바꾼다  눈꺼풀 수술, 2025년 글로벌 시술건수 1위 고수  아모레퍼시픽, AI기반 차세대 제품개발 기반 구축 아모레퍼시픽이 화장품 연구의 패러다임을 '측정'에서 '예측'으로 전환할 수 있는 기반을 확보했다.특히 이 같은 연구 결과를 세계 화장품 학회인 IFSCC(International Federation of Societies of Cosmetic Chemists) Congress 2026에서 공개하며, 학계의 검증을 받았다.따라서 아모레시픽은 과거 화장품 연구가 피부 상태를 관찰하고 제품 효능을 측정하는 데 집중했다면 이제는 인공지능(AI)을 활용해 피부 노화를 예측하고 소비자 반응을 분석하는 단계로 진화하면서 차세대 제품 개발을 진행 주가로 읽는 K-뷰티: 외국인 자금, ODM·뷰티테크에 집중 K-뷰티 성장 스토리가 중국에서 미국으로 이동하면서 외국인 투자자들의 투자 지형도 빠르게 재편되고 있다.네이버증권 자료를 바탕으로 2025년 10월 1일과 2026년 10월 1일 기준 주요 K-뷰티 기업 7곳의 주가와 외국인 보유율을 비교한 결과, 외국인 자금은 브랜드 기업보다 ODM(제조자개발생산)과 뷰티테크, 글로벌 유통 플랫폼 중심으로 유입되는 모습을 보였다.특히 주가와 외국인 보유율의 움직임은 외국인 투자자들이 K-뷰티 산업의 미래를 어디에서 찾고 있는지를 보여주는 중요한 지표로 평가된다.주가 상승·외국인 보유율 상승…시장과 호미반도, 유네스코 생물권보전지역 최종 심사 진입… 포항시 본신청서 제출 경북 포항시가 호미반도를 유네스코(UNESCO) 생물권보전지역으로 지정하기 위한 본신청서를 유네스코 본부에 공식 제출했다고 2일 밝혔다.지난해 5월 예비신청서 통과 이후 인간과 생물권 계획(MAB) 한국위원회의 현장실사와 전문가 자문, 주민 의견 수렴 등을 거쳐 거둔 성과다. 본신청서 제출에 따라 호미반도는 유네스코 국제조정이사회(ICC)의 최종 심사 절차에 밟게 된다.신청 대상지는 호미반도 일원의 육상과 해역을 모두 아우른다. 유네스코 가이드라인에 따라 핵심구역, 완충구역, 협력구역 등 3개 용도구획으로 설정됐다. 이곳에는 게바다 전통과 현대 잇는 경북 예술의 향연… ‘제48회 경북예술제’ 개막 경북 예술인들이 한자리에 모여 창작 성과를 공유하는 종합예술축제 ‘제48회 경북예술제’가 1일 경북도청 동락관에서 막을 올렸다.(사)한국예총 경상북도연합회가 주관하는 이번 예술제는 1일부터 6일까지 도청 동락관과 안동탈춤공원 일원에서 펼쳐진다. 이번 축제에는 국악·무용·문학·미술·연극·연예예술·음악 등 산하 7개 협회가 동참해 전통과 현대를 아우르는 다채로운 문화예술의 진수를 선보인다. 도내 예술인 등 600여 명이 참석한 개막 행사에서는 봉화 참소리오카리나앙상블과 칠곡 평화누리합창단의 오프닝 공연을 시작으로 경북도청 어린이집 합창 의성군, 29일 ‘2026 군민열린음악회’ 개최… 900여 관객 환호 속 성황리 막 내려 경북 의성군이 지난달 29일 오후 6시 의성문화회관에서 의성군기독교연합회 주관으로 개최한 ‘2026 군민열린음악회’가 군민들의 뜨거운 호응 속에 성황리에 마무리됐다고 2일 밝혔다.이번 음악회는 군민들에게 다채로운 문화 공연 향유 기회를 제공하고 세대와 이웃이 함께 어우러지는 화합의 장을 마련하기 위해 추진됐으며, 900여 명의 군민이 객석을 가득 메웠다.이날 공연은 솔리데오 오카리나오케스트라의 아름다운 선율로 개막 무대를 장식했다. 이어 대중적인 사랑을 받고 있는 박서진, 오유진, 무룡, 인썬, 피어나 등이 무대에 올라 폭발적인 가 파리서 만나는 ‘천년 신라’ ",
   "climateTrend": {
     "trend16": {
-      "week1": 21.3,
-      "week2": 22.9,
-      "delta": 1.6
+      "week1": 22.7,
+      "week2": 20.8,
+      "delta": -1.9
     },
-    "deviation": -3.2
+    "deviation": -1.2
   }
 }
