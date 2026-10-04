@@ -1,17 +1,17 @@
 {
-  "collectedAt": "2026-10-03T23:35:51.926Z",
+  "collectedAt": "2026-10-04T23:52:28.360Z",
   "sig": {
     "climate": {
-      "score": 3,
-      "interpret": "가을철 기온 하강 → 선케어 수요 둔화, 보습·리페어 라인 전환 수요 증가 · 평년 기준 전망: 1개월 후(11월) 평균최고 16.4℃ · 3개월 후(1월) 평균최고 2℃ · 6개월 후(4월) 평균최고 16.1℃",
+      "score": 2.6999999999999997,
+      "interpret": "가을철 기온 하강 → 선케어 수요 둔화, 보습·리페어 라인 전환 수요 증가 · 평년 대비 -3.6℃ → 시즌 지연 가능성 · 16일 단기예보 하강추세(-5.4℃, 참고용) → 보습라인 전환 고려 · 평년 기준 전망: 1개월 후(11월) 평균최고 15.8℃ · 3개월 후(1월) 평균최고 1.3℃ · 6개월 후(4월) 평균최고 16.4℃",
       "chips": [
-        "기온 15.4℃",
+        "기온 15.9℃",
         "PM10 —",
-        "습도 77%",
-        "UV 1.05",
-        "평년대비 +0.8℃",
-        "16일추세 -1.9℃",
-        "평년전망 1m 16.4℃/3m 2℃/6m 16.1℃"
+        "습도 73%",
+        "UV 1.95",
+        "평년대비 -3.6℃",
+        "16일추세 -5.4℃",
+        "평년전망 1m 15.8℃/3m 1.3℃/6m 16.4℃"
       ],
       "_sample": false
     },
@@ -37,7 +37,7 @@
     },
     "culture": {
       "score": 3.8,
-      "interpret": "뷰티미디어 4개 매체 RSS 160건 · 키워드 43종 언급 집계 · 축 분포 소비 41건·제형 8건·기능 8건 · 최다 \"메이크업·수출·올리브영·더마·크림\" — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가",
+      "interpret": "뷰티미디어 4개 매체 RSS 160건 · 키워드 42종 언급 집계 · 축 분포 소비 41건·제형 8건·기능 8건 · 최다 \"메이크업·수출·올리브영·더마·크림\" — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가",
       "chips": [
         "RSS 160건",
         "메이크업 11건",
@@ -64,7 +64,7 @@
         "platform": "Sephora",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 94
+        "items": 87
       },
       {
         "platform": "Ulta",
@@ -76,13 +76,13 @@
         "platform": "@cosme",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 46
+        "items": 48
       },
       {
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 78
+        "items": 75
       }
     ],
     "formulations": [
@@ -260,9 +260,23 @@
         "via": "news"
       },
       {
+        "title": "트렌디어AI, ‘트렌드 검증 AI’ 공개... “한 달 걸리던 시장 검증, 하루로 압축” - 코스인코리아닷컴",
+        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTFBpMXhiNlVvd1VHQ2pHQXA4bGJ2WFpyVzRiandzSldNX2VrZmVjbHJBb0FNbUFWUklHMUhzUGh1QVY2WmtSaklUSVZsckQtbUp1ME1tMzRMSUFYLVFvU2pVSTR3cw?oc=5",
+        "date": "Tue, 03 Mar 2026 08:00:00 GMT",
+        "publisher": "트렌디어 라이브러리",
+        "via": "news"
+      },
+      {
+        "title": "유형 넘나드는 K-뷰티 스킨케어 혁신 기술 - 주간신문씨엠엔",
+        "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTFB2SEdBYjVuenJoTk5fRkNwdWg2aVF5Q1owMHZHWVdHTzNjc1UzUEJJMXB1N1J0WTh1akpYcTVSLS15V2tZbHRiMTBPc3VINkNZOFUxVjdDRUJQUTVleVJBNTdEcVp4dw?oc=5",
+        "date": "Fri, 07 Nov 2025 08:00:00 GMT",
+        "publisher": "트렌디어 라이브러리",
+        "via": "news"
+      },
+      {
         "title": "K-뷰티는 2050년에 산다 - THE K BEAUTY SCIENCE",
-        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE10Sl9vd1JfcmtIN3pYUkVYcnZYM3ZmMWNzUDBCTEVUcU1vRTM3U2xUcjRHekNVN3d6UDBGQ1AtREJOY3pRcjUxelpxdFd5cDBoNEg2U3NiZm4zTTlzR0hBU2pmRTUxb1RFb1E?oc=5",
-        "date": "Tue, 14 Oct 2025 07:00:00 GMT",
+        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE5rVnliWG9uSmViWGowT0x0ck4xUDhmOVZqaTZsVEVsZHpQVW5na1pqdG0xYWxqM3BFVlVnVXZYWUJpZDJXSUNPRWdTSmtPN1NVRDhyNENsTmpfVHBEVkJ0cmNUV0t1R1J6Yldr?oc=5",
+        "date": "Mon, 13 Oct 2025 07:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -288,28 +302,14 @@
         "via": "news"
       },
       {
-        "title": "[뷰티누리×트렌디어] 효능주의 소비자 선택은 '스킨 부스터' - 약업닷컴",
-        "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE13cml4ekdhcjlnQUVoWm1FdDgzZk50MThFRktsendDZms1ZVlFekJ1ellnM2R0LTFsVzRhMTd5bVNmNEpfOEwwWV9pZjBPTFlOc3l3S1kzN3JkelI2Rm0zWFdIWm9Hdw?oc=5",
-        "date": "Thu, 16 Jan 2025 08:00:00 GMT",
-        "publisher": "트렌디어 라이브러리",
-        "via": "news"
-      },
-      {
-        "title": "“한 달 걸리던 시장 검증, 하루면 끝” - beautynury.com",
-        "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE9QQVA0Tmx0RGJCakxCR0h0cXJoc0p4c3I1eXhrV0E4Qk53bHZfcU1wUlNvV2RkYjFsWTV2LWV4NGZXWExMdEs3S0VIT2dlLXZ5azBKeEw1NmxlYUs0ak5n?oc=5",
-        "date": "Wed, 04 Mar 2026 08:00:00 GMT",
-        "publisher": "트렌디어 라이브러리",
-        "via": "news"
-      },
-      {
-        "title": "글로벌 더마 뷰티102조 시장의 함정: ‘성분 스펙’ 경쟁에 병드는 피부 - ktnews.com",
+        "title": "글로벌 더마 뷰티102조 시장의 함정: ‘성분 스펙’ 경쟁에 병드는 피부 - 한국섬유신문",
         "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE9maVh6MlllYVkzd2thOXlidUdHcE91NEZNWERwWUR3T2Q1VzUwS1FwNC11Z3NpNmczZ2VocjBscGdIRk9RSjliN2dpRUdKLWpJb0tfaERQbVpUREdJRVRacURVdmNXRzRp?oc=5",
         "date": "Wed, 22 Apr 2026 07:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
       {
-        "title": "2026년 뷰티 핵심 트렌드, ‘F.I.N.D’로 읽는다 - cmn.co.kr",
+        "title": "2026년 뷰티 핵심 트렌드, ‘F.I.N.D’로 읽는다 - 주간신문씨엠엔",
         "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE1PNzZkWFMzRjNrc21fcmtrRzZKQ0FQM1VHMk90LURnd204eEZiMHVzclNWNllhWnFYWlYzYzJvbjhCWjhENnU5UjZGQU1JeHBENmpCcWE2MS1VVDJyUl9sY2RzNHdmdw?oc=5",
         "date": "Wed, 11 Mar 2026 07:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
@@ -319,13 +319,6 @@
         "title": "[최초공개] 화해 2026 트렌드리포트: The New Edition - 뉴닉",
         "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTFBBa0gxdVVTaXQzUW9GWi01NFBmMU5ZR25YYV9qalRmYXV0X3dKVTAtaFI0R3JtWkl6REM3Y0toZVptY2k2NUhqeUgxYWxaQ1cxMV9OWXRB?oc=5",
         "date": "Mon, 23 Feb 2026 08:00:00 GMT",
-        "publisher": "화해 비즈니스 인사이트",
-        "via": "news"
-      },
-      {
-        "title": "정밀 검색·슬로우에이징…화해, 2026 뷰티 트렌드 공개 - 소셜밸류",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1QMVowM1lHOWg3dF9abWVXUUgtQ3QxanhscV8xSElTanE0dGdwUnI0eXlrSzlEbjlSemNOdFkzZThNaUl6MXpBVTh6OTdGYS1GdDJUYjltaURYMnlGMWJCbm9iVdIBbEFVX3lxTE0yMGJkQzd0X2c3VXFhQWRRSFZnd0dHaDV6eWxSUTYtNzhKNE4zQ05XaWxLeGQzdGUtMm03cDA2cVlVMXZqNHFWZmphY2ZCU2YzOTFOR0RuY3RiS25mOGVvUkRuQ3JlOHhMMkctcw?oc=5",
-        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -340,6 +333,13 @@
         "title": "화해, 1250만 데이터 기반 ‘2026 뷰티 트렌드 리포트’ 공개 - 벤처스퀘어",
         "link": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE1iREw1LUlfV3ZJUzZvTU5vOHJUSEptSzU5WkdMQWh5TDJRblN3RzhXU2R6UkI0OFBlS0lnc0dvSko5bnM1NWNFUVVQalF2bTQ?oc=5",
         "date": "Fri, 27 Feb 2026 06:36:09 GMT",
+        "publisher": "화해 비즈니스 인사이트",
+        "via": "news"
+      },
+      {
+        "title": "화해, 올해 뷰티 트렌드 공개… \"정밀 검색과 일상 노화 관리가 대세\" - 머니투데이 - 머니투데이",
+        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1iY28wY0F1aEhvSUk1RVJvNXkxOWlVNS1fVWdoZFl2RHEzU3NTWVBIYWxRdHdQVkl0cDRIcGRwT0dUc1pneVAzT1RTOXlqTUlFQzdsU3Z0cFlsYWl2SHVUNUlkRnVRaEJUVHfSAW9BVV95cUxQOEQzWkhvay1NZDhaemlsbUNON2tTX3JtRGdwOGpZYkpJMU9IUkUzV0dSRldDTVE3emlEa0hlNHo5SC1pTnVQWVUzT055WVZSYXRGUFQ3NDlzMVBkTmJwdWdjdzQ5VGV0czRwd1E5Y1E?oc=5",
+        "date": "Mon, 02 Mar 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -428,16 +428,16 @@
         "via": "news"
       },
       {
-        "title": "글로벌 코스메틱 포커스 배당표에 나오는 기호 설명 - Calgary Roughnecks",
-        "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNYjdkVVZXcENtUHdnYm1FZ2g4SGtyc1FGazcxb2pwWi1VT3NCVDdLN25Ed1JmXzRUU2tmWl9MRG1FaWxaaWFXQ2NISmlpUExSVENDS2VHXzYxZFhMS2hSbmxaMXBXbVBkY3lfbUp2QWgzSlhLLUVmTzFHb0V6RVpWRzk3WWltU0hMX0VVd3BjMDVseEFCWUkxVjZpdUdOdnFsTVh6WU1CRjdXYUJTMXlQMG1GTUNaLXlIcnJZd1g5aVJMOUJ6Sk1J?oc=5",
-        "date": "Thu, 01 Oct 2026 10:54:31 GMT",
+        "title": "대한화장품산업연구원 2026년 사업계획 프리뷰 - 코스모닝",
+        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE14X2FnSHpNUkF2ZXVSRXJwT01qZHV1MlNmV1hlTzNSUEVmY2QxSGJqVk9jTEVHemdFTEZqdWxlTUNjWlJlcnBMdEhyaXVPbWJORDBVek1SeldlLWlUS25vU1lPTQ?oc=5",
+        "date": "Mon, 26 Jan 2026 08:00:00 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       },
       {
-        "title": "대한화장품산업연구원 2026년 사업계획 프리뷰 - 코스모닝",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE14X2FnSHpNUkF2ZXVSRXJwT01qZHV1MlNmV1hlTzNSUEVmY2QxSGJqVk9jTEVHemdFTEZqdWxlTUNjWlJlcnBMdEhyaXVPbWJORDBVek1SeldlLWlUS25vU1lPTQ?oc=5",
-        "date": "Mon, 26 Jan 2026 08:00:00 GMT",
+        "title": "글로벌 코스메틱 포커스 배당표에 나오는 기호 설명 - calgaryroughnecks.com",
+        "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxNYjdkVVZXcENtUHdnYm1FZ2g4SGtyc1FGazcxb2pwWi1VT3NCVDdLN25Ed1JmXzRUU2tmWl9MRG1FaWxaaWFXQ2NISmlpUExSVENDS2VHXzYxZFhMS2hSbmxaMXBXbVBkY3lfbUp2QWgzSlhLLUVmTzFHb0V6RVpWRzk3WWltU0hMX0VVd3BjMDVseEFCWUkxVjZpdUdOdnFsTVh6WU1CRjdXYUJTMXlQMG1GTUNaLXlIcnJZd1g5aVJMOUJ6Sk1J?oc=5",
+        "date": "Thu, 01 Oct 2026 10:54:31 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       },
@@ -551,13 +551,13 @@
     }
   ],
   "kwSurge": null,
-  "rssText": "화장품 수출 3분기 누적 111억달러, 전년 금액 규모로 성장 식품의약품안전처(처장 오유경)는 2026년 3분기 누계 수출액이 전년 동기 대비 31.1% 증가한 111억 달러(잠정)를 기록하며, 3분기 누계 기준 역대 최대 수출 실적을 경신했다고 밝혔다. 이는 종전 최고치였던 2025년 연간 수출액(114억 달러)에 육박하는 규모로, 올해 9개월 만에 달성한 것이다. 연도별 3분기 누계 수출액, 증감률(억 달러, 전년 동기 대비 %)은 2022년 60억달러에서 2023년 62억달러(+3.3%), 2024년 74억달러(+19.4%), 2025년 85억달러(+14.9%)로 가파르게 성장했고 올해 日 수입시장 1위 K-뷰티, 프리미엄·성분 차별화로 고공행진 일본, 미국, 러시아, K-뷰티가 현지 화장품 수입시장 점유율 1위를 기록 중인 대표적인 국가들이다. 화장품 수출은 2025년 100억 달러를 넘어선 후(114억 달러), 올해도 8월까지 수출액이 벌써 96억 달러로 전년 동기 대비 31% 급증세다.특히 일본에서는 4년 연속 수입 화장품시장 1위를 지키고 있는 가운데, 프리미엄 차별화 전략을 앞세워 고부가가치 시장 공략에도 나서고 있다. 대한무역투자진흥공사(이하 코트라, 사장 강경성)는 K-뷰티 63개사가 대거 참가한 가운데, 9월 30일부터 3일간 오사카에서 개최된 ‘일본 대표 화 이미지컬러하우스, 경성대학교 퍼스널 컬러 특강 진행 (사)한국뷰티스타일리스트직업기능협회(회장 안미려) 산하 기관인 이미지컬러하우스(Image Color House)가 지난 9월 21일(월) 경성대학교 예술종합대학 패션디자인학과 학생들을 대상으로 퍼스널 컬러 특강을 진행했다.이번 특강은 패션디자인을 전공하는 학생들이 퍼스널 컬러의 기본 원리를 이해하고, 색채를 패션과 뷰티 및 이미지 스타일링에 활용할 수 있도록 이론과 실습을 연계한 과정으로 마련됐다.강의는 (사)한국뷰티스타일리스트직업기능협회 최민령 부회장과 신미선 교육이사가 퍼스널 컬러의 기초 이론을 시작으로 사계절 컬러의 특징과 1 아모레퍼시픽, ‘2026 세계면세박람회’서 글로벌 파트너십 강화 아모레퍼시픽이 9월 27일부터 10월 1일까지 프랑스 칸에서 열린 ‘2026 세계면세박람회(TFWA World Exhibition & Conference)’에 참가해 글로벌 면세 파트너십 강화에 나섰다. 2012년 첫 참가 이후 올해로 13회째다.세계면세협회(TFWA, Tax Free World Association)가 주관하는 세계면세박람회는 글로벌 브랜드와 주요 유통사, 공항, 항공사 등 면세 업계 관계자들이 한자리에 모여 새로운 사업 기회와 협력 방안을 논의하는 세계 최대 규모의 면세 비즈니스 행사다.아모레퍼시픽은 이번 박람회 대봉엘에스, 인천대와 ‘적채 엑소좀’ 산학협력 성과로 교육부장관상 수상 화장품∙의약∙바이오 소재 플랫폼 기업 대봉엘에스(대표 박진오)가 ‘2026년 산학협력 우수사례 경진대회’ 기술협력 분야 교육부장관상을 수상했다.인천대학교 생명공학전공 이원종 교수 연구팀과 공동 수행한 적채 유래 엑소좀 연구 성과를 인정받은 결과다. 교육부가 주최하고 한국연구재단이 주관하는 이번 경진대회는 우수한 산학협력 사례를 발굴하고 기술이전 및 사업화 성과를 확산하기 위해 마련됐다.이번 수상은 대학의 원천기술에 대봉엘에스의 연구개발과 사업화 역량을 더해 연구 성과를 실제 제품화와 산업 적용으로 이어낸 점을 높이 평가받았다.대봉엘 아모레퍼시픽, 세계화장품학회서 AI기반 미래뷰티 연구성과 공개 아모레퍼시픽이 세계 최대 화장품 학회인 &#39;IFSCC Congress 2026&#39;에서 AI와 디지털 기술을 활용한 피부과학 및 소비자 연구 성과를 발표했다. 현장에서 피부 노화 예측, 디지털 사용감 평가, 글로벌 소비자 연구 등을 공개하며 예측과 정량화, 데이터 기반 소비자 이해로 확장하는 미래 뷰티 연구 방향을 제시했다.올해 IFSCC(International Federation of Societies of Cosmetic Chemists)는 &#39;Solving the Sustainable B 미국 부작용 실시간 공개, 캐나다 알레르겐 81종 표기  선케어도 '올인원' 시대  뷰티 브랜드, 소비자 일상 속으로 더 깊이  아모레퍼시픽, IFSCC서 AI 기반 뷰티 연구 공개  유씨엘, 2027 헤어케어 트렌드로 ‘본드 리페어·두피 롱제비티’ 제시  폴라(POLA), ﻿‘B.A 아이존 크림’  글로벌 출시  아모레퍼시픽, 세계면세박람회서 유통사 협력 확대  마리엔메이, 그레이스와 글로벌 유통 확대  [뷰티누리×민텔] '바이브'가 향수 쇼핑을 바꾼다  눈꺼풀 수술, 2025년 글로벌 시술건수 1위 고수  中国Z世代美妆消费者访谈: 中国女大学生为何偏爱国际大牌？ 随着中国化妆品市场持续成长，越来越多本土品牌快速崛起。然而，在年轻消费者当中，仍有一部分人更愿意选择法国和美国等国际知名品牌。对于这类消费者而言，品牌积累的长期信任感比流行趋势更重要。《Beauty Economy》采访了来自山东省的22岁大学生赵熙芮。谈及最关注的化妆品国家时，她选择了法国和美国。■ “我更喜欢不容易出错的产品”赵熙芮表示，自己购买化妆品时不喜欢频繁尝试新品，而更倾向于经过市场长期验证的产品。“很多国际品牌都有销售几十年的经典产品。从妈妈那一代到现在仍然有人在使用，这会让我觉得更加可靠。”她认为，即使价格更高，只要产品真正适合自己，并且能够长期使用，依然是值得的投资。■ 最关 K-Beauty 3.0 in the U.S.: From Visibility to Understanding K-beauty is entering a new chapter in the United States.South Korea's cosmetics exports reached a record high in 2025, with the United States becoming the largest export destination for Korean beauty products.The achievement reflects the growing popularity of Korean skincare and cosmetics among Amer 아모레퍼시픽, AI기반 차세대 제품개발 기반 구축 아모레퍼시픽이 화장품 연구의 패러다임을 '측정'에서 '예측'으로 전환할 수 있는 기반을 확보했다.특히 이 같은 연구 결과를 세계 화장품 학회인 IFSCC(International Federation of Societies of Cosmetic Chemists) Congress 2026에서 공개하며, 학계의 검증을 받았다.따라서 아모레시픽은 과거 화장품 연구가 피부 상태를 관찰하고 제품 효능을 측정하는 데 집중했다면 이제는 인공지능(AI)을 활용해 피부 노화를 예측하고 소비자 반응을 분석하는 단계로 진화하면서 차세대 제품 개발을 진행 주가로 읽는 K-뷰티: 외국인 자금, ODM·뷰티테크에 집중 K-뷰티 성장 스토리가 중국에서 미국으로 이동하면서 외국인 투자자들의 투자 지형도 빠르게 재편되고 있다.네이버증권 자료를 바탕으로 2025년 10월 1일과 2026년 10월 1일 기준 주요 K-뷰티 기업 7곳의 주가와 외국인 보유율을 비교한 결과, 외국인 자금은 브랜드 기업보다 ODM(제조자개발생산)과 뷰티테크, 글로벌 유통 플랫폼 중심으로 유입되는 모습을 보였다.특히 주가와 외국인 보유율의 움직임은 외국인 투자자들이 K-뷰티 산업의 미래를 어디에서 찾고 있는지를 보여주는 중요한 지표로 평가된다.주가 상승·외국인 보유율 상승…시장과 호미반도, 유네스코 생물권보전지역 최종 심사 진입… 포항시 본신청서 제출 경북 포항시가 호미반도를 유네스코(UNESCO) 생물권보전지역으로 지정하기 위한 본신청서를 유네스코 본부에 공식 제출했다고 2일 밝혔다.지난해 5월 예비신청서 통과 이후 인간과 생물권 계획(MAB) 한국위원회의 현장실사와 전문가 자문, 주민 의견 수렴 등을 거쳐 거둔 성과다. 본신청서 제출에 따라 호미반도는 유네스코 국제조정이사회(ICC)의 최종 심사 절차에 밟게 된다.신청 대상지는 호미반도 일원의 육상과 해역을 모두 아우른다. 유네스코 가이드라인에 따라 핵심구역, 완충구역, 협력구역 등 3개 용도구획으로 설정됐다. 이곳에는 게바다 전통과 현대 잇는 경북 예",
+  "rssText": "화장품 수출 3분기 누적 111억달러, 전년 금액 규모로 성장 식품의약품안전처(처장 오유경)는 2026년 3분기 누계 수출액이 전년 동기 대비 31.1% 증가한 111억 달러(잠정)를 기록하며, 3분기 누계 기준 역대 최대 수출 실적을 경신했다고 밝혔다. 이는 종전 최고치였던 2025년 연간 수출액(114억 달러)에 육박하는 규모로, 올해 9개월 만에 달성한 것이다. 연도별 3분기 누계 수출액, 증감률(억 달러, 전년 동기 대비 %)은 2022년 60억달러에서 2023년 62억달러(+3.3%), 2024년 74억달러(+19.4%), 2025년 85억달러(+14.9%)로 가파르게 성장했고 올해 日 수입시장 1위 K-뷰티, 프리미엄·성분 차별화로 고공행진 일본, 미국, 러시아, K-뷰티가 현지 화장품 수입시장 점유율 1위를 기록 중인 대표적인 국가들이다. 화장품 수출은 2025년 100억 달러를 넘어선 후(114억 달러), 올해도 8월까지 수출액이 벌써 96억 달러로 전년 동기 대비 31% 급증세다.특히 일본에서는 4년 연속 수입 화장품시장 1위를 지키고 있는 가운데, 프리미엄 차별화 전략을 앞세워 고부가가치 시장 공략에도 나서고 있다. 대한무역투자진흥공사(이하 코트라, 사장 강경성)는 K-뷰티 63개사가 대거 참가한 가운데, 9월 30일부터 3일간 오사카에서 개최된 ‘일본 대표 화 이미지컬러하우스, 경성대학교 퍼스널 컬러 특강 진행 (사)한국뷰티스타일리스트직업기능협회(회장 안미려) 산하 기관인 이미지컬러하우스(Image Color House)가 지난 9월 21일(월) 경성대학교 예술종합대학 패션디자인학과 학생들을 대상으로 퍼스널 컬러 특강을 진행했다.이번 특강은 패션디자인을 전공하는 학생들이 퍼스널 컬러의 기본 원리를 이해하고, 색채를 패션과 뷰티 및 이미지 스타일링에 활용할 수 있도록 이론과 실습을 연계한 과정으로 마련됐다.강의는 (사)한국뷰티스타일리스트직업기능협회 최민령 부회장과 신미선 교육이사가 퍼스널 컬러의 기초 이론을 시작으로 사계절 컬러의 특징과 1 아모레퍼시픽, ‘2026 세계면세박람회’서 글로벌 파트너십 강화 아모레퍼시픽이 9월 27일부터 10월 1일까지 프랑스 칸에서 열린 ‘2026 세계면세박람회(TFWA World Exhibition & Conference)’에 참가해 글로벌 면세 파트너십 강화에 나섰다. 2012년 첫 참가 이후 올해로 13회째다.세계면세협회(TFWA, Tax Free World Association)가 주관하는 세계면세박람회는 글로벌 브랜드와 주요 유통사, 공항, 항공사 등 면세 업계 관계자들이 한자리에 모여 새로운 사업 기회와 협력 방안을 논의하는 세계 최대 규모의 면세 비즈니스 행사다.아모레퍼시픽은 이번 박람회 대봉엘에스, 인천대와 ‘적채 엑소좀’ 산학협력 성과로 교육부장관상 수상 화장품∙의약∙바이오 소재 플랫폼 기업 대봉엘에스(대표 박진오)가 ‘2026년 산학협력 우수사례 경진대회’ 기술협력 분야 교육부장관상을 수상했다.인천대학교 생명공학전공 이원종 교수 연구팀과 공동 수행한 적채 유래 엑소좀 연구 성과를 인정받은 결과다. 교육부가 주최하고 한국연구재단이 주관하는 이번 경진대회는 우수한 산학협력 사례를 발굴하고 기술이전 및 사업화 성과를 확산하기 위해 마련됐다.이번 수상은 대학의 원천기술에 대봉엘에스의 연구개발과 사업화 역량을 더해 연구 성과를 실제 제품화와 산업 적용으로 이어낸 점을 높이 평가받았다.대봉엘 아모레퍼시픽, 세계화장품학회서 AI기반 미래뷰티 연구성과 공개 아모레퍼시픽이 세계 최대 화장품 학회인 &#39;IFSCC Congress 2026&#39;에서 AI와 디지털 기술을 활용한 피부과학 및 소비자 연구 성과를 발표했다. 현장에서 피부 노화 예측, 디지털 사용감 평가, 글로벌 소비자 연구 등을 공개하며 예측과 정량화, 데이터 기반 소비자 이해로 확장하는 미래 뷰티 연구 방향을 제시했다.올해 IFSCC(International Federation of Societies of Cosmetic Chemists)는 &#39;Solving the Sustainable B 미국 부작용 실시간 공개, 캐나다 알레르겐 81종 표기  선케어도 '올인원' 시대  뷰티 브랜드, 소비자 일상 속으로 더 깊이  아모레퍼시픽, IFSCC서 AI 기반 뷰티 연구 공개  유씨엘, 2027 헤어케어 트렌드로 ‘본드 리페어·두피 롱제비티’ 제시  폴라(POLA), ﻿‘B.A 아이존 크림’  글로벌 출시  아모레퍼시픽, 세계면세박람회서 유통사 협력 확대  마리엔메이, 그레이스와 글로벌 유통 확대  [뷰티누리×민텔] '바이브'가 향수 쇼핑을 바꾼다  눈꺼풀 수술, 2025년 글로벌 시술건수 1위 고수  9월 티몰 뷰티시장 판매 둔화…광군절 앞두고 숨 고르기 중국 티몰(Tmall) 뷰티시장이 8월에 이어 9월에도 전반적인 판매 둔화세를 보였다.중추절과 국경절 연휴를 앞두고 여행과 외식 등 체험형 소비가 증가하면서 화장품 구매가 상대적으로 줄어든 데다 계절적 비수기 영향까지 겹친 결과로 풀이된다.9월에는 조사 대상 8개 품목 대부분이 전월 대비 판매량 감소를 기록했다. 특히 한국 브랜드의 존재감도 다소 약화됐다. 전체 품목 가운데 티몰 전체 TOP10에 진입한 한국 브랜드는 쿠션 부문의 에이지투웨니스가 유일했다.다만 월별 판매 둔화와 별개로 중국 화장품 시장의 성장 흐름은 이어지고 있다. 中国Z世代美妆消费者访谈: 中国女大学生为何偏爱国际大牌？ 随着中国化妆品市场持续成长，越来越多本土品牌快速崛起。然而，在年轻消费者当中，仍有一部分人更愿意选择法国和美国等国际知名品牌。对于这类消费者而言，品牌积累的长期信任感比流行趋势更重要。《Beauty Economy》采访了来自山东省的22岁大学生赵熙芮。谈及最关注的化妆品国家时，她选择了法国和美国。■ “我更喜欢不容易出错的产品”赵熙芮表示，自己购买化妆品时不喜欢频繁尝试新品，而更倾向于经过市场长期验证的产品。“很多国际品牌都有销售几十年的经典产品。从妈妈那一代到现在仍然有人在使用，这会让我觉得更加可靠。”她认为，即使价格更高，只要产品真正适合自己，并且能够长期使用，依然是值得的投资。■ 最关 K-Beauty 3.0 in the U.S.: From Visibility to Understanding K-beauty is entering a new chapter in the United States.South Korea's cosmetics exports reached a record high in 2025, with the United States becoming the largest export destination for Korean beauty products.The achievement reflects the growing popularity of Korean skincare and cosmetics among Amer 아모레퍼시픽, AI기반 차세대 제품개발 기반 구축 아모레퍼시픽이 화장품 연구의 패러다임을 '측정'에서 '예측'으로 전환할 수 있는 기반을 확보했다.특히 이 같은 연구 결과를 세계 화장품 학회인 IFSCC(International Federation of Societies of Cosmetic Chemists) Congress 2026에서 공개하며, 학계의 검증을 받았다.따라서 아모레시픽은 과거 화장품 연구가 피부 상태를 관찰하고 제품 효능을 측정하는 데 집중했다면 이제는 인공지능(AI)을 활용해 피부 노화를 예측하고 소비자 반응을 분석하는 단계로 진화하면서 차세대 제품 개발을 진행 주가로 읽는 K-뷰티: 외국인 자금, ODM·뷰티테크에 집중 K-뷰티 성장 스토리가 중국에서 미국으로 이동하면서 외국인 투자자들의 투자 지형도 빠르게 재편되고 있다.네이버증권 자료를 바탕으로 2025년 10월 1일과 2026년 10월 1일 기준 주요 K-뷰티 기업 7곳의 주가와 외국인 보유율을 비교한 결과, 외국인 자금은 브랜드 기업보다 ODM(제조자개발생산)과 뷰티테크, 글로벌 유통 플랫폼 중심으로 유입되는 모습을 보였다.특히 주가와 외국인 보유율의 움직임은 외국인 투자자들이 K-뷰티 산업의 미래를 어디에서 찾고 있는지를 보여주는 중요한 지표로 평가된다.주가 상승·외국인 보유율 상승…시장과 호미반도, 유네스코 생물권보전지역 최종 심사",
   "climateTrend": {
     "trend16": {
-      "week1": 22.9,
-      "week2": 21,
-      "delta": -1.9
+      "week1": 23.8,
+      "week2": 18.4,
+      "delta": -5.4
     },
-    "deviation": 0.8
+    "deviation": -3.6
   }
 }
