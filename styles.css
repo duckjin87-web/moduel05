@@ -116,6 +116,48 @@ button { font-family: inherit; cursor: pointer; }
 .hd .btn-report:hover, .hd .btn-guide:hover, .hd .btn-api-set:hover { background: rgba(255,255,255,.12); color: #fff; }
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.6} }
 
+/* ═══ 수집 진행률 — 8단계 중 현재 위치 ═══ */
+.collect-prog {
+  position: relative;
+  height: 26px;
+  background: var(--w);
+  border: .5px solid var(--bg3);
+  border-radius: var(--r);
+  margin-bottom: 10px;
+  box-shadow: var(--s1);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.collect-prog b {
+  position: absolute; inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, var(--acc), var(--acc2));
+  opacity: .16;
+  transition: width .5s cubic-bezier(.33,.9,.3,1);
+}
+.collect-prog.done b { opacity: .28; }
+.collect-prog span {
+  position: relative;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--acc);
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 진행 중임을 알리는 미세한 흐름 — 완료되면 멈춘다 */
+.collect-prog::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(23,94,76,.07), transparent);
+  transform: translateX(-100%);
+  animation: progSweep 1.6s ease-in-out infinite;
+}
+.collect-prog.done::after { animation: none; opacity: 0; }
+@keyframes progSweep { to { transform: translateX(100%); } }
+
 /* ═══════════════════════════════════════
    수집 상태 바
 ═══════════════════════════════════════ */
@@ -1158,3 +1200,50 @@ table.ht td.num { font-variant-numeric: tabular-nums; }
 
 /* 상태 도트 에러 */
 .sdot.err { background:var(--red); box-shadow:0 0 0 2px rgba(184,80,80,.2); }
+
+
+/* ═══════════════════════════════════════
+   모션 — 결과를 읽는 데 드는 노력을 줄이는 용도로만
+   (장식용 반복 애니메이션은 두지 않는다)
+═══════════════════════════════════════ */
+
+/* 게이지가 0에서 차오른다 — 크기 비교를 물리적으로 전달 */
+.pc-bar b,
+.fr-bt b,
+.kbar-t b {
+  transition: width .75s cubic-bezier(.22,1,.36,1);
+}
+
+/* 예측 카드 순차 등장 — 1위부터 들어와 순위가 순서로 각인된다 */
+.pc-enter {
+  animation: cardIn .42s cubic-bezier(.22,1,.36,1) backwards;
+  animation-delay: calc(var(--i, 0) * 65ms);
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 4대 신호 도트가 왼쪽부터 점등 */
+.dot5 { transition: background .3s ease; }
+
+/* 카운트업 숫자는 자릿수가 흔들리지 않게 고정폭 */
+.pc-num, .fr-score, .ch-tile-n, .sig-score {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 신호 카드·제형 카드 hover는 이미 있던 전환을 유지하되 과하지 않게 */
+.sig, .fr-card { will-change: transform; }
+
+/* 접근성 — 모션 감소를 켠 사용자에게는 전부 끈다.
+   전환을 0으로 만들되 최종 상태는 그대로 보이게 한다. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .collect-prog::after { animation: none; opacity: 0; }
+  .pc-enter { animation: none; opacity: 1; transform: none; }
+}

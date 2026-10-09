@@ -2848,14 +2848,14 @@ function renderFormulationRadar() {
             <div class="fr-name">${escHtml(r.name)}</div>
             <div class="fr-en">${escHtml(r.en)} · ${escHtml(r.group)}</div>
           </div>
-          <div class="fr-score ${gradeCls(r.grade)}">${r.score}</div>
+          <div class="fr-score ${gradeCls(r.grade)}" data-count="${r.score}">0</div>
         </div>
         <div class="fr-grade ${gradeCls(r.grade)}">${r.grade}</div>
         <div class="fr-bars">${Object.keys(FORM_WEIGHTS).map(k => {
           const c = r.comp[k];
           return `<div class="fr-bar-row" title="${FORM_WLABEL[k]} ${Math.round(FORM_WEIGHTS[k]*100)}%${c ? ` — ${c.score}점 (${c.srcs.join('·')})` : ' — 데이터 없음'}">
             <span class="fr-bl">${FORM_WLABEL[k]}</span>
-            <span class="fr-bt"><b style="width:${c ? c.score : 0}%"></b></span>
+            <span class="fr-bt"><b data-grow="${c ? c.score : 0}%"></b></span>
             <span class="fr-bv">${c ? c.score : '—'}</span>
           </div>`;
         }).join('')}</div>
@@ -2864,6 +2864,7 @@ function renderFormulationRadar() {
     ${layer1StatusHtml()}
     <div class="fr-note">※ 점수는 수집된 축만으로 가중 재정규화해 산출하며, 미수집 축은 중립값으로 채우지 않고 신뢰도(커버리지)로 표기합니다. 80↑ 고성장 · 70~79 관찰 · 60~69 유지 · 60↓ 낮음 · 신뢰도 50% 미만은 '데이터 부족'으로 후순위 표기</div>`;
   el.style.display = '';
+  animateIn(el);
 }
 
 /* Layer1 글로벌 선행시장 수집 상태 — 어떤 플랫폼이 '공식 피드 실측'이고 어떤 것이
@@ -2968,6 +2969,81 @@ function formRadarPromptBlock() {
   return `\n[제형 트렌드 레이더 — 제형별 종합 점수 (SNS35·검색30·신제품25·글로벌10 가중, 실측 신호 기반)]\n`
     + top.map(r => `${r.name}(${r.en}) ${r.score}점/${r.grade} · 신뢰도 ${r.coverage}%${r.thin ? '(관측 얕음 — 참고만)' : ''} · 설비:${r.capa[0]}`).join('\n')
     + `\n※ 이 시스템의 예측 단위는 성분이 아니라 '제형'이다. 위 점수가 높은 제형을 우선 반영하고, 각 예측의 formulation 필드에는 반드시 위 목록의 제형명을 그대로 적어라. packaging·tech는 그 제형의 실제 포장형태·생산설비와 일치해야 한다.`;
+}
+
+/* ════════════ 모션 유틸리티 ════════════
+   모션은 장식이 아니라 "결과를 읽는 데 드는 노력을 줄일 때"만 쓴다.
+     · 숫자 카운트업 — 방금 계산됐다는 신호 + 자릿수 체감
+     · 게이지 채우기 — 크기 비교를 물리적으로 전달
+     · 선 그리기    — 시간축의 방향을 체감
+     · 순차 등장    — 순위를 순서로 각인
+   무한 반복이나 과한 이징은 쓰지 않는다. 접근성 설정(prefers-reduced-motion)을
+   켠 사용자에게는 전부 끄고 최종 상태만 즉시 보여준다. */
+const REDUCED_MOTION = () =>
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* 숫자 카운트업 — 등폭 숫자라 자릿수가 흔들리지 않는다 */
+function countUp(el, to, { dur = 650, decimals = 0, suffix = '', prefix = '' } = {}) {
+  if (!el) return;
+  const fmt = v => prefix + (decimals ? v.toFixed(decimals) : Math.round(v).toLocaleString()) + suffix;
+  if (REDUCED_MOTION() || !Number.isFinite(to)) { el.textContent = fmt(to || 0); return; }
+  const from = 0, t0 = performance.now();
+  const ease = x => 1 - Math.pow(1 - x, 3);          /* easeOutCubic — 끝에서 부드럽게 멈춘다 */
+  const tick = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    el.textContent = fmt(from + (to - from) * ease(p));
+    if (p < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* 컨테이너 안의 숫자·게이지를 한 번에 살린다.
+   [data-count]  — 그 값까지 카운트업
+   [data-grow]   — width를 0에서 그 값까지 */
+function animateIn(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-count]').forEach(el => {
+    const to = parseFloat(el.dataset.count);
+    countUp(el, to, {
+      decimals: parseInt(el.dataset.decimals || '0', 10),
+      suffix: el.dataset.suffix || '',
+      dur: parseInt(el.dataset.dur || '650', 10),
+    });
+  });
+  const bars = root.querySelectorAll('[data-grow]');
+  if (REDUCED_MOTION()) {
+    bars.forEach(b => { b.style.width = b.dataset.grow; });
+    return;
+  }
+  bars.forEach(b => { b.style.width = '0'; });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bars.forEach((b, i) => {
+      b.style.transitionDelay = `${Math.min(i * 40, 320)}ms`;
+      b.style.width = b.dataset.grow;
+    });
+  }));
+}
+
+/* SVG 꺾은선을 왼쪽부터 그려 낸다 — 시간축이 흐르는 방향을 체감시킨다 */
+function drawLines(root) {
+  if (!root) return;
+  const paths = root.querySelectorAll('.ch-line');
+  if (REDUCED_MOTION()) { paths.forEach(p => { p.style.strokeDasharray = ''; p.style.strokeDashoffset = ''; }); return; }
+  paths.forEach((p, i) => {
+    let len = 0;
+    try { len = p.getTotalLength(); } catch { return; }
+    if (!len) return;
+    const dashed = p.classList.contains('ch-sample');   /* 샘플 점선은 패턴을 유지해야 한다 */
+    p.style.strokeDasharray = dashed ? `${len}` : `${len}`;
+    p.style.strokeDashoffset = `${len}`;
+    p.style.transition = 'none';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      p.style.transition = `stroke-dashoffset 900ms cubic-bezier(.33,.9,.3,1) ${i * 90}ms`;
+      p.style.strokeDashoffset = '0';
+      /* 점선 계열은 그리기가 끝난 뒤 원래 대시 패턴으로 되돌린다 */
+      if (dashed) setTimeout(() => { p.style.strokeDasharray = ''; }, 900 + i * 90 + 60);
+    }));
+  });
 }
 
 /* ════════════ 누적 추이 차트 (data/history.json) ════════════
@@ -3100,7 +3176,7 @@ function chartKeywords(hist) {
   return `<div class="kbars">${rows.map(([name, v]) => `
     <div class="kbar-row" title="${escHtml(name)} — 누적 ${v}건">
       <span class="kbar-l">${escHtml(name)}</span>
-      <span class="kbar-t"><b style="width:${Math.max(2, (v / max) * 100)}%"></b></span>
+      <span class="kbar-t"><b data-grow="${(Math.max(2, (v / max) * 100)).toFixed(2)}%"></b></span>
       <span class="kbar-v">${v}</span>
     </div>`).join('')}</div>`;
 }
@@ -3125,10 +3201,10 @@ function renderHistory() {
     </div>
 
     <div class="ch-tiles">
-      <div class="ch-tile"><div class="ch-tile-n">${n}<em>일</em></div><div class="ch-tile-l">누적 수집일</div></div>
-      <div class="ch-tile"><div class="ch-tile-n">${last.real}<em>/4</em></div><div class="ch-tile-l">최신 실데이터 신호</div></div>
-      <div class="ch-tile"><div class="ch-tile-n">${(last.volume?.rss ?? 0).toLocaleString()}<em>건</em></div><div class="ch-tile-l">최신 RSS 기사</div></div>
-      <div class="ch-tile"><div class="ch-tile-n">${avg('culture')}</div><div class="ch-tile-l">문화 신호 평균</div></div>
+      <div class="ch-tile"><div class="ch-tile-n"><span data-count="${n}">0</span><em>일</em></div><div class="ch-tile-l">누적 수집일</div></div>
+      <div class="ch-tile"><div class="ch-tile-n"><span data-count="${last.real}">0</span><em>/4</em></div><div class="ch-tile-l">최신 실데이터 신호</div></div>
+      <div class="ch-tile"><div class="ch-tile-n"><span data-count="${last.volume?.rss ?? 0}">0</span><em>건</em></div><div class="ch-tile-l">최신 RSS 기사</div></div>
+      <div class="ch-tile"><div class="ch-tile-n"><span data-count="${avg('culture')}" data-decimals="1">0</span></div><div class="ch-tile-l">문화 신호 평균</div></div>
     </div>
 
     <div class="ch-block">
@@ -3163,6 +3239,8 @@ function renderHistory() {
       <div class="ch-s" style="padding:6px 2px">* 표시는 샘플값 — 해당 신호의 API 키가 등록되지 않아 참조값으로 대체된 날입니다.</div>
     </div>`;
   el.style.display = '';
+  animateIn(el);
+  drawLines(el);
 }
 
 function toggleHistTable() {
@@ -3770,7 +3848,7 @@ function renderZ1() {
         chips.push(`<span class="pc-chip ${an.verdict === 'hit' || an.verdict === 'signal' ? 'pcc-strong' : an.verdict === 'miss' ? 'pcc-bad' : 'pcc-mid'}" title="작년 같은 시기(±65일) 예측 이력 대조">${lbl}</span>`);
       }
       if (p._capped) chips.push(`<span class="pc-chip pcc-bad" title="실데이터 비율에 따른 신뢰도 상한 적용">품질상한▼</span>`);
-      return `<div class="pcard${i === 0 ? ' pcard-top' : ''}${SEL_IDX === i ? ' sel' : ''}" onclick="selectPred(${i})">
+      return `<div class="pcard pc-enter${i === 0 ? ' pcard-top' : ''}${SEL_IDX === i ? ' sel' : ''}" style="--i:${i}" onclick="selectPred(${i})">
         <div class="pc-rank">${String(p.rank).padStart(2, '0')}${deltaHtml}</div>
         <div class="pc-main">
           <div class="pc-type">${escHtml(p.type)}</div>
@@ -3783,13 +3861,14 @@ function renderZ1() {
           </div>
         </div>
         <div class="pc-side">
-          <div class="pc-num ${confCls}">${p.confidence}<em>%</em></div>
-          <div class="pc-bar"><b class="${confCls}" style="width:${p.confidence}%"></b></div>
+          <div class="pc-num ${confCls}"><span data-count="${p.confidence}">0</span><em>%</em></div>
+          <div class="pc-bar"><b class="${confCls}" data-grow="${p.confidence}%"></b></div>
           <button class="p-evi-btn" onclick="event.stopPropagation();openPredEvidence(${i})">근거 보기</button>
         </div>
         <span class="pc-arr">${SEL_IDX === i ? '▼' : '›'}</span>
       </div>`;
     }).join('')}</div>`;
+  animateIn(el);
 }
 
 /* 예측 → 제형 매칭 — Gemini의 formulation 필드 우선, 없으면 type/packaging에서 역추론.
@@ -4505,10 +4584,24 @@ async function collectAll() {
   ['climate','society','economy','culture'].forEach(k => { SIG_DATA[k] = null; });
   renderZ0();
 
-  const setStep = (txt, pct) => {
+  /* 진행률 바 — 수집은 8단계라 버튼 텍스트만으로는 얼마나 남았는지 알 수 없다.
+     frac은 0~1. 생략하면 바는 그대로 두고 문구만 바꾼다. */
+  const prog = document.getElementById('collectProg');
+  const progBar = document.getElementById('collectProgBar');
+  const progLabel = document.getElementById('collectProgLabel');
+  if (prog) { prog.hidden = false; prog.classList.remove('done'); }
+  const setStep = (txt, pct, frac) => {
     btn.textContent = txt;
     const sm = document.getElementById('statusSummary');
     if (sm) sm.textContent = pct;
+    if (progBar && typeof frac === 'number') progBar.style.width = `${Math.round(frac * 100)}%`;
+    if (progLabel) progLabel.textContent = txt.replace(/\.\.\.$/, '');
+  };
+  const endProgress = () => {
+    if (!prog) return;
+    if (progBar) progBar.style.width = '100%';
+    prog.classList.add('done');
+    setTimeout(() => { prog.hidden = true; if (progBar) progBar.style.width = '0'; }, 900);
   };
 
   /* 신호 수집 우선순위 — 사용자가 자기 키를 넣었으면 "그 키로 라이브 수집"이 최우선.
@@ -4518,7 +4611,7 @@ async function collectAll() {
   const hasOwnKeys = K.public() || K.naverID() || K.ecos();
   let usedPre = false;
   if (!hasOwnKeys) {
-    setStep('사전수집 데이터 확인 중...', '확인 중');
+    setStep('사전수집 데이터 확인 중...', '확인 중', 0.04);
     const pre = await loadPrecollected();
     if (pre) {
       applyPrecollected(pre); renderZ0(); usedPre = true;
@@ -4530,16 +4623,16 @@ async function collectAll() {
   }
   if (!usedPre) {
     /* 사용자 키로 직접 라이브 수집 — "내 키가 실제 적용되는" 경로 */
-    setStep('① 기후 수집 중...', '수집 1/4');
+    setStep('① 기후 수집 중...', '수집 1/4', 0.12);
     await collectClimate(); renderZ0();
 
-    setStep('② 사회 수집 중...', '수집 2/4');
+    setStep('② 사회 수집 중...', '수집 2/4', 0.24);
     await collectSociety(); renderZ0();
 
-    setStep('③ 경제 수집 중...', '수집 3/4');
+    setStep('③ 경제 수집 중...', '수집 3/4', 0.36);
     await collectEconomy(); renderZ0();
 
-    setStep('④ 문화 수집 중...', '수집 4/4');
+    setStep('④ 문화 수집 중...', '수집 4/4', 0.50);
     await collectCulture(); renderZ0();
 
     /* 키는 있으나 라이브가 전부 실패(사내망 프록시 차단 등 → 전 신호 샘플)하면
@@ -4555,7 +4648,7 @@ async function collectAll() {
 
   updateStatusSummary();
 
-  setStep('⑤ 공급·해외박람회·YouTube·글로벌 선행신호 수집 중...', '선행신호');
+  setStep('⑤ 공급·해외박람회·YouTube·글로벌 선행신호 수집 중...', '선행신호', 0.64);
   await Promise.all([collectMFDSSupply(), collectGlobalExpoTrends(), collectYouTubeTrends(), loadServerLeads()]);
 
   /* 라이프사이클: 오늘 모멘텀을 스냅샷으로 누적 → 4단계 분류(예측 프롬프트에도 반영) */
@@ -4568,13 +4661,13 @@ async function collectAll() {
   window._history = await loadHistory();
   renderHistory();
 
-  setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인');
+  setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인', 0.74);
   window._expoVerified = await verifyExpoSchedules();
   await discoverDomesticExpos();
   renderZ4();
 
   const periodLabel = PERIOD_LABEL[currentPeriod] || '6개월';
-  setStep(`⑦ Gemini ${periodLabel} 분석 중...`, 'AI 분석');
+  setStep(`⑦ Gemini ${periodLabel} 분석 중...`, 'AI 분석', 0.84);
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
   await runGeminiPrediction(currentPeriod);
@@ -4582,7 +4675,7 @@ async function collectAll() {
   renderZ1();
   resetZ2();
 
-  setStep('⑧ 신제품 레이더 확인 중...', '출시 감지');
+  setStep('⑧ 신제품 레이더 확인 중...', '출시 감지', 0.92);
   await collectProductRadar();
   renderRadar();
   /* 출시 보도가 확보됐으므로 신제품 축을 포함해 제형 점수 재산출 */
@@ -4595,6 +4688,7 @@ async function collectAll() {
   renderFunnel();
   checkWatchdog();
 
+  endProgress();
   btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
   showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
