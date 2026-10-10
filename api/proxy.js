@@ -133,7 +133,10 @@ export default async function handler(req, res) {
 
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 20000);
+    /* 상류 대기 85초 — 신호 17블록짜리 예측 프롬프트는 추론 모델에서 20초를 넘기기 쉽다.
+       20초에 끊으면 504가 나고 클라이언트는 샘플로 떨어졌다. 클라이언트 예측 타임아웃(90초)보다
+       짧게 잡아, 클라이언트가 먼저 끊지 않고 이 함수가 원인 있는 오류를 돌려주게 한다. */
+    const tid = setTimeout(() => ctrl.abort(), 85000);
     const upstream = await fetch(urlStr, {
       method: req.method,
       headers,
@@ -146,6 +149,6 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'text/plain; charset=utf-8');
     return res.send(text);
   } catch (e) {
-    return res.status(504).json({ error: `대상 API 호출 실패: ${e.name === 'AbortError' ? '타임아웃(20초)' : e.message}` });
+    return res.status(504).json({ error: `대상 API 호출 실패: ${e.name === 'AbortError' ? '타임아웃(85초)' : e.message}` });
   }
 }

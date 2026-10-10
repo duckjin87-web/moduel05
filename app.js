@@ -609,8 +609,8 @@ async function discoverDomesticExpos() {
 [뉴스]
 ${corpus.slice(0, 5000)}
 JSON만 출력: {"expos":[{"name":"정확한 행사명","date":"YYYY.MM.DD 또는 YYYY.MM.DD~MM.DD (불명확하면 빈 문자열)","location":"장소 (불명확하면 빈 문자열)","type":"expo|retail|equipment"}]}`;
-    const txt = await geminiGenerate(prompt, { maxTokens: 700, temperature: 0, timeout: 15000 });
-    const parsed = JSON.parse(txt);
+    const txt = await geminiGenerate(prompt, { maxTokens: 2048, temperature: 0, timeout: 30000, json: true });
+    const parsed = parseJsonLoose(txt);
     const found = (parsed.expos || []).filter(e => e && e.name && e.name.trim().length >= 3).map(e => ({
       name: e.name.trim(),
       type: ['expo', 'retail', 'equipment'].includes(e.type) ? e.type : 'expo',
@@ -1084,6 +1084,7 @@ function buildPredEvidenceHtml(idx) {
 }
 function openPredEvidence(idx) {
   const p = PREDICTIONS[idx];
+  if (p && p._sample) { showToast('예시 항목에는 근거가 없습니다 — AI 예측 실패 사유는 상단 안내를 확인하세요'); return; }
   document.getElementById('sigModalTitle').textContent = `${p ? p.rank + '위 ' + p.type : '예측'} — 선정 근거 & 신뢰도 분해`;
   document.getElementById('sigModalBody').innerHTML = buildPredEvidenceHtml(idx);
   document.getElementById('sigOverlay').classList.add('open');
@@ -2158,6 +2159,7 @@ async function collectSociety() {
 }
 
 function savePredHistory(predictions, period) {
+  if (predsAreSample(predictions) || isLegacyFallback(predictions)) return;   /* 예시는 원장에 남기지 않는다 */
   try {
     const hist = JSON.parse(ls('m5_history') || '[]');
     /* 같은 날 같은 기간의 재수집은 최신으로 대체(원장 중복 방지) */
@@ -2971,6 +2973,42 @@ function formRadarPromptBlock() {
     + `\n※ 이 시스템의 예측 단위는 성분이 아니라 '제형'이다. 위 점수가 높은 제형을 우선 반영하고, 각 예측의 formulation 필드에는 반드시 위 목록의 제형명을 그대로 적어라. packaging·tech는 그 제형의 실제 포장형태·생산설비와 일치해야 한다.`;
 }
 
+/* ════ 예측 실패 시 표시하는 예시 — 실제 예측이 아님 ════
+   상시 수요형 품목만 담고 계절·날짜·신뢰도는 넣지 않는다. */
+const SAMPLE_PREDICTIONS = [
+  { rank:1, type:'소용량 앰플 루틴팩', packaging:'2ml × 7ea 파우치', confidence:null, tech:'소용량 자동 충진 + 파우치 포장', channel:[], season:'—', signals:{} },
+  { rank:2, type:'리필형 수분 크림', packaging:'리필 파우치 + 전용 용기', confidence:null, tech:'유화 + 파우치 충진', channel:[], season:'—', signals:{} },
+  { rank:3, type:'진정 토너패드 (리필형)', packaging:'토너패드 60~80매', confidence:null, tech:'패드 자동 투입 + 함침', channel:[], season:'—', signals:{} },
+  { rank:4, type:'고체형 클렌징 바', packaging:'고형 성형 + 종이 슬리브', confidence:null, tech:'고형 성형', channel:[], season:'—', signals:{} },
+  { rank:5, type:'다기능 세럼 스틱', packaging:'스틱 몰딩 12g', confidence:null, tech:'고형 세럼 몰딩', channel:[], season:'—', signals:{} },
+];
+const predsAreSample = (list = PREDICTIONS) => Array.isArray(list) && list.length > 0 && list.every(p => p && p._sample);
+
+/* 과거 버전의 하드코딩 폴백 품목명 — 플래그 없이 캐시·원장에 남아 실제 예측처럼 쓰였다.
+   (이번 진단에서 10월 TOP5와 원장·퍼널·시즌앵커가 이 값으로 오염된 것을 확인) */
+const LEGACY_FALLBACK_TYPES = new Set([
+  '쿨링 선세럼·선쿠션 (여름 즉시 대응)', '진정·수분 토너패드 (여름 데일리)', '피지·모공 클렌징 (여름 시즌)',
+  '남성 올인원·선스틱 (휴가철)', '미스트·픽서 (지속력·쿨링)',
+  '에어리스 세럼 SPF50+ (선세럼)', '고체형 클렌징 바 (비건 인증)', '소용량 앰플 (2ml×7ea 주간 루틴팩)',
+  '리필 크림 (파우치+전용 용기)', '쿨링 젤 선크림 (스틱+튜브)',
+  '프리바이오틱스 스킨케어 라인 (마이크로바이옴)', '고기능성 UV 패드 (선패드)', '생분해 포장재 스킨케어 (친환경 리뉴얼)',
+  '다기능 세럼 스틱 (올인원 고형)', '맞춤형 화장품 키트 (처방 배합)',
+]);
+const isLegacyFallback = list => Array.isArray(list) && list.length > 0 && list.every(p => p && LEGACY_FALLBACK_TYPES.has(p.type));
+
+/* 오염된 원장 정리 — 판정 기록이 없는 폴백 회차만 지운다(사람이 판정한 건 보존) */
+function purgeLegacyFallbackLedger() {
+  try {
+    const hist = JSON.parse(ls('m5_history') || '[]');
+    const clean = hist.filter(h => !(isLegacyFallback(h.predictions) && !h.judgments));
+    if (clean.length !== hist.length) {
+      ls('m5_history', JSON.stringify(clean));
+      return hist.length - clean.length;
+    }
+  } catch {}
+  return 0;
+}
+
 /* ════════════ 모션 유틸리티 ════════════
    모션은 장식이 아니라 "결과를 읽는 데 드는 노력을 줄일 때"만 쓴다.
      · 숫자 카운트업 — 방금 계산됐다는 신호 + 자릿수 체감
@@ -3371,7 +3409,7 @@ function seasonAnchorForType(type) {
 async function collectProductRadar() {
   window._productRadar = null;
   const nid = K.naverID(), nsec = K.naverSec();
-  if (!nid || !nsec || !PREDICTIONS.length) return;
+  if (!nid || !nsec || !PREDICTIONS.length || predsAreSample()) return;
   try {
     const resps = await Promise.all(['화장품 신제품 출시', '뷰티 신제품'].map(q =>
       fetchNaverAPI(`https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=20&sort=date`, nid, nsec, 9000)));
@@ -3481,48 +3519,166 @@ function mergeEnsemble(runs) {
 
 /* ════ Gemini 공통 호출 — 모든 호출부(예측·TRACK B·행사 발견·테스트)가 이 하나를 쓴다.
    백엔드 모드면 서버가 키를 주입해 대신 호출. 성공 시 텍스트, 실패 시 status 포함 throw. */
-async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000, model, fallback = true } = {}) {
+async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000, model, fallback = true, json = false } = {}) {
   const key = K.gemini();
-  const useModel = model || K.model();
-  try {
-    return await geminiCall(useModel, key, promptText, maxTokens, temperature, timeout);
-  } catch (e) {
-    /* 상위 모델이 없거나(404) 쿼터를 넘으면(429) 보조 모델로 한 번 재시도한다.
-       모델 라인업은 수시로 바뀌므로 잘못된 모델명 하나로 기능 전체가 멈추지 않게 한다. */
-    const retryable = e.status === 404 || e.status === 429 || e.status === 400;
-    const alt = K.model();
-    if (fallback && retryable && alt && alt !== useModel) {
-      window._geminiFellBack = { from: useModel, to: alt, reason: e.status };
-      return await geminiCall(alt, key, promptText, maxTokens, temperature, timeout);
+  const first = model || K.model();
+  /* 시도 순서: 지정 모델 → 보조 모델 → (모델 문제일 때만) 계정에서 실제로 쓸 수 있는 모델 자동 탐색.
+     2.5 계열은 '과거 사용 이력이 있는 프로젝트'로 접근이 제한돼 신규 키에선 없는 모델이
+     될 수 있다. 같은 세대끼리만 폴백하면 함께 실패하므로 목록에서 다른 모델을 찾아 붙는다. */
+  const tried = [];
+  const attempt = async (m) => {
+    tried.push({ model: m });
+    try {
+      const txt = await geminiCall(m, key, promptText, maxTokens, temperature, timeout, json);
+      tried[tried.length - 1].ok = true;
+      return txt;
+    } catch (e) {
+      Object.assign(tried[tried.length - 1], { status: e.status || e.name || 'ERR', message: String(e.message || '').slice(0, 160) });
+      throw e;
     }
-    throw e;
+  };
+  try {
+    return await attempt(first);
+  } catch (e1) {
+    if (!fallback) { e1.attempts = tried; throw e1; }
+    const queue = [];
+    const alt = K.model();
+    if (alt && alt !== first) queue.push(alt);
+    if (isModelProblem(e1)) {
+      const auto = await autoPickModels().catch(() => null);
+      if (auto) [auto.predict, auto.aux].forEach(m => { if (m && m !== first && !queue.includes(m)) queue.push(m); });
+    }
+    let lastErr = e1;
+    for (const m of queue) {
+      if (!isRetryable(lastErr)) break;
+      try {
+        const txt = await attempt(m);
+        window._geminiFellBack = { from: first, to: m, reason: e1.status || e1.name };
+        /* 자동 탐색으로 살린 모델은 다음부터 바로 쓰도록 기억한다 */
+        if (model && m !== first) { ls('gemini_model_predict', m); }
+        return txt;
+      } catch (e) { lastErr = e; }
+    }
+    lastErr.attempts = tried;
+    throw lastErr;
   }
 }
 
-async function geminiCall(modelId, key, promptText, maxTokens, temperature, timeout) {
+/* 모델 이름·권한 문제인가 — 이 경우에만 목록 조회로 다른 모델을 찾는다 */
+function isModelProblem(e) {
+  const st = e && e.status, msg = String((e && e.message) || '').toLowerCase();
+  return st === 404 || st === 403 ||
+    (st === 400 && /model|not found|not supported|unsupported|no longer|not available/.test(msg));
+}
+/* 다른 모델로 다시 시도할 가치가 있는가 */
+function isRetryable(e) {
+  const st = e && e.status;
+  return [400, 403, 404, 429, 500, 502, 503, 504, 'MAX_TOKENS', 'EMPTY', 'BAD_JSON', 'AbortError'].includes(st)
+    || (e && e.name === 'AbortError');
+}
+
+/* 계정에서 실제로 generateContent를 쓸 수 있는 모델 목록 — 세션 1회만 조회 */
+let _modelListPromise = null;
+function fetchModelList() {
+  if (_modelListPromise) return _modelListPromise;
+  _modelListPromise = (async () => {
+    const key = K.gemini();
+    if (!key) return [];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key.trim())}&pageSize=200`;
+    const r = key === '__BK__' ? await bkFetch(url, {}, 15000) : await fetch(url);
+    const j = await r.json();
+    if (!r.ok) { const e = new Error(j?.error?.message || `HTTP ${r.status}`); e.status = r.status; throw e; }
+    return (j.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => ({ id: (m.name || '').replace(/^models\//, ''), label: m.displayName || '' }))
+      .filter(m => m.id && !/embedding|aqa|imagen|veo|tts|audio|image|live|native|computer|robotics|learnlm|gemma/i.test(m.id))
+      .sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+  })();
+  _modelListPromise.catch(() => { _modelListPromise = null; });
+  return _modelListPromise;
+}
+
+/* 목록에서 용도별 기본 모델을 고른다 — 정식 버전 우선, 최신 세대 우선.
+   예측은 추론이 필요하니 Flash(비-Lite), 보조는 Flash-Lite. Pro는 무료 한도가 없을 수 있어 후순위. */
+async function autoPickModels() {
+  const list = await fetchModelList();
+  if (!list.length) return null;
+  const ver = id => { const m = id.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  const stable = id => !/preview|exp|experimental|\d{2}-\d{2}/i.test(id);
+  const rank = (arr) => arr.sort((a, b) => (stable(b.id) - stable(a.id)) || (ver(b.id) - ver(a.id)));
+  const flash = rank(list.filter(m => /flash/i.test(m.id) && !/lite/i.test(m.id)));
+  const lite  = rank(list.filter(m => /flash-lite/i.test(m.id)));
+  const pro   = rank(list.filter(m => /pro/i.test(m.id)));
+  return {
+    predict: (flash[0] || lite[0] || pro[0] || list[0]).id,
+    aux:     (lite[0] || flash[0] || list[0]).id,
+  };
+}
+
+/* 응답에서 JSON 객체를 꺼낸다 — 앞뒤 설명문·코드펜스가 섞여도 바깥 중괄호를 찾아 파싱 */
+function parseJsonLoose(txt) {
+  const t = String(txt || '').replace(/```json|```/g, '').trim();
+  try { return JSON.parse(t); } catch {}
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) {
+    try { return JSON.parse(t.slice(a, b + 1)); } catch {}
+  }
+  const e = new Error('응답이 올바른 JSON이 아닙니다'); e.status = 'BAD_JSON'; throw e;
+}
+
+async function geminiCall(modelId, key, promptText, maxTokens, temperature, timeout, json = false) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(key.trim())}`;
-  const body = JSON.stringify({ contents: [{ role: 'user', parts: [{ text: promptText }] }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature } });
-  let r;
-  if (key === '__BK__') {
-    r = await bkFetch(url, { method: 'POST', body }, timeout);
-  } else {
+  const mkBody = (useJson) => JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: promptText }] }],
+    generationConfig: { maxOutputTokens: maxTokens, temperature, ...(useJson ? { responseMimeType: 'application/json' } : {}) },
+  });
+  const send = async (body) => {
+    if (key === '__BK__') return bkFetch(url, { method: 'POST', body }, timeout);
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     try {
-      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: ctrl.signal });
+      return await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: ctrl.signal });
     } finally { clearTimeout(tid); }
+  };
+  let r = await send(mkBody(json));
+  let data = await r.json().catch(() => ({}));
+  /* 일부 모델은 JSON 모드를 지원하지 않는다 — 그 경우만 일반 모드로 한 번 더 */
+  if (!r.ok && json && r.status === 400 && /mime|json|response_?mime/i.test(data?.error?.message || '')) {
+    r = await send(mkBody(false));
+    data = await r.json().catch(() => ({}));
   }
-  const data = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error(data?.error?.message || `HTTP ${r.status}`); e.status = r.status; throw e; }
-  return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').replace(/```json|```/g, '').trim();
+  const cand = data.candidates?.[0];
+  if (!cand) {
+    const e = new Error(`응답 없음${data.promptFeedback?.blockReason ? ` — 차단(${data.promptFeedback.blockReason})` : ''}`);
+    e.status = 'EMPTY'; throw e;
+  }
+  /* 추론(thought) 파트는 제외하고 본문만 이어 붙인다 — parts[0]이 추론일 수 있다 */
+  const text = (cand.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+  if (!text) {
+    const e = new Error(cand.finishReason === 'MAX_TOKENS'
+      ? '출력 한도에 도달해 본문이 비었습니다(추론 토큰이 한도를 소진)'
+      : `빈 응답 (${cand.finishReason || '사유 없음'})`);
+    e.status = cand.finishReason === 'MAX_TOKENS' ? 'MAX_TOKENS' : 'EMPTY'; throw e;
+  }
+  if (cand.finishReason && !['STOP', 'MAX_TOKENS'].includes(cand.finishReason)) {
+    const e = new Error(`생성 중단 (${cand.finishReason})`); e.status = 'EMPTY'; throw e;
+  }
+  const out = text.replace(/```json|```/g, '').trim();
+  /* JSON을 기대했는데 한도에서 잘린 경우 — 파싱 실패를 원인과 함께 알린다 */
+  if (json && cand.finishReason === 'MAX_TOKENS') {
+    try { parseJsonLoose(out); } catch { const e = new Error('출력 한도에서 JSON이 잘렸습니다'); e.status = 'MAX_TOKENS'; throw e; }
+  }
+  return out;
 }
 
 /* Gemini 예측 1회 — predictions 배열 반환, 빈 응답은 throw */
 async function callGeminiPredict(fullPrompt) {
-  const txt = await geminiGenerate(fullPrompt, { maxTokens: 1800, temperature: 0.3, timeout: 30000, model: K.modelPredict() });
-  const preds = JSON.parse(txt).predictions || [];
-  if (!preds.length) throw new Error('빈 예측 응답');
+  /* 출력 한도 8192 — 추론 모델은 생각 토큰이 한도를 함께 쓰므로 1800으론 JSON이 잘렸다.
+     과금은 실제 생성분만이라 한도를 올려도 비용은 늘지 않는다. */
+  const txt = await geminiGenerate(fullPrompt, { maxTokens: 8192, temperature: 0.3, timeout: 90000, model: K.modelPredict(), json: true });
+  const preds = parseJsonLoose(txt).predictions || [];
+  if (!preds.length) { const e = new Error('예측 항목이 비어 있습니다'); e.status = 'EMPTY'; throw e; }
   return preds;
 }
 
@@ -3530,7 +3686,12 @@ async function callGeminiPredict(fullPrompt) {
 async function runGeminiPrediction(period) {
   period = period || currentPeriod;
   const key = K.gemini();
-  if (!key) { showToast('Gemini API 키를 설정하세요'); return false; }
+  if (!key) {
+    window._predError = { period, at: Date.now(), status: 'NO_KEY', message: 'Gemini 키가 설정되지 않았습니다', attempts: [] };
+    PREDICTIONS = [];
+    return false;
+  }
+  window._predError = null;
   const model = K.model();
   const now = new Date();
   const yr = now.getFullYear();
@@ -3709,34 +3870,19 @@ ${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${
     return true;
   } catch (e) {
     console.error('Gemini error:', e);
-    const fallback6m = [
-      {rank:1,type:'에어리스 세럼 SPF50+ (선세럼)',packaging:'에어리스 펌프 30~50ml',confidence:88,tech:'고점도 선세럼 배합 + 에어리스 충진 동시 가능 설비',channel:['올리브영','미국 TikTok Shop'],season:'2026 하반기',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
-      {rank:2,type:'고체형 클렌징 바 (비건 인증)',packaging:'고형 성형 + 종이 슬리브 포장',confidence:82,tech:'고형 성형 + 비건 원료 배합 + 종이 패키징',channel:['다이소','무신사','유럽 수출'],season:'2026 4Q',signals:{climate:0.1,society:0.2,economy:0.3,culture:0.4}},
-      {rank:3,type:'소용량 앰플 (2ml×7ea 주간 루틴팩)',packaging:'소용량 앰플 2ml × 7ea 파우치',confidence:76,tech:'소용량(≤3ml) 자동 충진 + 파우치 포장 라인',channel:['올리브영','편의점','아마존'],season:'2026 3Q',signals:{climate:0.1,society:0.4,economy:0.1,culture:0.4}},
-      {rank:4,type:'리필 크림 (파우치+전용 용기)',packaging:'리필 파우치 50ml + 재사용 알루미늄 용기',confidence:71,tech:'리필 파우치 충진 + 재사용 알루미늄 용기 설계',channel:['프리미엄 브랜드','백화점'],season:'2027 1Q',signals:{climate:0.1,society:0.1,economy:0.5,culture:0.3}},
-      {rank:5,type:'쿨링 젤 선크림 (스틱+튜브)',packaging:'스틱 몰딩 15g 또는 저점도 튜브 75ml',confidence:65,tech:'스틱 몰딩 or 저점도 튜브 충진 + 쿨링 성분 배합',channel:['다이소','편의점','남성 채널'],season:'2026 4Q',signals:{climate:0.5,society:0.1,economy:0.1,culture:0.3}},
-    ];
-    const fallback1y = [
-      {rank:1,type:'프리바이오틱스 스킨케어 라인 (마이크로바이옴)',packaging:'에어리스 포장 30~80ml (산화방지)',confidence:85,tech:'마이크로바이옴 활성 성분 에어리스 패키징 + 저온 충진',channel:['올리브영','피부과 연계','해외 수출'],season:'2027 상반기',signals:{climate:0.1,society:0.3,economy:0.1,culture:0.5}},
-      {rank:2,type:'고기능성 UV 패드 (선패드)',packaging:'소용량 틱택 컨테이너 15ml + 패드팩',confidence:80,tech:'패드 자동 투입 + UV 에멀전 충진 동시 라인',channel:['올리브영','드러그스토어','중동 수출'],season:'2027 상반기',signals:{climate:0.45,society:0.1,economy:0.15,culture:0.3}},
-      {rank:3,type:'생분해 포장재 스킨케어 (친환경 리뉴얼)',packaging:'퇴비화 가능 바이오 플라스틱 용기 50ml',confidence:74,tech:'바이오 PLA 용기 충진 + 무알코올 보존',channel:['유럽 수출','친환경 PB 브랜드'],season:'2027 2Q',signals:{climate:0.2,society:0.2,economy:0.3,culture:0.3}},
-      {rank:4,type:'다기능 세럼 스틱 (올인원 고형)',packaging:'스틱 몰딩 12g 회전식 용기',confidence:70,tech:'고형 세럼 스틱 몰딩 + 활성 성분 안정화',channel:['다이소','무신사','편의점'],season:'2027 1Q',signals:{climate:0.1,society:0.4,economy:0.2,culture:0.3}},
-      {rank:5,type:'맞춤형 화장품 키트 (처방 배합)',packaging:'소분 앰플 2ml×5 + 베이스 크림 30ml 세트',confidence:62,tech:'소용량 다품종 혼합 충진 + 개인화 라벨링',channel:['D2C 브랜드','피부과 병원'],season:'2027 2Q',signals:{climate:0.05,society:0.5,economy:0.1,culture:0.35}},
-    ];
-    /* 단기(3m) 폴백 — 이미 시장에 있고 계절·검색이 즉시 미는 품목 위주 */
-    const fallback3m = [
-      {rank:1,type:'쿨링 선세럼·선쿠션 (여름 즉시 대응)',packaging:'에어리스/쿠션 15~50ml',confidence:84,tech:'쿨링 배합 + 고SPF 즉시 충진',channel:['올리브영','다이소'],season:'향후 4~8주',signals:{climate:0.55,society:0.05,economy:0.1,culture:0.3}},
-      {rank:2,type:'진정·수분 토너패드 (여름 데일리)',packaging:'토너패드 60~80매 리필형',confidence:78,tech:'패드 자동 투입 + 진정 성분',channel:['올리브영','편의점'],season:'향후 6주',signals:{climate:0.35,society:0.1,economy:0.15,culture:0.4}},
-      {rank:3,type:'피지·모공 클렌징 (여름 시즌)',packaging:'튜브/펌프 150ml',confidence:72,tech:'저자극 계면활성 배합',channel:['올리브영','드러그스토어'],season:'향후 8주',signals:{climate:0.3,society:0.1,economy:0.2,culture:0.4}},
-      {rank:4,type:'남성 올인원·선스틱 (휴가철)',packaging:'스틱 몰딩 15g',confidence:66,tech:'스틱 성형 + 멀티기능',channel:['편의점','남성 채널'],season:'향후 8주',signals:{climate:0.4,society:0.2,economy:0.1,culture:0.3}},
-      {rank:5,type:'미스트·픽서 (지속력·쿨링)',packaging:'스프레이 50~100ml',confidence:60,tech:'분무 충진 + 쿨링·픽싱',channel:['올리브영','다이소'],season:'향후 6주',signals:{climate:0.45,society:0.05,economy:0.1,culture:0.4}},
-    ];
-    /* 폴백도 품질 상한을 그대로 적용 — 샘플 기반 수치가 실측처럼 보이지 않게 */
-    PREDICTIONS_CACHE[period] = applyQualityCap(period === '1y' ? fallback1y : period === '3m' ? fallback3m : fallback6m);
-    PREDICTIONS = PREDICTIONS_CACHE[period];
-    window._ensembleInfo = null;   /* 앙상블 미수행(샘플) */
-    showToast('Gemini 연결 실패 — 샘플 예측 사용');
-    return true;
+    /* 실패 사유를 남긴다 — 토스트는 몇 초 뒤 사라져 무엇이 잘못됐는지 알 수 없었다 */
+    window._predError = {
+      period, at: Date.now(),
+      status: e.status || e.name || 'ERR',
+      message: String(e.message || '').slice(0, 240),
+      attempts: e.attempts || [],
+    };
+    /* 예시 — AI 예측이 아니다. 계절·날짜를 담지 않은 상시형 품목으로 두고(10월에 '여름 즉시 대응'이
+       뜨던 문제), 신뢰도는 비워 실측처럼 보이지 않게 한다. 캐시·원장·매칭·보고서에 들어가지 않도록
+       _sample 플래그로 격리하며, 캐시에 넣지 않으므로 기간을 다시 열면 재시도한다. */
+    PREDICTIONS = SAMPLE_PREDICTIONS.map(x => ({ ...x, _sample: true }));
+    window._ensembleInfo = null;
+    return false;
   }
 }
 
@@ -3800,6 +3946,23 @@ function renderZ1() {
       panel.style.display = show ? '' : 'none';
       if (show) renderBacktestDashboard(matured);
     };
+  }
+  /* 예측 실패 — 사유를 화면에 고정해 둔다. 예시가 실제 예측처럼 읽히지 않게 신뢰도·근거·매칭을 모두 뺀다 */
+  if (predsAreSample() || (!PREDICTIONS.length && window._predError)) {
+    const lbl = document.getElementById('geminiModelLabel');
+    if (lbl) lbl.textContent = 'AI 예측 실패';
+    el.innerHTML = predErrorPanelHtml() + (predsAreSample() ? `
+      <div class="pred-sample-hd">아래는 <b>예시</b>입니다 — 수집 신호로 산출한 예측이 아니며, 원장·보고서·제조사 매칭에서 제외됩니다.</div>
+      <div class="pred-list pred-sample">${PREDICTIONS.map((p, i) => `
+        <div class="pcard pcard-sample" style="--i:${i}">
+          <div class="pc-rank">${String(p.rank).padStart(2, '0')}</div>
+          <div class="pc-main">
+            <div class="pc-type">${escHtml(p.type)} <span class="pc-sample-badge">예시</span></div>
+            <div class="pc-meta"><span>📦 ${escHtml(p.packaging || '—')}</span></div>
+          </div>
+          <div class="pc-side"><div class="pc-num pc-num-na">—</div></div>
+        </div>`).join('')}</div>` : '');
+    return;
   }
   if (!PREDICTIONS.length) {
     el.innerHTML = '<div class="z1-placeholder">예측 데이터 없음</div>';
@@ -3871,6 +4034,67 @@ function renderZ1() {
   animateIn(el);
 }
 
+/* 실패 사유를 사람이 조치할 수 있는 문장으로 바꾼다 */
+function predErrorPanelHtml() {
+  const e = window._predError || { status: 'ERR', message: '알 수 없는 오류', attempts: [] };
+  const msg = String(e.message || '');
+  const st = e.status;
+  let why, fix;
+  if (st === 'NO_KEY') {
+    why = 'Gemini 키가 설정되어 있지 않습니다.';
+    fix = '[API 설정]에서 Gemini 키를 입력하거나, Vercel 백엔드에 GEMINI_KEY를 등록하세요.';
+  } else if (st === 502 && /키가 등록되지/.test(msg)) {
+    why = 'Vercel 서버에 GEMINI_KEY가 없습니다.';
+    fix = 'Vercel → Settings → Environment Variables에 GEMINI_KEY를 추가한 뒤 Redeploy 하세요.';
+  } else if (st === 404 || st === 403 || (st === 400 && /model|not found|not supported|not available/i.test(msg))) {
+    why = '설정된 모델을 이 계정에서 쓸 수 없습니다. (2.5 계열은 과거 사용 이력이 있는 프로젝트로 접근이 제한됩니다)';
+    fix = '[API 설정] → [내 계정에서 사용 가능한 모델 불러오기]를 누르면 사용 가능한 모델로 자동 교정됩니다.';
+  } else if (st === 429 && /limit: 0|free_tier/i.test(msg)) {
+    why = '이 모델은 무료 한도가 0입니다 (유료 전용 모델).';
+    fix = '[모델 불러오기] 후 예측용을 Flash 계열로 바꾸세요.';
+  } else if (st === 429) {
+    why = '요청 한도를 넘었습니다.';
+    fix = '1~2분 뒤 [다시 시도]를 누르세요. 반복되면 보조용 모델을 Lite 계열로 두세요.';
+  } else if (st === 504 || st === 'AbortError') {
+    why = '응답 시간이 초과됐습니다.';
+    fix = '[다시 시도]를 누르세요. 반복되면 예측용 모델을 더 가벼운 Flash 계열로 바꾸세요.';
+  } else if (st === 'MAX_TOKENS') {
+    why = '모델 출력이 한도에서 잘렸습니다.';
+    fix = '[다시 시도] 후에도 반복되면 예측용 모델을 바꿔 보세요.';
+  } else if (st === 'BAD_JSON' || st === 'EMPTY') {
+    why = '모델 응답을 해석하지 못했습니다.';
+    fix = '[다시 시도]를 누르세요. 반복되면 다른 모델로 바꿔 보세요.';
+  } else {
+    why = '예측 호출이 실패했습니다.';
+    fix = '[다시 시도] 후 반복되면 [API 설정] → [테스트]로 연결 상태를 확인하세요.';
+  }
+  const trail = (e.attempts || []).map(a => `${escHtml(a.model)}${a.ok ? ' ✓' : ` (${escHtml(String(a.status))})`}`).join(' → ');
+  return `<div class="pred-err">
+    <div class="pred-err-hd"><span class="pred-err-tag">AI 예측 실패</span> ${escHtml(why)}</div>
+    <div class="pred-err-fix">해결: ${escHtml(fix)}</div>
+    ${trail ? `<div class="pred-err-trail">시도한 모델: ${trail}</div>` : ''}
+    <div class="pred-err-raw">오류 원문: ${escHtml(String(st))} · ${escHtml(msg || '—')}</div>
+    <div class="pred-err-act">
+      <button class="btn-hd btn-bt-toggle" onclick="retryPrediction()">다시 시도</button>
+      <button class="btn-hd btn-bt-toggle" onclick="document.getElementById('btnApiSet').click()">API 설정 열기</button>
+    </div>
+  </div>`;
+}
+
+async function retryPrediction() {
+  if (!Object.values(SIG_DATA).some(v => v)) { showToast('[전체 수집 실행]을 먼저 해 주세요'); return; }
+  PREDICTIONS_CACHE[currentPeriod] = null;
+  _modelListPromise = null;
+  const el = document.getElementById('z1body');
+  if (el) el.innerHTML = `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">AI 예측 다시 시도 중...</div></div>`;
+  await runGeminiPrediction(currentPeriod);
+  if (PREDICTIONS.length && !predsAreSample()) {
+    savePredHistory(PREDICTIONS, currentPeriod);
+    showToast('AI 예측을 생성했습니다');
+  }
+  renderZ1(); renderScoreboard(); resetZ2();
+}
+
 /* 예측 → 제형 매칭 — Gemini의 formulation 필드 우선, 없으면 type/packaging에서 역추론.
    점수가 있으면(_formRadar) 함께 반환해 카드에 표기한다. */
 function formulationOfPred(p) {
@@ -3899,6 +4123,7 @@ async function selectPred(idx) {
   if (SEL_IDX === idx) return;
   const p = PREDICTIONS[idx];
   if (!p) return;
+  if (p._sample) { showToast('예시 항목입니다 — AI 예측이 생성된 뒤 제조사 매칭을 할 수 있습니다'); return; }
   SEL_IDX = idx;
   renderZ1();
   currentPkgType = p.packaging || '';
@@ -4142,8 +4367,8 @@ ${allText}
 JSON만 출력:
 {"companies":[{"name":"업체명","evidence_type":"mfds|news|blog|inferred","production":"생산중|생산이력|생산가능(추측)","evidence_detail":"근거 설명","region":"지역(알 경우)"}]}`;
     try {
-      const txt = await geminiGenerate(prompt, { maxTokens: 600, temperature: 0, timeout: 15000 });
-      const parsed = JSON.parse(txt);
+      const txt = await geminiGenerate(prompt, { maxTokens: 2048, temperature: 0, timeout: 30000, json: true });
+      const parsed = parseJsonLoose(txt);
       (parsed.companies || []).forEach(c => { if (c.name) results.push(c); });
     } catch {}
   }
@@ -4671,7 +4896,7 @@ async function collectAll() {
   document.getElementById('z1body').innerHTML =
     `<div class="z1-placeholder"><div class="sig-loading" style="justify-content:center">Gemini ${periodLabel} 예측 분석 중...</div></div>`;
   await runGeminiPrediction(currentPeriod);
-  if (PREDICTIONS.length) savePredHistory(PREDICTIONS, currentPeriod);
+  if (PREDICTIONS.length && !predsAreSample()) savePredHistory(PREDICTIONS, currentPeriod);
   renderZ1();
   resetZ2();
 
@@ -4820,8 +5045,14 @@ function genReport() {
   }
   lines.push('');
   lines.push('▶ 예측 화장품 유형 TOP5');
-  PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) — 출시적기: ${p.season}`));
-  if (SEL_IDX >= 0 && PREDICTIONS[SEL_IDX]) {
+  if (predsAreSample() || !PREDICTIONS.length) {
+    const pe = window._predError;
+    lines.push(`  ⚠ AI 예측 생성 실패 — 이 보고서에는 예측 결과가 없습니다${pe ? ` (사유: ${pe.status} · ${pe.message})` : ''}`);
+    lines.push('  ※ 화면의 예시 항목은 실제 예측이 아니므로 보고서에서 제외했습니다.');
+  } else {
+    PREDICTIONS.forEach(p => lines.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) — 출시적기: ${p.season}`));
+  }
+  if (!predsAreSample() && SEL_IDX >= 0 && PREDICTIONS[SEL_IDX]) {
     const p = PREDICTIONS[SEL_IDX];
     lines.push('');
     lines.push(`▶ 선택 유형 제조사 매칭: ${p.type}`);
@@ -4872,7 +5103,8 @@ function exportReportCSV() {
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) rows.push(['신호', k, `${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} - ${v.interpret}`]);
   });
-  PREDICTIONS.forEach(p => rows.push(['예측 TOP5', `${p.rank}위 ${p.type}`, `신뢰도 ${p.confidence}% / 출시적기 ${p.season}`]));
+  if (predsAreSample()) rows.push(['예측 TOP5', 'AI 예측 생성 실패', `예시 항목은 제외됨 — ${(window._predError || {}).status || ''}`]);
+  else PREDICTIONS.forEach(p => rows.push(['예측 TOP5', `${p.rank}위 ${p.type}`, `신뢰도 ${p.confidence}% / 출시적기 ${p.season}`]));
   const matured = backtestPredictions();
   matured.slice(0, 5).forEach(h => {
     const dateStr = new Date(h.ts).toLocaleDateString('ko-KR');
@@ -4900,7 +5132,7 @@ async function testGemini() {
   try {
     let reply;
     try {
-      reply = await geminiGenerate('한 단어로만 답하세요: 화장품', { maxTokens: 10, timeout: 12000 });
+      reply = await geminiGenerate('한 단어로만 답하세요: 화장품', { maxTokens: 256, timeout: 20000 });
     } catch (ge) {
       const errMsg = ge.message || '';
       if (ge.status === 429) {
@@ -5257,33 +5489,28 @@ async function loadGeminiModels() {
   if (!key) { showToast('Gemini 키를 먼저 입력 후 저장하세요'); return; }
   el.textContent = '계정에서 사용 가능한 모델 조회 중...'; el.style.color = 'var(--ink3)';
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key.trim())}&pageSize=200`;
-    const r = key === '__BK__' ? await bkFetch(url, {}, 15000) : await fetch(url);
-    const j = await r.json();
-    if (!r.ok) {
-      el.textContent = `모델 조회 실패 (${r.status}): ${j?.error?.message || ''}`;
-      el.style.color = 'var(--red)'; return;
-    }
-    const models = (j.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => ({
-        id: (m.name || '').replace(/^models\//, ''),
-        label: m.displayName || '',
-        inTok: m.inputTokenLimit || 0,
-      }))
-      .filter(m => m.id && !/embedding|aqa|imagen|veo|tts/i.test(m.id))
-      .sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+    _modelListPromise = null;   /* 버튼은 항상 새로 조회 */
+    let models;
+    try { models = await fetchModelList(); }
+    catch (e) { el.textContent = `모델 조회 실패 (${e.status || ''}): ${e.message}`; el.style.color = 'var(--red)'; return; }
     if (!models.length) { el.textContent = '사용 가능한 생성 모델이 없습니다.'; el.style.color = 'var(--yel)'; return; }
     window._geminiModels = models;
-    ['gemini-model', 'gemini-model-predict'].forEach(selId => {
+    /* 지금 설정된 모델이 계정 목록에 없으면(예: 2.5 계열 접근 제한) 사용 가능한 모델로 교정한다.
+       예측 실패의 가장 흔한 원인이 '존재하지 않는 모델명'이다. */
+    const pick = await autoPickModels().catch(() => null);
+    const fixed = [];
+    [['gemini-model-predict', 'gemini_model_predict', 'predict'], ['gemini-model', 'gemini_model', 'aux']].forEach(([selId, lsKey, role]) => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const cur = sel.value;
       sel.innerHTML = models.map(m =>
         `<option value="${escHtml(m.id)}">${escHtml(m.id)}${m.label && m.label !== m.id ? ` — ${escHtml(m.label)}` : ''}</option>`).join('');
-      if (models.some(m => m.id === cur)) sel.value = cur;
+      if (models.some(m => m.id === cur)) { sel.value = cur; return; }
+      const to = pick && pick[role];
+      if (to) { sel.value = to; ls(lsKey, to); fixed.push(`${role === 'predict' ? '예측용' : '보조용'} ${cur || '(없음)'} → ${to}`); }
     });
-    el.textContent = `사용 가능한 모델 ${models.length}종 — 드롭다운에 반영됨\n`
+    el.textContent = (fixed.length ? `⚠ 설정된 모델이 이 계정에서 사용 불가해 자동 교정했습니다\n  · ${fixed.join('\n  · ')}\n\n` : '')
+      + `사용 가능한 모델 ${models.length}종 — 드롭다운에 반영됨\n`
       + models.slice(0, 12).map(m => `  · ${m.id}`).join('\n')
       + (models.length > 12 ? `\n  … 외 ${models.length - 12}종` : '')
       + `\n\n※ 예측용은 추론이 필요하므로 상위(Pro/Flash) 모델을, 보조용은 경량(Lite) 모델을 권장합니다.`;
@@ -5445,6 +5672,8 @@ function showCollectedData() {
 /* ════ INIT ════ */
 function init() {
   loadKeys();
+  const purged = purgeLegacyFallbackLedger();
+  if (purged) console.info(`예측 원장에서 과거 샘플 회차 ${purged}건을 정리했습니다`);
   /* 누적 추이는 수집과 무관하게 접속 즉시 보여준다 — 과거 기록은 이미 저장소에 있다 */
   loadHistory().then(h => { window._history = h; renderHistory(); });
   renderZ0();
@@ -5520,9 +5749,10 @@ function init() {
       /* 24시간 이내 캐시만 복원 — 만료 캐시는 신호·예측 모두 무시 */
       if (d.ts && Date.now() - d.ts < 86400000) {
         if (d.signals) SIG_DATA = d.signals;
-        if (d.predictions_3m) { PREDICTIONS_CACHE['3m'] = d.predictions_3m; }
-        if (d.predictions_6m) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
-        if (d.predictions_1y) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
+        /* 과거 버전이 캐시에 남긴 하드코딩 폴백은 실제 예측처럼 복원되므로 버린다 */
+        if (d.predictions_3m && !isLegacyFallback(d.predictions_3m)) { PREDICTIONS_CACHE['3m'] = d.predictions_3m; }
+        if (d.predictions_6m && !isLegacyFallback(d.predictions_6m)) { PREDICTIONS_CACHE['6m'] = d.predictions_6m; }
+        if (d.predictions_1y && !isLegacyFallback(d.predictions_1y)) { PREDICTIONS_CACHE['1y'] = d.predictions_1y; }
         /* 현재 기간의 캐시 로드 */
         const p = PREDICTIONS_CACHE[currentPeriod];
         if (p && p.length) {
