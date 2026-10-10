@@ -115,6 +115,11 @@ console.log('키 현황: 네이버', lsStore.naver_id ? 'O' : 'X',
 await sandbox.collectClimate();
 await sandbox.collectSociety();
 await sandbox.collectEconomy();
+/* 고빈도 키워드는 30일 비교가 불가능해(뉴스 API 100건 상한) 누적 이력과 비교한다 —
+   문화 수집 전에 지금까지의 history.json을 넣어 둔다 */
+try {
+  sandbox.window._history = JSON.parse(fs.readFileSync(path.join(root, 'data', 'history.json'), 'utf8'));
+} catch { sandbox.window._history = []; }
 await sandbox.collectCulture();
 
 /* 수집 상태 점(sdot) 결과 캡처 — 클라이언트에서 그대로 재생 */
@@ -421,6 +426,7 @@ const out = {
   trendReports,
   kwVolume: sandbox.window._kwVolume || null,
   kwSurge: sandbox.window._kwSurge || null,
+  kwHighFreq: sandbox.window._kwHighFreq || null,
   rssText: sandbox.window._rssText || '',
   climateTrend: sandbox.window._climateTrend || null,
 };
@@ -435,6 +441,9 @@ function buildHistoryRecord(o) {
   const num = v => (typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null);
   const rssItems = (o.rssFeedStatus || []).reduce((n, f) => n + (f.items || 0), 0);
   const topKw = (o.kwVolume || []).slice(0, 5).map(k => ({ n: k.name, c: k.count }));
+  /* 키워드별 일평균 기사 밀도 — 고빈도 키워드 증감 판정의 기준선(약 3주 누적 후 사용) */
+  const kwRate = {};
+  (o.kwVolume || []).forEach(k => { if (typeof k.rate === 'number') kwRate[k.name] = k.rate; });
   const topSurge = (o.kwSurge || []).slice(0, 5).map(k => ({ n: k.name, d: k.delta }));
   return {
     date: new Date().toISOString().slice(0, 10),
@@ -460,6 +469,7 @@ function buildHistoryRecord(o) {
     },
     /* 모멘텀 */
     topKeywords: topKw,
+    kwRate,
     surge: topSurge,
     export: (o.exportTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),
     search: (o.dlTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),

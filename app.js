@@ -910,10 +910,21 @@ function buildSigDetailHtml(key) {
     body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
     body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
     if (window._kwSurge && window._kwSurge.length) {
-      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 최근 30일 vs 직전 30일 (기사 5건 이상 · 증가율 20% 이상)</div>
+      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 증감을 실제로 측정한 것만 (기사 5건 이상 · +20% 이상 또는 신규 출현)</div>
         <ul class="gm-list">${window._kwSurge.slice(0, 10).map(t =>
-          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — 최근 30일 ${t.count}건 (직전 ${t.prior}건) <b style="color:var(--grn)">+${t.delta}%</b></li>`).join('')}</ul>
+          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — ${t.fresh
+            ? `최근 30일 ${t.count}건 (직전 30일 0건) <b style="color:var(--grn)">신규 출현</b>`
+            : `일 ${t.rate}건 <b style="color:var(--grn)">${t.delta >= 0 ? '+' : ''}${t.delta}%</b>`} <span style="color:var(--ink3)">· ${escHtml(t.basis || '')}</span></li>`).join('')}</ul>
         <div class="gm-note2">언급이 많은 것보다 <b>늘고 있는 것</b>이 예측 대상입니다. 이 목록이 문화 신호 점수의 가산 근거입니다.</div>
+      </div>`;
+    }
+    if (window._kwHighFreq && window._kwHighFreq.length) {
+      body += `<div class="gm-block"><div class="gm-block-title">고빈도 키워드 — 증감 미측정</div>
+        <ul class="gm-list">${window._kwHighFreq.slice(0, 10).map(t =>
+          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — 일 ${t.rate}건 (최근 기사 100건이 약 ${Math.max(1, Math.round(100 / Math.max(t.rate, 0.01)))}일 안에 몰림)</li>`).join('')}</ul>
+        <div class="gm-note2">네이버 뉴스 API는 최근 100건까지만 주므로, 기사가 많은 키워드는 직전 30일을 관측할 수 없습니다.
+          예전에는 이 구간을 0건으로 세어 <b>전부 +100%</b>로 잘못 표시됐습니다. 지금은 일평균 밀도를 매일 누적해
+          <b>약 3주 뒤부터 이력 비교</b>로 증감을 판정합니다.</div>
       </div>`;
     }
     if (window._kwVolume && window._kwVolume.length) {
@@ -1011,9 +1022,11 @@ function buildPredEvidenceHtml(idx) {
       body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
       body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
       if (window._kwSurge && window._kwSurge.length) {
-      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 최근 30일 vs 직전 30일 (기사 5건 이상 · 증가율 20% 이상)</div>
+      body += `<div class="gm-block"><div class="gm-block-title">급증 키워드 — 증감을 실제로 측정한 것만 (기사 5건 이상 · +20% 이상 또는 신규 출현)</div>
         <ul class="gm-list">${window._kwSurge.slice(0, 10).map(t =>
-          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — 최근 30일 ${t.count}건 (직전 ${t.prior}건) <b style="color:var(--grn)">+${t.delta}%</b></li>`).join('')}</ul>
+          `<li><b>${escHtml(t.name)}</b> <span style="color:var(--ink3)">[${escHtml(t.axis)}]</span> — ${t.fresh
+            ? `최근 30일 ${t.count}건 (직전 30일 0건) <b style="color:var(--grn)">신규 출현</b>`
+            : `일 ${t.rate}건 <b style="color:var(--grn)">${t.delta >= 0 ? '+' : ''}${t.delta}%</b>`} <span style="color:var(--ink3)">· ${escHtml(t.basis || '')}</span></li>`).join('')}</ul>
         <div class="gm-note2">언급이 많은 것보다 <b>늘고 있는 것</b>이 예측 대상입니다. 이 목록이 문화 신호 점수의 가산 근거입니다.</div>
       </div>`;
     }
@@ -1904,22 +1917,41 @@ async function collectExportTrend(pubKey) {
    호출은 상위 후보 KW_PROBE_MAX개로 제한(네이버 일 25,000회 대비 여유). */
 const KW_PROBE_MAX = 18;
 async function probeKeywordNews(nid, nsec, candidates) {
-  const now = Date.now(), D30 = 30 * 86400000;
+  /* 네이버 뉴스 API는 최신순으로 최대 100건만 준다. 기사가 많은 키워드는 100건이 최근 며칠에
+     몰려 '직전 30일'을 아예 관측하지 못한다. 이전 코드는 관측 못 한 구간을 0건으로 세어
+     중요한 키워드일수록 무조건 +100%가 나왔다(10월 화면의 급증 10개가 전부 100건·직전 0건).
+     → 두 구간을 실제로 관측했을 때만 증감률을 내고, 못 하면 '측정 불가'로 둔다.
+       대신 일평균 기사 밀도(rate)를 남겨 누적 이력과 비교해 증감을 판단한다. */
+  const now = Date.now(), DAY = 86400000, D30 = 30 * DAY, CAP = 100;
   const probe = async (kw) => {
     const j = await fetchNaverAPI(
-      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kw + ' 화장품')}&display=100&sort=date`,
+      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(kw + ' 화장품')}&display=${CAP}&sort=date`,
       nid, nsec, 9000);
     if (!j || j._error || !Array.isArray(j.items)) return null;
-    let recent = 0, prior = 0;
-    j.items.forEach(it => {
-      const ts = it.pubDate ? new Date(it.pubDate).getTime() : NaN;
-      if (isNaN(ts)) return;
-      const age = now - ts;
-      if (age <= D30) recent++;
-      else if (age <= 2 * D30) prior++;
-    });
-    const delta = prior > 0 ? Math.round((recent - prior) / prior * 100) : (recent > 0 ? 100 : 0);
-    return { name: kw, total: j.total || 0, count: recent, prior, delta, axis: KW_OF_AXIS[kw] || '기타' };
+    const ages = j.items
+      .map(it => (it.pubDate ? now - new Date(it.pubDate).getTime() : NaN))
+      .filter(a => Number.isFinite(a) && a >= 0);
+    if (!ages.length) return null;
+    /* API 상한에 걸려 더 오래된 기사를 못 본 상태인가 */
+    const capped = j.items.length >= CAP && (j.total || 0) > CAP;
+    const oldest = Math.max(...ages);
+    const recent = ages.filter(a => a <= D30).length;
+    const prior  = ages.filter(a => a > D30 && a <= 2 * D30).length;
+    const recentSeen = !capped || oldest >= D30;        /* 최근 30일을 끝까지 봤는가 */
+    const priorSeen  = !capped || oldest >= 2 * D30;    /* 직전 30일까지 봤는가 */
+    /* 일평균 기사 밀도 — 실제로 관측한 기간으로 나눈다 */
+    const rate = recentSeen ? recent / 30 : ages.length / Math.max(oldest / DAY, 0.5);
+    let delta = null, basis = null, fresh = false;
+    if (recentSeen && priorSeen) {
+      if (prior > 0) { delta = Math.round((recent - prior) / prior * 100); basis = '30일 비교'; }
+      else if (recent >= 5) { fresh = true; basis = '신규 출현'; }   /* 직전 0건 — 비율이 정의되지 않는다 */
+    }
+    return {
+      name: kw, total: j.total || 0, count: recent, countExact: recentSeen,
+      prior: priorSeen ? prior : null, delta, basis, fresh,
+      rate: Math.round(rate * 100) / 100, capped, measurable: delta !== null || fresh,
+      axis: KW_OF_AXIS[kw] || '기타',
+    };
   };
   const out = [];
   /* 4개씩 묶어 순차 — 동시 호출 폭주로 인한 429 회피 */
@@ -1929,6 +1961,30 @@ async function probeKeywordNews(nid, nsec, candidates) {
   }
   return out;
 }
+
+/* 30일 비교가 불가능한 고빈도 키워드는 누적 이력(history.json의 kwRate)과 비교한다.
+   21~45일 전 기록 중 30일 전에 가장 가까운 날의 일평균 밀도를 기준으로 삼는다. */
+function applyHistorySurge(list, history) {
+  if (!Array.isArray(list) || !Array.isArray(history) || !history.length) return list;
+  const today = Date.now(), DAY = 86400000;
+  const cands = history
+    .map(h => ({ h, age: (today - new Date(h.date + 'T00:00:00').getTime()) / DAY }))
+    .filter(x => x.age >= 21 && x.age <= 45 && x.h.kwRate)
+    .sort((a, b) => Math.abs(a.age - 30) - Math.abs(b.age - 30));
+  list.forEach(r => {
+    if (r.measurable) return;
+    const ref = cands.find(x => typeof x.h.kwRate[r.name] === 'number' && x.h.kwRate[r.name] > 0);
+    if (!ref) return;
+    const then = ref.h.kwRate[r.name];
+    r.delta = Math.round((r.rate - then) / then * 100);
+    r.basis = `이력 비교(${Math.round(ref.age)}일 전 일 ${then}건)`;
+    r.measurable = true;
+  });
+  return list;
+}
+
+/* 표시용 — 상한에 걸려 하한값인 건수는 '+'를 붙인다 */
+const kwCountLabel = r => `${r.count}${r.countExact === false ? '+' : ''}건`;
 
 async function collectCulture() {
   setSdot('sd-datalab', 'warn');
@@ -2013,13 +2069,20 @@ async function collectCulture() {
 
   /* 후보를 네이버 뉴스로 직접 조회해 실제 기사 건수·급증률을 측정 (1건씩 잡히던 문제 해소) */
   const probed = candidates.length ? await probeKeywordNews(nid, nsec, candidates) : [];
-  window._kwVolume = probed.length ? probed.slice().sort((a,b)=>b.count-a.count) : null;
+  /* 30일 비교가 안 되는 고빈도 키워드는 누적 이력과 비교한다 */
+  applyHistorySurge(probed, window._history);
+  /* 언급 규모는 건수보다 일평균 밀도로 정렬 — 상한(100건)에 걸린 키워드끼리도 구분된다 */
+  window._kwVolume = probed.length ? probed.slice().sort((a,b)=>b.rate-a.rate) : null;
+  /* 급증 = 실제로 증감을 측정할 수 있었던 키워드만 */
   window._kwSurge  = probed.length
-    ? probed.filter(r => r.count >= 5 && r.delta >= 20).sort((a,b)=>b.delta-a.delta)
+    ? probed.filter(r => r.count >= 5 && (r.fresh || (r.delta !== null && r.delta >= 20)))
+        .sort((a,b)=>(b.fresh - a.fresh) || (b.delta - a.delta))
     : null;
-  /* 최다언급 트렌드 = 실측 기사 건수 기준 상위 12 (기존 3건 → 확대) */
+  /* 고빈도 — 언급은 많지만 증감을 아직 판정할 수 없는 키워드(이력 누적 후 판정) */
+  window._kwHighFreq = probed.length ? probed.filter(r => !r.measurable).sort((a,b)=>b.rate-a.rate) : null;
+  /* 최다언급 트렌드 = 일평균 밀도 기준 상위 12 */
   window._newsTrends = probed.length
-    ? probed.slice().sort((a,b)=>b.count-a.count).slice(0,12).map(r=>({name:r.name, count:r.count, delta:r.delta, axis:r.axis}))
+    ? window._kwVolume.slice(0,12).map(r=>({name:r.name, count:r.count, countExact:r.countExact, rate:r.rate, delta:r.delta, basis:r.basis, axis:r.axis}))
     : (candidates.length ? candidates.slice(0,12).map(k=>({name:k, count:combinedKw[k]})) : null);
   const topMentioned = (window._newsTrends || []).map(t => [t.name, t.count]);
 
@@ -2046,7 +2109,7 @@ async function collectCulture() {
     score,
     interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
       + (window._kwVolume ? ` · 키워드 ${window._kwVolume.length}종 실측(최근 30일)` : '')
-      + (surge.length ? ` · 급증 "${surge.slice(0,3).map(r=>`${r.name} +${r.delta}%`).join('·')}"` : '')
+      + (surge.length ? ` · 급증 "${surge.slice(0,3).map(r=>r.fresh ? `${r.name} 신규` : `${r.name} +${r.delta}%`).join('·')}"` : '')
       + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a,c])=>`${a} ${c}건`).join('·')}` : '')
       + (topMentioned.length ? ` · 최다 언급 "${topMentioned.slice(0,5).map(([n])=>n).join('·')}"` : '')
       + (top ? ` · 검색 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
@@ -2055,8 +2118,8 @@ async function collectCulture() {
       + ' — 전체 유형 트렌드 종합',
     chips: [
       `뉴스 ${totalNews.toLocaleString()}건`,
-      ...surge.slice(0, 2).map(r => `급증 ${r.name} +${r.delta}%`),
-      ...(window._kwVolume || []).slice(0, 2).map(r => `${r.name} ${r.count}건`),
+      ...surge.slice(0, 2).map(r => r.fresh ? `신규 ${r.name}` : `급증 ${r.name} +${r.delta}%`),
+      ...(window._kwVolume || []).slice(0, 2).map(r => `${r.name} 일 ${r.rate}건`),
       ...(exportChip ? [exportChip] : []), ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []),
     ].slice(0, 6),
     _sample: totalNews === 0 && !top && !xTop
@@ -3713,13 +3776,18 @@ async function runGeminiPrediction(period) {
       + window._dlTrends.map(t => `${t.name} ${t.delta >= 0 ? '+' : ''}${t.delta}%`).join(' · ')
     : '';
   const newsDetail = (window._newsTrends && window._newsTrends.length)
-    ? `\n[뷰티 뉴스·미디어 언급 키워드 — 최근 30일 기사 건수 실측 (축: 제형/성분/기능/포맷/소비)]\n`
-      + window._newsTrends.map(t => `${t.name}${t.axis ? `[${t.axis}]` : ''} ${t.count}건${typeof t.delta === 'number' ? ` ${t.delta >= 0 ? '+' : ''}${t.delta}%` : ''}`).join(' · ')
+    ? `\n[뷰티 뉴스·미디어 언급 키워드 — 일평균 기사 밀도 실측 (축: 제형/성분/기능/포맷/소비)]\n`
+      + window._newsTrends.map(t => `${t.name}${t.axis ? `[${t.axis}]` : ''} ${typeof t.rate === 'number' ? `일 ${t.rate}건` : `${t.count}건`}${typeof t.delta === 'number' ? ` ${t.delta >= 0 ? '+' : ''}${t.delta}%` : ''}`).join(' · ')
     : '';
   const surgeDetail = (window._kwSurge && window._kwSurge.length)
-    ? `\n[급증 키워드 — 최근 30일 vs 직전 30일 기사 증가 (문화 신호의 핵심)]\n`
-      + window._kwSurge.slice(0, 8).map(t => `${t.name}[${t.axis}] ${t.count}건 +${t.delta}%`).join(' · ')
+    ? `\n[급증 키워드 — 증감을 실제로 측정할 수 있었던 키워드만 (문화 신호의 핵심)]\n`
+      + window._kwSurge.slice(0, 8).map(t => `${t.name}[${t.axis}] ${t.fresh ? '신규 출현(직전 30일 0건)' : `${t.delta >= 0 ? '+' : ''}${t.delta}%`} — ${t.basis}`).join(' · ')
       + `\n※ 언급량이 큰 것보다 '늘고 있는 것'이 예측 대상이다. 위 급증 키워드를 우선 반영하라.`
+    : '';
+  const hiFreqDetail = (window._kwHighFreq && window._kwHighFreq.length)
+    ? `\n[고빈도 키워드 — 언급은 많으나 증감 미측정(뉴스 API 100건 상한)]\n`
+      + window._kwHighFreq.slice(0, 8).map(t => `${t.name} 일 ${t.rate}건`).join(' · ')
+      + `\n※ 증가 근거가 아니다. 규모 참고로만 쓰고 급증으로 해석하지 마라.`
     : '';
   const tr = window._trendReports;
   const reportDetail = (tr && (tr.keywords || []).length)
@@ -3821,7 +3889,7 @@ async function runGeminiPrediction(period) {
 신호는 '수요(소비자 관심·구매)'와 '공급·규제(제조사 보고·확정 규제)' 두 축으로 구성되며, 공급·규제 신호가 수요보다 선행합니다.
 
 [4대 신호 현황]
-${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${surgeDetail}${reportDetail}${societyDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
+${formRadarPromptBlock()}${sigSummary}${exportDetail}${salesDetail}${dlDetail}${newsDetail}${surgeDetail}${hiFreqDetail}${reportDetail}${societyDetail}${ytDetail}${gtrendsDetail}${redditDetail}${supplyDetail}${regDetail}${expoDetail}${retailFeedDetail}${retailDetail}${lifecycleDetail}${climateDetail}${nearTermNote}
 분석 기준월: ${yr}년 ${now.getMonth()+1}월
 
 [출력 규칙 엄수]
@@ -4786,6 +4854,7 @@ function applyPrecollected(pre) {
   window._newsTrends = pre.newsTrends || null;
   window._kwVolume = pre.kwVolume || pre.newsTrends || null;
   window._kwSurge = pre.kwSurge || null;
+  window._kwHighFreq = pre.kwHighFreq || null;
   window._trendReports = pre.trendReports || null;
   window._rssFeedStatus = pre.rssFeedStatus || null;
   window._rssText = pre.rssText || '';
@@ -4811,6 +4880,8 @@ async function collectAll() {
 
   /* 진행률 바 — 수집은 8단계라 버튼 텍스트만으로는 얼마나 남았는지 알 수 없다.
      frac은 0~1. 생략하면 바는 그대로 두고 문구만 바꾼다. */
+  /* 급증 키워드의 이력 비교에 필요 — 문화 수집 전에 누적 이력을 먼저 읽어 둔다 */
+  if (!window._history) window._history = await loadHistory();
   const prog = document.getElementById('collectProg');
   const progBar = document.getElementById('collectProgBar');
   const progLabel = document.getElementById('collectProgLabel');
@@ -4972,8 +5043,15 @@ function genReport() {
   }
   if (window._kwSurge && window._kwSurge.length) {
     lines.push('');
-    lines.push('▶ 급증 키워드 — 최근 30일 vs 직전 30일 기사 증가');
-    window._kwSurge.slice(0, 10).forEach(t => lines.push(`  • ${t.name}[${t.axis}]: ${t.count}건 (직전 ${t.prior}건) +${t.delta}%`));
+    lines.push('▶ 급증 키워드 — 증감을 실제로 측정한 것만');
+    window._kwSurge.slice(0, 10).forEach(t => lines.push(t.fresh
+      ? `  • ${t.name}[${t.axis}]: 신규 출현 — 최근 30일 ${t.count}건, 직전 30일 0건`
+      : `  • ${t.name}[${t.axis}]: ${t.delta >= 0 ? '+' : ''}${t.delta}% (일 ${t.rate}건 · ${t.basis})`));
+  }
+  if (window._kwHighFreq && window._kwHighFreq.length) {
+    lines.push('');
+    lines.push('▶ 고빈도 키워드 — 언급 많음 · 증감 미측정(뉴스 API 100건 상한, 이력 누적 후 판정)');
+    lines.push('  ' + window._kwHighFreq.slice(0, 10).map(t => `${t.name}(일 ${t.rate}건)`).join(' · '));
   }
   lines.push('');
   lines.push('▶ 사회·인구 구조 앵커');
