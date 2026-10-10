@@ -470,6 +470,8 @@ function buildHistoryRecord(o) {
     /* 모멘텀 */
     topKeywords: topKw,
     kwRate,
+    /* 점수 산식 버전 — 바뀐 날을 누적 차트에 표시해 전후를 같은 척도로 읽지 않게 한다 */
+    methods: { culture: sig.culture?.method || null },
     surge: topSurge,
     export: (o.exportTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),
     search: (o.dlTrends || []).slice(0, 3).map(t => ({ n: t.name, d: t.delta })),

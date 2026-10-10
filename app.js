@@ -907,6 +907,18 @@ function buildSigDetailHtml(key) {
     </div>`;
   }
   if (key === 'culture') {
+    const cs = SIG_DATA.culture || {};
+    if (cs.method === 'v2') {
+      const comp = cs.components || [];
+      body += `<div class="gm-block"><div class="gm-block-title">점수 산출 근거 — 중립 3.0에서 각 축이 얼마나 움직였나</div>
+        ${comp.length ? `<ul class="gm-list">${comp.map(c =>
+          `<li><b>${escHtml(c.k)}</b> <b style="color:${c.v > 0 ? 'var(--grn)' : c.v < 0 ? 'var(--red)' : 'var(--ink3)'}">${c.v > 0 ? '+' : ''}${c.v.toFixed(2)}</b> <span style="color:var(--ink3)">· ${escHtml(c.basis)}</span></li>`).join('')}
+          <li><b>합계</b> 3.0 ${comp.reduce((a, c) => a + c.v, 0) >= 0 ? '+' : ''}${comp.reduce((a, c) => a + c.v, 0).toFixed(2)} → <b>${cs.score}</b></li></ul>`
+          : `<div class="gm-p">증감을 잴 축(검색·구매·수출)이 없어 중립값 3.0으로 두었습니다. 네이버 키를 등록하면 변화율로 산출됩니다.</div>`}
+        <div class="gm-note2">각 축의 평균 증감률을 ±50%에서 잘라 가중치만큼 반영합니다(검색 ±0.6 · 구매 ±0.5 · 수출 ±0.4 · 상위 상승 강도 0~0.3 · 측정된 급증 0~0.3).
+          이전 산식은 네이버 누적 매칭 기사 수로 기본 4.4점을 주고 가산을 얹어 거의 항상 5.0이었습니다.</div>
+      </div>`;
+    }
     body += trendListHtml('네이버 검색 모멘텀(DataLab)', window._dlTrends);
     body += trendListHtml('네이버 구매(쇼핑클릭) 모멘텀', window._salesTrends);
     if (window._kwSurge && window._kwSurge.length) {
@@ -1750,13 +1762,14 @@ async function collectNewsTrends(nid, nsec) {
     const url = `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(q)}&display=30&sort=date`;
     return fetchNaverAPI(url, nid, nsec, 10000);
   }));
-  let total = 0, ok = false;
+  let total = 0, received = 0, ok = false;
   const kwMap = {};
   const articles = [];   /* ZONE 0 문화 카드 클릭 시 "분석 근거 자료"로 노출할 기사 제목+링크 */
   resps.forEach(j => {
     if (!j || j._error) return;
     ok = true;
-    total += j.total || 0;
+    total += j.total || 0;          /* 검색어에 걸리는 누적 기사 수 — 분석한 건수가 아니다 */
+    received += (j.items || []).length;
     (j.items || []).forEach(it => {
       const title = (it.title || '').replace(/<[^>]+>/g, '');
       const text = `${title} ${it.description}`.replace(/<[^>]+>/g, '');
@@ -1764,7 +1777,7 @@ async function collectNewsTrends(nid, nsec) {
       if (it.link && articles.length < 20) articles.push({ title, link: it.link, source: '네이버뉴스' });
     });
   });
-  return { total, kwMap, ok, articles };
+  return { total, received, kwMap, ok, articles };
 }
 
 async function collectDataLab(nid, nsec) {
@@ -1909,6 +1922,37 @@ async function collectExportTrend(pubKey) {
   return { trends: trends.length ? trends : null, err: trends.length ? null : (err || 'empty') };
 }
 
+/* ════ 문화 신호 점수 v2 — 변화율 기반 ════
+   이전 산식은 네이버 '누적 매칭 기사 수'(수십만)가 1,000을 넘으면 기본 4.4를 주고 가산 4개
+   (+0.3씩)를 얹어 사실상 항상 5.0이었다. 판별력이 없었다.
+   v2는 3.0을 중립으로 두고, 각 축의 평균 증감률을 ±50%로 자른 뒤 가중치만큼 더하고 뺀다.
+   절대 규모가 아니라 '움직임'을 점수로 만든다. 구성요소를 함께 돌려 근거로 보여준다.
+     검색 ±0.6 · 구매(쇼핑클릭) ±0.5 · 수출 ±0.4 · 상위 상승 강도 0~0.3 · 측정된 급증 0~0.3 */
+const CULTURE_METHOD = 'v2';
+function cultureScoreV2({ dl, sales, exp, surge }) {
+  const comp = [];
+  const clip = v => Math.max(-50, Math.min(50, Number(v) || 0));
+  const mom = (list, w, label) => {
+    if (!Array.isArray(list) || !list.length) return;
+    const mean = list.reduce((a, t) => a + clip(t.delta), 0) / list.length;
+    comp.push({ k: label, v: Math.round((mean / 50) * w * 100) / 100,
+                basis: `평균 ${mean >= 0 ? '+' : ''}${Math.round(mean)}% · ${list.length}개 항목`, axis: true });
+  };
+  mom(dl, 0.6, '검색 모멘텀');
+  mom(sales, 0.5, '구매(쇼핑클릭) 모멘텀');
+  mom(exp, 0.4, '수출 모멘텀');
+  /* 평균은 내려도 뚜렷하게 오르는 품목이 있으면 트렌드는 살아 있다 */
+  const tops = [...(dl || []), ...(sales || [])].map(t => Number(t.delta) || 0).sort((a, b) => b - a).slice(0, 3);
+  if (tops.length) {
+    const t = Math.max(0, Math.min(50, tops.reduce((a, b) => a + b, 0) / tops.length));
+    comp.push({ k: '상위 상승 강도', v: Math.round((t / 50) * 0.3 * 100) / 100, basis: `상위 ${tops.length}개 평균 +${Math.round(t)}%` });
+  }
+  const ms = (surge || []).filter(r => r && r.measurable !== false);
+  if (ms.length) comp.push({ k: '급증 키워드', v: Math.round(Math.min(ms.length, 3) * 0.1 * 100) / 100, basis: `측정된 급증 ${ms.length}개` });
+  const raw = 3 + comp.reduce((a, c) => a + c.v, 0);
+  return { score: Math.round(Math.max(1, Math.min(5, raw)) * 10) / 10, comp, measured: comp.some(c => c.axis) };
+}
+
 /* ════ 키워드별 뉴스 볼륨·급증률 실측 (네이버 뉴스 API) ════
    기존에는 고정 쿼리 몇 개로 기사를 받아 키워드를 세다 보니 키워드당 1~3건밖에 잡히지
    않았다. 여기서는 후보 키워드를 '화장품'과 조합해 직접 조회해 ① 전체 기사 수(total)와
@@ -1933,7 +1977,9 @@ async function probeKeywordNews(nid, nsec, candidates) {
       .filter(a => Number.isFinite(a) && a >= 0);
     if (!ages.length) return null;
     /* API 상한에 걸려 더 오래된 기사를 못 본 상태인가 */
-    const capped = j.items.length >= CAP && (j.total || 0) > CAP;
+    /* 전체 기사 수(total)보다 적게 받았다면 일부만 본 것이다 — 100건 상한뿐 아니라
+       API가 덜 돌려준 경우도 '전부 관측'으로 오판하지 않게 total과 비교한다 */
+    const capped = (j.total || 0) > j.items.length;
     const oldest = Math.max(...ages);
     const recent = ages.filter(a => a <= D30).length;
     const prior  = ages.filter(a => a > D30 && a <= 2 * D30).length;
@@ -2025,18 +2071,24 @@ async function collectCulture() {
       const axisCount = {};
       (window._newsTrends || []).forEach(r => { axisCount[r.axis] = (axisCount[r.axis]||0) + r.count; });
       const axisTop = Object.entries(axisCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+      /* 변화율을 잴 축이 없다 — 기사 수(규모)로 점수를 매기던 방식은 판별력이 없어 버린다.
+         기사 수집은 실데이터지만 점수는 중립값이므로 샘플로 표시한다 */
       SIG_DATA.culture = {
-        score: rssData.count > 300 ? 4.0 : rssData.count > 100 ? 3.8 : 3.4,
-        interpret: `뷰티미디어 ${feedsUsed}개 매체 RSS ${rssData.count}건 · 키워드 ${ranked.length}종 언급 집계`
-          + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a,c])=>`${a} ${c}건`).join('·')}` : '')
+        score: 3.0,
+        method: CULTURE_METHOD,
+        components: [],
+        interpret: `뷰티미디어 ${feedsUsed}개 매체 기사 ${rssData.count}건 수집 · 키워드 ${ranked.length}종 언급 집계`
+          + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a])=>a).join('>')}` : '')
           + (ranked.length ? ` · 최다 "${ranked.slice(0,5).map(([n])=>n).join('·')}"` : '')
-          + ' — 네이버 키 입력 시 키워드별 기사 건수·급증률 실측 추가',
-        chips: [`RSS ${rssData.count}건`, ...ranked.slice(0, 4).map(([n,c]) => `${n} ${c}건`)]
+          + ' — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)',
+        chips: [`기사 ${rssData.count}건`, '모멘텀 미측정', ...ranked.slice(0, 3).map(([n,c]) => `${n} ${c}건`)],
+        _sample: true,
       };
     } else {
       setSdot('sd-datalab', 'off');
       window._newsTrends = null;
-      SIG_DATA.culture = { score:4.2, interpret:'문화 데이터 수집 불가 (네이버 키 필요) — 샘플 값 사용', chips:['API 키 필요'], _sample:true };
+      /* 기사도 못 받았다 — 근거 없는 고정값(4.2) 대신 v2와 같은 중립 3.0으로 둔다 */
+      SIG_DATA.culture = { score:3.0, method: CULTURE_METHOD, components: [], interpret:'문화 데이터 수집 불가 — 뷰티 매체 RSS 응답 없음, 네이버 키도 없음 (점수는 중립 3.0)', chips:['수집 불가','API 키 필요'], _sample:true };
     }
     return;
   }
@@ -2086,43 +2138,38 @@ async function collectCulture() {
     : (candidates.length ? candidates.slice(0,12).map(k=>({name:k, count:combinedKw[k]})) : null);
   const topMentioned = (window._newsTrends || []).map(t => [t.name, t.count]);
 
-  const totalNews = (newsTrends.total || 0) + rssData.count;
+  /* '분석 N건' = 실제로 받아서 키워드를 센 기사 수. 네이버 total(누적 매칭 수)은 쓰지 않는다 */
+  const analyzed = (newsTrends.received || 0) + rssData.count;
   const top = dlResult.trends?.[0];
   const sTop = salesResult.trends?.[0];
   const xTop = exportResult.trends?.[0];
   const dlChip = top ? `검색 ${top.name} ${top.delta >= 0 ? '+' : ''}${top.delta}%` : null;
   const salesChip = sTop ? `구매 ${sTop.name} ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : null;
   const exportChip = xTop ? `수출 ${xTop.name} ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : null;
-  const mentionChip = topMentioned.length ? `최다언급 "${topMentioned[0][0]}"(${topMentioned[0][1]}건)` : null;
-  let score = totalNews > 1000 ? 4.4 : totalNews > 100 ? 3.9 : 3.5;
-  if (top && top.delta >= 20) score = Math.min(5, score + 0.3);
-  /* 구매의도(쇼핑클릭)·수출(실판매) 급등은 가장 강한 선행 신호 — 추가 가산 */
-  if (sTop && sTop.delta >= 20) score = Math.min(5, score + 0.3);
-  if (xTop && xTop.delta >= 15) score = Math.min(5, score + 0.3);
-  /* 언급이 어느 축에서 움직이는지 — 제형/성분/기능/포맷/소비 분포 */
+  /* 언급이 어느 축에서 움직이는지 — 제형/성분/기능/포맷/소비 분포(일평균 밀도 기준) */
   const axisCount = {};
-  (window._kwVolume || []).forEach(r => { axisCount[r.axis] = (axisCount[r.axis] || 0) + r.count; });
+  (window._kwVolume || []).forEach(r => { axisCount[r.axis] = (axisCount[r.axis] || 0) + (r.rate || 0); });
   const axisTop = Object.entries(axisCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const surge = window._kwSurge || [];
-  if (surge.length) score = Math.min(5, score + 0.3);
+  const sc = cultureScoreV2({ dl: dlResult.trends, sales: salesResult.trends, exp: exportResult.trends, surge });
   SIG_DATA.culture = {
-    score,
-    interpret: `화장품 뉴스 ${totalNews.toLocaleString()}건 분석`
-      + (window._kwVolume ? ` · 키워드 ${window._kwVolume.length}종 실측(최근 30일)` : '')
+    score: sc.score,
+    method: CULTURE_METHOD,
+    components: sc.comp,
+    interpret: `기사 ${analyzed.toLocaleString()}건 분석(RSS ${rssData.count} · 네이버 ${newsTrends.received || 0})`
+      + (window._kwVolume ? ` · 키워드 ${window._kwVolume.length}종 밀도 실측` : '')
       + (surge.length ? ` · 급증 "${surge.slice(0,3).map(r=>r.fresh ? `${r.name} 신규` : `${r.name} +${r.delta}%`).join('·')}"` : '')
-      + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a,c])=>`${a} ${c}건`).join('·')}` : '')
-      + (topMentioned.length ? ` · 최다 언급 "${topMentioned.slice(0,5).map(([n])=>n).join('·')}"` : '')
-      + (top ? ` · 검색 급상승 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
-      + (sTop ? ` · 구매(쇼핑클릭) 급상승 "${sTop.name}" ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : '')
-      + (xTop ? ` · 수출(실판매) 급상승 "${xTop.name}" ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : '')
-      + ' — 전체 유형 트렌드 종합',
+      + (axisTop.length ? ` · 축 분포 ${axisTop.map(([a])=>a).join('>')}` : '')
+      + (top ? ` · 검색 최상위 "${top.name}" ${top.delta >= 0 ? '+' : ''}${top.delta}%` : '')
+      + (sTop ? ` · 구매 최상위 "${sTop.name}" ${sTop.delta >= 0 ? '+' : ''}${sTop.delta}%` : '')
+      + (xTop ? ` · 수출 최상위 "${xTop.name}" ${xTop.delta >= 0 ? '+' : ''}${xTop.delta}%` : '')
+      + ` — 점수는 각 축 평균 증감률 기준(중립 3.0)`,
     chips: [
-      `뉴스 ${totalNews.toLocaleString()}건`,
+      `기사 ${analyzed.toLocaleString()}건`,
       ...surge.slice(0, 2).map(r => r.fresh ? `신규 ${r.name}` : `급증 ${r.name} +${r.delta}%`),
-      ...(window._kwVolume || []).slice(0, 2).map(r => `${r.name} 일 ${r.rate}건`),
-      ...(exportChip ? [exportChip] : []), ...(salesChip ? [salesChip] : []), ...(dlChip ? [dlChip] : []),
+      ...(dlChip ? [dlChip] : []), ...(salesChip ? [salesChip] : []), ...(exportChip ? [exportChip] : []),
     ].slice(0, 6),
-    _sample: totalNews === 0 && !top && !xTop
+    _sample: !sc.measured,
   };
 }
 
@@ -3209,6 +3256,13 @@ function chartSignals(hist) {
     const last = pts[pts.length - 1];
     ends.push({ sr, last, allSample, cy: y(last.v) });
   });
+  /* 문화 점수 산식이 바뀐 날 — 그 전후 값을 같은 척도로 읽으면 안 되므로 표시한다 */
+  const mIdx = hist.findIndex((h, i) => i > 0 && (h.methods || {}).culture === 'v2' && (hist[i - 1].methods || {}).culture !== 'v2');
+  if (mIdx > 0) {
+    const mx = x(mIdx);
+    lines += `<line class="ch-method" x1="${mx}" y1="${MT}" x2="${mx}" y2="${MT + ih}"></line>`
+           + `<text class="ch-method-l" x="${mx + 4}" y="${MT + 9}">문화 산식 변경</text>`;
+  }
   /* 값이 같으면 라벨이 겹쳐 글자가 뭉개진다 — y로 정렬해 최소 간격만큼 벌린다 */
   const GAP = 12;
   ends.sort((a, b) => a.cy - b.cy);
@@ -4986,7 +5040,10 @@ async function collectAll() {
 
   endProgress();
   btn.textContent = '전체 수집 실행'; btn.classList.remove('running'); btn.disabled = false;
-  showToast('수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
+  /* 결과에 맞는 안내 — 예측이 실패했는데 'TOP5 도출됨'이라고 하면 안 된다 */
+  showToast(predsAreSample() || !PREDICTIONS.length
+    ? '수집 완료 — AI 예측은 실패했습니다 (사유는 예측 결과 영역 참고)'
+    : '수집 완료 — 예측 TOP5 도출됨 · 보고서 자동 생성됨');
 }
 
 function updateStatusSummary() {

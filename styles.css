@@ -398,6 +398,8 @@ button { font-family: inherit; cursor: pointer; }
 .ch-svg circle.ch-end:not([fill]) { fill: var(--acc); }
 .ch-dlabel { font-size: 9.5px; font-weight: 600; }
 .ch-leader { stroke-width: 1; opacity: .5; }
+.ch-method { stroke: var(--ink3); stroke-width: 1; stroke-dasharray: 2 3; }
+.ch-method-l { font-size: 9px; fill: var(--ink3); }
 .ch-volabel { fill: var(--acc); }
 .ch-empty { font-size: 10.5px; color: var(--ink3); padding: 6px 2px; }
 .kbars { display: flex; flex-direction: column; gap: 5px; }
