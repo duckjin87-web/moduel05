@@ -1,17 +1,17 @@
 {
-  "collectedAt": "2026-10-23T23:47:10.046Z",
+  "collectedAt": "2026-10-24T22:59:00.023Z",
   "sig": {
     "climate": {
       "score": 3.3,
-      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 +2.4℃ → 시즌 조기 진입 가능성 · 16일 단기예보 하강추세(-3.9℃, 참고용) → 보습라인 전환 고려 · 평년 기준 전망: 1개월 후(11월) 평균최고 9.5℃ · 3개월 후(1월) 평균최고 0.1℃ · 6개월 후(4월) 평균최고 20.8℃",
+      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 +7.8℃ → 시즌 조기 진입 가능성 · 16일 단기예보 하강추세(-3.8℃, 참고용) → 보습라인 전환 고려 · 평년 기준 전망: 1개월 후(11월) 평균최고 8.3℃ · 3개월 후(1월) 평균최고 -0.2℃ · 6개월 후(4월) 평균최고 20.8℃",
       "chips": [
-        "기온 13.8℃",
+        "기온 10.5℃",
         "PM10 —",
-        "습도 86%",
-        "UV 0.55",
-        "평년대비 +2.4℃",
-        "16일추세 -3.9℃",
-        "평년전망 1m 9.5℃/3m 0.1℃/6m 20.8℃"
+        "습도 94%",
+        "UV 0.45",
+        "평년대비 +7.8℃",
+        "16일추세 -3.8℃",
+        "평년전망 1m 8.3℃/3m -0.2℃/6m 20.8℃"
       ],
       "_sample": false
     },
@@ -39,13 +39,13 @@
       "score": 3,
       "method": "v2",
       "components": [],
-      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 56종 언급 집계 · 축 분포 소비>기능>성분 · 최다 \"수출·더마·올리브영·메이크업·두피\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
+      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 56종 언급 집계 · 축 분포 소비>기능>성분 · 최다 \"수출·더마·메이크업·올리브영·두피\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
       "chips": [
         "기사 160건",
         "모멘텀 미측정",
-        "수출 11건",
+        "수출 12건",
         "더마 6건",
-        "올리브영 5건"
+        "메이크업 6건"
       ],
       "_sample": true
     }
@@ -67,13 +67,13 @@
         "platform": "Sephora",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 86
+        "items": 84
       },
       {
         "platform": "Ulta",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 78
+        "items": 77
       },
       {
         "platform": "@cosme",
@@ -85,7 +85,7 @@
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 71
+        "items": 69
       }
     ],
     "formulations": [
@@ -116,7 +116,7 @@
   "newsTrends": [
     {
       "name": "수출",
-      "count": 11,
+      "count": 12,
       "axis": "소비"
     },
     {
@@ -125,12 +125,12 @@
       "axis": "소비"
     },
     {
-      "name": "올리브영",
-      "count": 5,
+      "name": "메이크업",
+      "count": 6,
       "axis": "소비"
     },
     {
-      "name": "메이크업",
+      "name": "올리브영",
       "count": 5,
       "axis": "소비"
     },
@@ -270,6 +270,13 @@
         "via": "news"
       },
       {
+        "title": "2026 K-뷰티 트렌드 : Trend - 리테일톡",
+        "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFBYakJqckwzX1FYQnRmRWNqdGdnOE9Ld2ctelRzb2NPbEo3azd2YS1SUm9pVVVGdDFRMjNBQkowQ19oRzJpS1IzNW1OZ3ItM2JFelVlbGNpRnZxaEljZXdZclgtLWFoSE0?oc=5",
+        "date": "Wed, 02 Sep 2026 07:00:00 GMT",
+        "publisher": "트렌디어 라이브러리",
+        "via": "news"
+      },
+      {
         "title": "트렌디어, ‘K-뷰티 트렌드 서밋 2025’ 팡파르! - 코스모닝",
         "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTFBHcEZ3aDhtQjctOHRTQUFCSjg3c1dCc0JhMEFla0V1NWZsQjFIY2tuSGh3T0pieHpWNVAxMzc3eU5meDcweDFpMml6RzdpLTR5Rk5PcEEzcjdGNkZ3Y3c?oc=5",
         "date": "Tue, 24 Jun 2025 07:00:00 GMT",
@@ -291,16 +298,9 @@
         "via": "news"
       },
       {
-        "title": "2025 K-뷰티 트렌드 : Trend - 리테일톡",
-        "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE82a3Mzb25fZm8yelFNaTY2UmI0ekhXTmZSZ1Zjd3U3R0JTN3JOUmhpcmVETmVGWExUS3VRU1ZJTy05U0ZVOGdnSTAzTnVPU2lWVEh5UDlRcUxJcDR4anVNcF9KVDI1Zkk?oc=5",
-        "date": "Wed, 11 Jun 2025 07:00:00 GMT",
-        "publisher": "트렌디어 라이브러리",
-        "via": "news"
-      },
-      {
-        "title": "트렌디어AI, ‘K-뷰티 트렌드 서밋 2025’ 개막 - 코스모닝",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE5SLWlEWndpUVo3dzB5MnExa0tXUzZpbjByMXg2eWhSVU9UX1pYVmpYb0R1NG0wU3E1d0JNZnVYMFAtNUJiblhWaDgzZXE3NzBIM000RWNtLTE1TmVWbUNIOEVNcw?oc=5",
-        "date": "Tue, 04 Nov 2025 08:00:00 GMT",
+        "title": "글로벌 뷰티 키워드 1위 ‘사용감’ - 주간신문씨엠엔",
+        "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTE93bGJEUnFZRlBWQVpOblN4aXZCa21kYWpVRXg0OGRzeVJlcVl6ZXpxd01TNXRhdDRkYkUwbjV6MkVNaEh5NDBuUGdpcUJWM1J6cHlmM0M4bi1CclJwUFNRaGxuWDQtQQ?oc=5",
+        "date": "Thu, 30 Oct 2025 07:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -354,9 +354,9 @@
         "via": "news"
       },
       {
-        "title": "화해 ‘2026 뷰티 트렌드 리포트’ 발표 - 코스모닝",
-        "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9kUnhNVFRXWHJ6VmphSFpPcTNsS0ZzTHlZZ3g2MExMUzFiLXJYY1BBczliYXE0U0NVVjY5Y2RGMjh5amFtdWxyNndxODJLNHMweWZDVktMcmdDVE9wQ2c?oc=5",
-        "date": "Tue, 26 Aug 2025 07:00:00 GMT",
+        "title": "화해 1250만 사용자 데이터로 읽은 2026 뷰티 트렌드 FIND 발표 - 한경매거진",
+        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBSaFBmRkNEbDVoTEtiQ3NoNGVLS1RJWXhvMFVseW9HQm9NcHZwY2k2TmZUdzhVaEREN0hPY0o2cFF0dFp6dHdMZWw2V1cxZkt2RnhqcktlMElibllMelVROGtPZ3dVRmtnNDFn?oc=5",
+        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -364,6 +364,13 @@
         "title": "[뷰스컴퍼니] 2025년 12월 올리브영 &amp; 다이소 트렌드 리포트 - 아이보스",
         "link": "https://news.google.com/rss/articles/CBMiTkFVX3lxTE9wVEVER1N3WmVMZHMydjJIRm9NNnVmQ0xhaVJTLVpEQm5uYmpKQ0xRNm5tQm1IeWpUdWtnZ3J3NzRpdGlUVFg0cl9jR0d0UQ?oc=5",
         "date": "Mon, 29 Dec 2025 08:00:00 GMT",
+        "publisher": "올리브영 인사이트 스튜디오",
+        "via": "news"
+      },
+      {
+        "title": "[인사이트코리아 기획연재 ②] 같은 리뷰 10만 건, 전혀 다른 결론 - 코스인코리아닷컴",
+        "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE1Qd3hJaGczdXBJeTlWU01XNlBISTRwVG5HeHNONHNuV2ZaWEttcVgwbXdLYXFsU1hubTcyZ3cxdjBNWld3YnB0UjBDNTFkVTNFY3d2S1JWcldrNUJEQVlLNw?oc=5",
+        "date": "Mon, 10 Aug 2026 07:00:00 GMT",
         "publisher": "올리브영 인사이트 스튜디오",
         "via": "news"
       },
@@ -396,13 +403,6 @@
         "via": "news"
       },
       {
-        "title": "'온전한 나'를 향한 소비 트렌드 부상…CJ올리브영, '2026 트렌드 키워드' 발표 - 청년일보",
-        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE15T1pnaDdXVy15dzhTbTYyXzkzVEdha1pLLXVBRjZEUWZncjAwa204MnRaRU1hNzF0Q2RZZHljU0lXX0hCUVZMdVpLOWNjcU1JSDJDeWhaOXozREtXdFRRb2FfMENsWjNZWXc?oc=5",
-        "date": "Fri, 19 Dec 2025 08:00:00 GMT",
-        "publisher": "올리브영 인사이트 스튜디오",
-        "via": "news"
-      },
-      {
         "title": "[르포] ‘뷰티 테마파크’ 따로 없네…2023 올리브영 어워즈&amp;페스타 첫날부터 ‘후끈’ - CEO스코어데일리",
         "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTFBYN2RnUy1jVmcwQVhEbzZIa3ZGWXl1ZXNoVGgycnlSOU9oUlZWNEJxRTFXc05JY2x2ZjljQ0VaNHBpWm1rMUZYeS1TQ0gzblVPaUtiVW1BZ2pqdkpXWlI0OUVZTHFGUQ?oc=5",
         "date": "Wed, 13 Dec 2023 08:00:00 GMT",
@@ -410,9 +410,9 @@
         "via": "news"
       },
       {
-        "title": "K-뷰티 팬덤 확인한 ‘2025 올리브영 페스타’ - 코스모닝",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE5vRDVWYVVEOUN3WGpIN19FNFFvR3ZnWTI5X2daaVg2anQ0NlBwNi15YkhIYlBBR0M3S1FxaG54eFlXd0J1cFdCUTI2Um82MTdJamI1Zzd6VFpjMXBBNDZWel9nZw?oc=5",
-        "date": "Mon, 26 May 2025 07:00:00 GMT",
+        "title": "'온전한 나'를 향한 소비 트렌드 부상…CJ올리브영, '2026 트렌드 키워드' 발표 - 청년일보",
+        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE15T1pnaDdXVy15dzhTbTYyXzkzVEdha1pLLXVBRjZEUWZncjAwa204MnRaRU1hNzF0Q2RZZHljU0lXX0hCUVZMdVpLOWNjcU1JSDJDeWhaOXozREtXdFRRb2FfMENsWjNZWXc?oc=5",
+        "date": "Fri, 19 Dec 2025 08:00:00 GMT",
         "publisher": "올리브영 인사이트 스튜디오",
         "via": "news"
       },
@@ -445,6 +445,13 @@
         "via": "news"
       },
       {
+        "title": "화장품 업계, 안전성 평가 의무 강화…한국 2028년 시행 - 대한데일리",
+        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE50bWRib3VZNjdUNVczaUdDMGZveFNuLUFIeENEWUxQWjdIWExKOHJKWlNXWlFwclIzVnd1VUM3RmlaLUFmUVZuTWJqcmNWdXcydTBtbERvRUdzZ3VjRU9oNk5XcUZxdnBqM2c?oc=5",
+        "date": "Fri, 03 Jul 2026 07:00:00 GMT",
+        "publisher": "대한화장품산업연구원",
+        "via": "news"
+      },
+      {
         "title": "테마를 이해하는 데 필요한 글로벌 코스메틱 포커스 배경 설정 - Calgary Roughnecks",
         "link": "https://news.google.com/rss/articles/CBMirAFBVV95cUxNSFM3ektVU2djRWIwRG9JLVl5ay01dHNaMDh0b1BCNkJpQW00TUZjd052cjYzdTlzM01qSHlIWnI4OUtVd3kzbWlqLWs1ZTYxNUlnZWNMVmNkS3VINC0zZ2NWNmt5S204MEVoVDZmYnFXWGNkeUF5aUNCT2FhZ2pvTVJ2d0hWX2Z3SjRjNDh5cm1sRlZQZ0h4WXlXckxKUUowY2RwU09KRFd5LVVV?oc=5",
         "date": "Thu, 15 Oct 2026 09:09:12 GMT",
@@ -462,13 +469,6 @@
         "title": "(재)대한화장품산업연구원, 화장품 안전성 평가 교육 확대 운영 - 코스인코리아닷컴",
         "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1uMEltc1hoRGVMM2xHWnlSMHEtOXFnN2o4V2JnbUJnd2ozSFdWbFdleUNzX0p6OTFVZVcyWDE0ajdkLTI4LU1HdTNsX0ZCYlBHV0wtV2xRWWNXaks1TU8yVVhGcw?oc=5",
         "date": "Mon, 30 Mar 2026 07:00:00 GMT",
-        "publisher": "대한화장품산업연구원",
-        "via": "news"
-      },
-      {
-        "title": "2026 화장품 안전성 평가 정규교육 1차 개설 - THE K BEAUTY SCIENCE",
-        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1WSnl4MlVjWGE3VGRFeXJUejQ5ZUZDbTlXS29yTE8tWjlNZHFXdTl1bmxUT2YtRzZVa1Q1ampqdmpLTkJ3ZlloQzYyQUtPTFlxNkp1LWN3dmJPajNNMmtIX1FCelBQRTdGSVE?oc=5",
-        "date": "Sat, 28 Mar 2026 07:00:00 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       }
@@ -504,7 +504,7 @@
   "kwVolume": [
     {
       "name": "수출",
-      "count": 11,
+      "count": 12,
       "axis": "소비"
     },
     {
@@ -513,12 +513,12 @@
       "axis": "소비"
     },
     {
-      "name": "올리브영",
-      "count": 5,
+      "name": "메이크업",
+      "count": 6,
       "axis": "소비"
     },
     {
-      "name": "메이크업",
+      "name": "올리브영",
       "count": 5,
       "axis": "소비"
     },
@@ -565,13 +565,13 @@
   ],
   "kwSurge": null,
   "kwHighFreq": null,
-  "rssText": "[창간특집] K-뷰티의 전성기, 브랜드 위상이 미래를 좌우한다 수출의 기록을 넘어, 소비자의 선택을 남겨야 한다 K-뷰티의 성장은 이제 가능성이 아니라 숫자다. 식품의약품안전처에 따르면 2025년 한국 화장품 수출액은 114억 달러 였다. 2024년의 102억 달러를 넘어선 기록이다.[1] 2026년 상반기 수출액도 70억 달러로, 지난해 같은 기간보다 27.3% 늘었다. 상반기 수치는 아직 잠정치이기에 아마 더 높은 숫자가 집계될 것으로 예상된다. 국내 브랜드에게는 이제 세계 시장의 문이 활짝 열려 있다는 사실만큼은 누구나 알고 있는 보편적 정보로서 더 말할 필요가 없을 것이다. 그러나 산업 에이블씨엔씨 어퓨, 스킨케어 성분 담은 ‘모찌 블러 틴트’ 글로벌 뷰티 기업 에이블씨엔씨(ABLE C&C, 대표 신유정)의 화장품 브랜드 어퓨(A’pieu)가 촉촉한 사용감과 볼륨감 있는 입술 표현을 동시에 구현한 신제품 ‘모찌 블러 틴트’를 출시한다고 23일 밝혔다.모찌 블러 틴트는 수분감 있는 크리미한 텍스처로 입술의 각질과 주름을 매끈하게 커버하고 플럼핑 효과를 더해 도톰한 입술을 연출하는 제품이다. 특히 초경량·초밀착 제형을 적용해 번짐과 묻어남을 줄이고 보송한 마무리감을 살린 것이 특징이다.시카PDRN, 펩타이드, 판테놀, 히알루론산 등 스킨케어 성분을 더한 것도 차별화 요소다. 파마리서치 리쥬란코스메틱, 美 코스트코 첫 ‘뷰티 테이블’ 참여 파마리서치(대표이사 손지훈)의 프리미엄 더마 코스메틱 브랜드 ‘리쥬란코스메틱’은 미국 코스트코(Costco)가 처음 선보이는 ‘뷰티 테이블(Beauty Table)’ 프로그램에 참여하며 미국 내 오프라인 유통 기반을 확대한다고 23일 밝혔다.‘뷰티 테이블’은 코스트코 회원들이 새로운 뷰티 브랜드와 제품을 발견할 수 있도록 마련된 뷰티 전용 진열 프로그램이다. 리쥬란코스메틱은 해당 공간에서 브랜드와 주요 제품의 특징을 소개하고, 현지 소비자가 일상적인 쇼핑 동선에서 제품을 직접 살펴보고 구매할 수 있는 기회를 제공한다.특히 이번 입점 4분기 소매유통업 경기전망 ‘주춤’ 대한상공회의소(회장 최태원)가 백화점, 대형마트, 편의점, 슈퍼마켓, 온라인쇼핑 등 서울 및 6대 광역시 소재 500개 소매유통업체를 대상으로 ‘2026년 4분기 소매유통업 경기전망지수(RBSI: Retail Business Survey Index)’ 를 조사한 결과, 전망치는 지난 3분기(92) 대비 4포인트 낮은 ‘88’ 로 집계됐다.RBSI는 유통업계의 당해 분기 대비 다음 분기 경기 전망을 수치화한 지표로, 100을 넘으면 다음 분기 경기가 이번 분기 대비 호전될 것으로 보는 기업이 많다는 뜻이고 100 미만이면 그 반대를 비비드몽타주, ‘올퓨어 멀티비타민 구미’ 누적 판매 10만 개 돌파 다림바이오텍 뷰티·웰니스 브랜드 비비드몽타주는 어린이용 건강기능식품 ‘올퓨어 멀티비타민 구미’가 2023년 11월 출시 이후 올해 9월까지 온라인 누적 판매량 10만 개를 돌파했다고 밝혔다. 제품은 꾸준히 판매되며 비비드몽타주의 대표 키즈 건강기능식품으로 자리매김하고 있다.올퓨어 멀티비타민 구미는 비비드몽타주의 키즈 건강기능식품 라인 ‘올퓨어(ALL PURE)’의 제품으로, 성장기 어린이의 영양 섭취와 일상에서의 섭취 편의성을 함께 고려해 개발됐다. 올퓨어는 제품 설계 과정에서 불필요한 첨가물을 줄이고 핵심 영양 성분을 담는 것을 ‘2026 오송화장품뷰티엑스포’, 22일 청주 OSCO 개막 대한민국 K-뷰티의 최전선을 이끌어갈 ‘2026 오송화장품뷰티엑스포’가 10월 22일(목) 청주 오스코(OSCO)에서 성대한 막을 올렸다. 오전 10시 전시장 개장과 함께 본격적인 관람 및 비즈니스 상담이 시작되었으며, 이어 오후 2시에는 각계 주요 인사와 국내외 뷰티 관계자, 관람객들이 참석한 가운데 공식 개막식이 개최됐다.이날 개막식에는 충북도지사, 청주시장, 도·시의회 의장, 식약처장, 지역 언론사 대표를 비롯해 기업 및 학계 관계자는 물론, K-뷰티를 세계에 알릴 인플루언서들까지 각계각층의 인사가 대거 참석해 엑스포의 성공적 중 이마트 와우샵, 신진 뷰티 브랜드 2곳 동시 입점  오송 K-뷰티, 생산 넘어 수출로… 22일 오송화장품뷰티엑스포 개막  돈·시간 따지는 소비자, 형태 바꾸고 단골 붙잡아라  K-뷰티 해외 판매, \"입점보다 운영이 관건\"  홀리데이 시즌 쇼핑 ‘위시 리스트’ 화장품은 4위  샤넬, 다수 보유 뷰티기업 지분 민간투자사 매각  랜딩인터내셔널 정새라 대표, 미국 K-뷰티 성장 전략 제시  파마리서치, 리쥬란 중심 에스테틱 라인업 학술 마케팅 강화  글로벌 화장품 안전성 규제, 왜 강화되나  Z세대, 반품 의향 베이비붐 세대 4배..화장품도  K-뷰티 대표주 수급 점검…대형주는 동반 매수, 성장주는 엇갈린 시선 최근 5거래일간 K-뷰티 대표 7개 종목은 일제히 주가 조정을 받았지만 수급 흐름은 종목별로 차별화됐다.아모레퍼시픽과 LG생활건강 등 대형주에는 외국인과 기관의 동반 매수세가 유입된 반면, 성장주에서는 외국인과 기관의 투자 판단이 엇갈리는 모습을 보였다.네이버증권에 따르면 최근 5거래일(10월16일-22일) 동안 아모레퍼시픽, LG생활건강, 코스맥스, 한국콜마, 에이피알, 실리콘투, 파마리서치의 투자자별 수급동향과 주가를 분석한 결과다.아모레퍼시픽, 외국인·기관 동반 매수아모레퍼시픽은 외국인과 기관이 함께 매수에 나서며 주가 조정 김재욱 칠곡군수, 말레이시아 서 ‘세일즈 행정’… 자동차부품 영토 넓힌다 김재욱 경북 칠곡군수가 말레이시아 현지에서 지역 기업의 자동차부품 수출을 위한 판로 개척에 직접 나섰다.칠곡군은 김 군수가 지난 23일 말레이시아에서 개최된 ‘MIAPEX 2026 국제 자동차부품 전시회’ 제품 론칭 행사에 참석해 현지 주요 바이어들과 협력 방안을 논의했다고 밝혔다.이날 김 군수는 말레이시아의 대형 자동차부품 유통기업인 ‘파나마 퀘스트 오토 파츠 그룹(Panama Quest Auto Parts Group)’의 림순팟(Lim Soon Fatt) 대표이사를 만나 관내 기업들의 우수한 기술력을 소개하고 현지 시장 진출을 &quot;미래 혁신 기술 한자리에&quot;… 대구시, 우수 혁신기업 31개사에 'FIX 혁신상' 수여 대구광역시는 지난 22일 오후 3시 엑스코(EXCO) 동관 오픈세미나장에서 미래 산업을 선도할 우수한 기술력과 혁신성을 인정받은 31개 기업을 선정해 ‘FIX 혁신상(FIX Innovation Awards)’을 수여했다고 23일 밝혔다.이번 시상식은 지난 21일 개막한 ‘2026 미래혁신기술박람회(FIX 2026)’의 핵심 행사로, 미래 산업의 혁신 기술 성과를 조명하기 위해 마련됐다. 행사에는 김정기 대구시 행정부시장을 비롯해 국내외 언론사 관계자, 수상 기업 및 심사위원단 등 100여 명이 참석했다.올해로 3회째를 맞은 ‘FIX Fermented Skincare Evolves Into Bio-Skincare as R828 Expands Globally The global skincare industry is undergoing a significant transformation. While ingredient origin and brand storytelling once played a central role in product marketing, consumers, retailers, and distributors are increasingly prioritizing scientific validation, efficacy data, and ingredient transpare 경북도, 제107회 전국체전서 ‘종합 2위’ 대위업… 비개최지 기준 역대 최고 성적 경상북도가 제주특별자치도에서 열린 제107회 전국체육대회에서 당초 목표였던 종합 3위를 뛰어넘어 '종합 2위'를 달성하는 쾌거를 이뤄냈다.지난해 종합 4위에서 두 계단이나 뛰어오른 성적이며, 대구·경북 분리 이후 경북에서 대회가 열리지 않은 '비개최지' 기준으로는 역대 최고 성과다.경북선수단은 지난 16일부터 22일까지 7일간 치러진 이번 대회에 49개 종목, 총 2077명(선수 1469명, 임원 608명)의 대규모 단을 ",
+  "rssText": "[창간특집] K-뷰티의 전성기, 브랜드 위상이 미래를 좌우한다 수출의 기록을 넘어, 소비자의 선택을 남겨야 한다 K-뷰티의 성장은 이제 가능성이 아니라 숫자다. 식품의약품안전처에 따르면 2025년 한국 화장품 수출액은 114억 달러 였다. 2024년의 102억 달러를 넘어선 기록이다.[1] 2026년 상반기 수출액도 70억 달러로, 지난해 같은 기간보다 27.3% 늘었다. 상반기 수치는 아직 잠정치이기에 아마 더 높은 숫자가 집계될 것으로 예상된다. 국내 브랜드에게는 이제 세계 시장의 문이 활짝 열려 있다는 사실만큼은 누구나 알고 있는 보편적 정보로서 더 말할 필요가 없을 것이다. 그러나 산업 에이블씨엔씨 어퓨, 스킨케어 성분 담은 ‘모찌 블러 틴트’ 글로벌 뷰티 기업 에이블씨엔씨(ABLE C&C, 대표 신유정)의 화장품 브랜드 어퓨(A’pieu)가 촉촉한 사용감과 볼륨감 있는 입술 표현을 동시에 구현한 신제품 ‘모찌 블러 틴트’를 출시한다고 23일 밝혔다.모찌 블러 틴트는 수분감 있는 크리미한 텍스처로 입술의 각질과 주름을 매끈하게 커버하고 플럼핑 효과를 더해 도톰한 입술을 연출하는 제품이다. 특히 초경량·초밀착 제형을 적용해 번짐과 묻어남을 줄이고 보송한 마무리감을 살린 것이 특징이다.시카PDRN, 펩타이드, 판테놀, 히알루론산 등 스킨케어 성분을 더한 것도 차별화 요소다. 파마리서치 리쥬란코스메틱, 美 코스트코 첫 ‘뷰티 테이블’ 참여 파마리서치(대표이사 손지훈)의 프리미엄 더마 코스메틱 브랜드 ‘리쥬란코스메틱’은 미국 코스트코(Costco)가 처음 선보이는 ‘뷰티 테이블(Beauty Table)’ 프로그램에 참여하며 미국 내 오프라인 유통 기반을 확대한다고 23일 밝혔다.‘뷰티 테이블’은 코스트코 회원들이 새로운 뷰티 브랜드와 제품을 발견할 수 있도록 마련된 뷰티 전용 진열 프로그램이다. 리쥬란코스메틱은 해당 공간에서 브랜드와 주요 제품의 특징을 소개하고, 현지 소비자가 일상적인 쇼핑 동선에서 제품을 직접 살펴보고 구매할 수 있는 기회를 제공한다.특히 이번 입점 4분기 소매유통업 경기전망 ‘주춤’ 대한상공회의소(회장 최태원)가 백화점, 대형마트, 편의점, 슈퍼마켓, 온라인쇼핑 등 서울 및 6대 광역시 소재 500개 소매유통업체를 대상으로 ‘2026년 4분기 소매유통업 경기전망지수(RBSI: Retail Business Survey Index)’ 를 조사한 결과, 전망치는 지난 3분기(92) 대비 4포인트 낮은 ‘88’ 로 집계됐다.RBSI는 유통업계의 당해 분기 대비 다음 분기 경기 전망을 수치화한 지표로, 100을 넘으면 다음 분기 경기가 이번 분기 대비 호전될 것으로 보는 기업이 많다는 뜻이고 100 미만이면 그 반대를 비비드몽타주, ‘올퓨어 멀티비타민 구미’ 누적 판매 10만 개 돌파 다림바이오텍 뷰티·웰니스 브랜드 비비드몽타주는 어린이용 건강기능식품 ‘올퓨어 멀티비타민 구미’가 2023년 11월 출시 이후 올해 9월까지 온라인 누적 판매량 10만 개를 돌파했다고 밝혔다. 제품은 꾸준히 판매되며 비비드몽타주의 대표 키즈 건강기능식품으로 자리매김하고 있다.올퓨어 멀티비타민 구미는 비비드몽타주의 키즈 건강기능식품 라인 ‘올퓨어(ALL PURE)’의 제품으로, 성장기 어린이의 영양 섭취와 일상에서의 섭취 편의성을 함께 고려해 개발됐다. 올퓨어는 제품 설계 과정에서 불필요한 첨가물을 줄이고 핵심 영양 성분을 담는 것을 ‘2026 오송화장품뷰티엑스포’, 22일 청주 OSCO 개막 대한민국 K-뷰티의 최전선을 이끌어갈 ‘2026 오송화장품뷰티엑스포’가 10월 22일(목) 청주 오스코(OSCO)에서 성대한 막을 올렸다. 오전 10시 전시장 개장과 함께 본격적인 관람 및 비즈니스 상담이 시작되었으며, 이어 오후 2시에는 각계 주요 인사와 국내외 뷰티 관계자, 관람객들이 참석한 가운데 공식 개막식이 개최됐다.이날 개막식에는 충북도지사, 청주시장, 도·시의회 의장, 식약처장, 지역 언론사 대표를 비롯해 기업 및 학계 관계자는 물론, K-뷰티를 세계에 알릴 인플루언서들까지 각계각층의 인사가 대거 참석해 엑스포의 성공적 중 이마트 와우샵, 신진 뷰티 브랜드 2곳 동시 입점  오송 K-뷰티, 생산 넘어 수출로… 22일 오송화장품뷰티엑스포 개막  돈·시간 따지는 소비자, 형태 바꾸고 단골 붙잡아라  K-뷰티 해외 판매, \"입점보다 운영이 관건\"  홀리데이 시즌 쇼핑 ‘위시 리스트’ 화장품은 4위  샤넬, 다수 보유 뷰티기업 지분 민간투자사 매각  랜딩인터내셔널 정새라 대표, 미국 K-뷰티 성장 전략 제시  파마리서치, 리쥬란 중심 에스테틱 라인업 학술 마케팅 강화  글로벌 화장품 안전성 규제, 왜 강화되나  Z세대, 반품 의향 베이비붐 세대 4배..화장품도  K-뷰티 수출 빅데이터 리포트 ③: 립메이크업 수출 둔화…미국·일본이 전체 절반 비중 [편집자 주] 산업통상자원부에 따르면 2026년 9월 화장품 수출은 15억달러로 전년 동기 대비 31% 증가했다. 이에 따라 관세청 수출입무역통계를 바탕으로 K-뷰티 8대 핵심 품목의 수출 현황과 국가별 수출단가 변화를 분석하는 연속 기획을 시작한다. 이번 순서는 입술화장용 제품류(HS 330410)다.③ 입술용화장품 수출립메이크업 수출이 2026년 3분기와 9월 모두 감소하며 부진했다. 다만 무역수지 감소 폭은 제한적이어서 K-뷰티 립 제품의 해외 경쟁력은 일정 수준 유지되고 있는 것으로 분석된다.관세청 수출입무역통계를 분석한 결 Eight Key Categories Reveal China's Changing Beauty Consumption Trends on Tmall China's beauty market on Tmall continued to show signs of weakness in the third quarter of 2026, but the latest sales data also point to a significant shift in consumer priorities.While most major beauty categories recorded lower sales volumes, demand for efficacy-driven skincare products remained r K-뷰티 대표주 수급 점검…대형주는 동반 매수, 성장주는 엇갈린 시선 최근 5거래일간 K-뷰티 대표 7개 종목은 일제히 주가 조정을 받았지만 수급 흐름은 종목별로 차별화됐다.아모레퍼시픽과 LG생활건강 등 대형주에는 외국인과 기관의 동반 매수세가 유입된 반면, 성장주에서는 외국인과 기관의 투자 판단이 엇갈리는 모습을 보였다.네이버증권에 따르면 최근 5거래일(10월16일-22일) 동안 아모레퍼시픽, LG생활건강, 코스맥스, 한국콜마, 에이피알, 실리콘투, 파마리서치의 투자자별 수급동향과 주가를 분석한 결과다.아모레퍼시픽, 외국인·기관 동반 매수아모레퍼시픽은 외국인과 기관이 함께 매수에 나서며 주가 조정 김재욱 칠곡군수, 말레이시아 서 ‘세일즈 행정’… 자동차부품 영토 넓힌다 김재욱 경북 칠곡군수가 말레이시아 현지에서 지역 기업의 자동차부품 수출을 위한 판로 개척에 직접 나섰다.칠곡군은 김 군수가 지난 23일 말레이시아에서 개최된 ‘MIAPEX 2026 국제 자동차부품 전시회’ 제품 론칭 행사에 참석해 현지 주요 바이어들과 협력 방안을 논의했다고 밝혔다.이날 김 군수는 말레이시아의 대형 자동차부품 유통기업인 ‘파나마 퀘스트 오토 파츠 그룹(Panama Quest Auto Parts Group)’의 림순팟(Lim Soon Fatt) 대표이사를 만나 관내 기업들의 우수한 기술력을 소개하고 현지 시장 진출을 &quot;미래 혁신 기술 한자리에&quot;… 대구시, 우수 혁신기업 31개사에 'FIX 혁신상' 수여 대구광역시는 지난 22일 오후 3시 엑스코(EXCO) 동관 오픈세미나장에서 미래 산업을 선도할 우수한 기술력과 혁신성을 인정받은 31개 기업을 선정해 ‘FIX 혁신상(FIX Innovation Awards)’을 수여했다고 23일 밝혔다.이번 시상식은 지난 21일 개막한 ‘2026 미래혁신기술박람회(FIX 2026)’의 핵심 행사로, 미래 산업의 혁신 기술 성과를 조명하기 위해 마련됐다. 행사에는 김정기 ",
   "climateTrend": {
     "trend16": {
-      "week1": 16.9,
-      "week2": 13,
-      "delta": -3.9
+      "week1": 15.1,
+      "week2": 11.4,
+      "delta": -3.8
     },
-    "deviation": 2.4
+    "deviation": 7.8
   }
 }
