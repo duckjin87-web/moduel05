@@ -270,6 +270,13 @@ function saveKey(type) {
   if (type === 'gemini') {
     const v = document.getElementById('k-gemini').value.trim();
     if (v) { ls('gemini_key', v); setStatus('st-gemini', '설정됨', true); showToast('Gemini 키 저장됨'); }
+    else {
+      /* 빈 칸 저장 = 브라우저 키 삭제 → 서버(Vercel) 키 사용. 예전 키가 서버 키를 덮어쓰는 문제를 풀 수 있다 */
+      try { localStorage.removeItem('gemini_key'); } catch {}
+      _modelListPromise = null;
+      setStatus('st-gemini', BK.on() ? '백엔드' : '미설정', BK.on());
+      showToast(BK.on() ? '브라우저 키 삭제됨 — 서버(Vercel) 키를 사용합니다' : '브라우저 키 삭제됨');
+    }
   }
   if (type === 'gemini-model') { ls('gemini_model', document.getElementById('gemini-model').value); }
   if (type === 'public') {
@@ -324,7 +331,7 @@ async function testBackend() {
     /* 미등록일 때는 '무엇을 찾았는지'까지 보여줘야 원인을 추측하지 않는다 */
     const lines = Object.entries(j.keys).map(([k, on]) => {
       const c = (j.checked || {})[k];
-      if (on) return `  · ${lbl[k] || k}: 등록됨 ✓${c && c.found ? ` (${c.found})` : ''}`;
+      if (on) return `  · ${lbl[k] || k}: 등록됨 ✓${c && c.found ? ` (${c.found})` : ''}${c && c.format === 'AQ.' ? ' ⚠ AQ. 형식 — Gemini REST에서 401이 나는 사례가 많아 AIza 키 권장' : ''}`;
       const names = c && c.names ? c.names.join(' / ') : '';
       return `  · ${lbl[k] || k}: 미등록 — ${names ? `${names} 중 어느 것도 서버에 없음` : '환경변수 없음'}`
            + (c && c.note ? ` · ${c.note}` : '');
@@ -3636,15 +3643,40 @@ function mergeEnsemble(runs) {
 
 /* ════ Gemini 공통 호출 — 모든 호출부(예측·TRACK B·행사 발견·테스트)가 이 하나를 쓴다.
    백엔드 모드면 서버가 키를 주입해 대신 호출. 성공 시 텍스트, 실패 시 status 포함 throw. */
-async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, timeout = 15000, model, fallback = true, json = false } = {}) {
-  const key = K.gemini();
+function geminiKeyInfo() {
+  const local = (ls('gemini_key') || '').trim();
+  const fmt = k => !k ? null : k.startsWith('AIza') ? 'AIza' : k.startsWith('AQ.') ? 'AQ.' : '기타';
+  return { source: local ? '브라우저 저장 키' : (BK.on() ? '서버(Vercel) 키' : '없음'), format: fmt(local) };
+}
+
+const isKeyRejected = e => !!e && (e.status === 401 ||
+  (e.status === 400 && /api key|api_key|credential/i.test(String(e.message || ''))) ||
+  (e.status === 403 && /api key|permission|unregistered caller/i.test(String(e.message || ''))));
+
+async function geminiGenerate(promptText, opts = {}) {
+  try {
+    return await geminiGenerateWithKey(K.gemini(), promptText, opts);
+  } catch (e) {
+    const local = ls('gemini_key');
+    if (local && BK.on() && isKeyRejected(e)) {
+      try {
+        const out = await geminiGenerateWithKey('__BK__', promptText, opts);
+        window._geminiKeySource = { used: 'server', reason: '브라우저에 저장된 키가 거부돼 서버(Vercel) 키로 대체' };
+        return out;
+      } catch (e2) { e2.attempts = [...(e.attempts || []), ...(e2.attempts || [])]; e2.localRejected = true; throw e2; }
+    }
+    throw e;
+  }
+}
+
+async function geminiGenerateWithKey(key, promptText, { maxTokens = 800, temperature = 0, timeout = 15000, model, fallback = true, json = false } = {}) {
   const first = model || K.model();
   /* 시도 순서: 지정 모델 → 보조 모델 → (모델 문제일 때만) 계정에서 실제로 쓸 수 있는 모델 자동 탐색.
      2.5 계열은 '과거 사용 이력이 있는 프로젝트'로 접근이 제한돼 신규 키에선 없는 모델이
      될 수 있다. 같은 세대끼리만 폴백하면 함께 실패하므로 목록에서 다른 모델을 찾아 붙는다. */
   const tried = [];
   const attempt = async (m) => {
-    tried.push({ model: m });
+    tried.push({ model: m, via: key === '__BK__' ? '서버 키' : '브라우저 키' });
     try {
       const txt = await geminiCall(m, key, promptText, maxTokens, temperature, timeout, json);
       tried[tried.length - 1].ok = true;
@@ -3657,7 +3689,7 @@ async function geminiGenerate(promptText, { maxTokens = 800, temperature = 0, ti
   try {
     return await attempt(first);
   } catch (e1) {
-    if (!fallback) { e1.attempts = tried; throw e1; }
+    if (!fallback || isKeyRejected(e1)) { e1.attempts = tried; throw e1; }
     const queue = [];
     const alt = K.model();
     if (alt && alt !== first) queue.push(alt);
@@ -3701,8 +3733,9 @@ function fetchModelList() {
   _modelListPromise = (async () => {
     const key = K.gemini();
     if (!key) return [];
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key.trim())}&pageSize=200`;
-    const r = key === '__BK__' ? await bkFetch(url, {}, 15000) : await fetch(url);
+    const r = key === '__BK__'
+      ? await bkFetch('https://generativelanguage.googleapis.com/v1beta/models?key=__BK__&pageSize=200', {}, 15000)
+      : await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key.trim() } });
     const j = await r.json();
     if (!r.ok) { const e = new Error(j?.error?.message || `HTTP ${r.status}`); e.status = r.status; throw e; }
     return (j.models || [])
@@ -3744,7 +3777,10 @@ function parseJsonLoose(txt) {
 }
 
 async function geminiCall(modelId, key, promptText, maxTokens, temperature, timeout, json = false) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(key.trim())}`;
+  /* 키는 URL이 아니라 x-goog-api-key 헤더로 보낸다(공식 권장). 백엔드 모드는 센티널을 ?key=에
+     두면 프록시가 헤더로 옮겨 서버 키를 넣는다 */
+  const bk = key === '__BK__';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent${bk ? '?key=__BK__' : ''}`;
   const mkBody = (useJson) => JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: promptText }] }],
     generationConfig: { maxOutputTokens: maxTokens, temperature, ...(useJson ? { responseMimeType: 'application/json' } : {}) },
@@ -3754,7 +3790,7 @@ async function geminiCall(modelId, key, promptText, maxTokens, temperature, time
     const ctrl = new AbortController();
     const tid = setTimeout(() => ctrl.abort(), timeout);
     try {
-      return await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: ctrl.signal });
+      return await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.trim() }, body, signal: ctrl.signal });
     } finally { clearTimeout(tid); }
   };
   let r = await send(mkBody(json));
@@ -4162,7 +4198,15 @@ function predErrorPanelHtml() {
   const msg = String(e.message || '');
   const st = e.status;
   let why, fix;
-  if (st === 'NO_KEY') {
+  const keyErr = st === 401 || (st === 400 && /api key|api_key|credential/i.test(msg)) || (st === 403 && /api key|unregistered caller/i.test(msg));
+  if (keyErr) {
+    const ki = geminiKeyInfo();
+    why = `Gemini가 API 키를 거부했습니다 (${st}). 사용 중인 키: ${ki.source}${ki.format ? ` · ${ki.format} 형식` : ''}`
+        + (e.localRejected ? ' — 서버 키로도 재시도했지만 거부됐습니다.' : '');
+    fix = (ki.format === 'AQ.' || !ki.format)
+      ? 'AI Studio의 새 "AQ." 형식 키는 REST 호출에서 401이 나는 사례가 많습니다. Google Cloud Console → API 및 서비스 → 사용자 인증 정보 → [API 키 만들기]로 "AIza…" 키를 새로 발급하고(Generative Language API 허용), Vercel의 GEMINI_KEY를 교체한 뒤 Redeploy 하세요. 브라우저에 저장된 키가 있으면 [API 설정]에서 지우세요.'
+      : '키가 만료·삭제됐거나 다른 프로젝트 키일 수 있습니다. AI Studio에서 키 상태를 확인하고 새로 발급해 교체하세요. 브라우저에 예전 키가 저장돼 있으면 [API 설정]에서 지우면 서버 키가 쓰입니다.';
+  } else if (st === 'NO_KEY') {
     why = 'Gemini 키가 설정되어 있지 않습니다.';
     fix = '[API 설정]에서 Gemini 키를 입력하거나, Vercel 백엔드에 GEMINI_KEY를 등록하세요.';
   } else if (st === 502 && /키가 등록되지/.test(msg)) {
@@ -4190,7 +4234,7 @@ function predErrorPanelHtml() {
     why = '예측 호출이 실패했습니다.';
     fix = '[다시 시도] 후 반복되면 [API 설정] → [테스트]로 연결 상태를 확인하세요.';
   }
-  const trail = (e.attempts || []).map(a => `${escHtml(a.model)}${a.ok ? ' ✓' : ` (${escHtml(String(a.status))})`}`).join(' → ');
+  const trail = (e.attempts || []).map(a => `${escHtml(a.model)}${a.via ? `[${escHtml(a.via)}]` : ''}${a.ok ? ' ✓' : ` (${escHtml(String(a.status))})`}`).join(' → ');
   return `<div class="pred-err">
     <div class="pred-err-hd"><span class="pred-err-tag">AI 예측 실패</span> ${escHtml(why)}</div>
     <div class="pred-err-fix">해결: ${escHtml(fix)}</div>
@@ -5270,22 +5314,30 @@ async function testGemini() {
       reply = await geminiGenerate('한 단어로만 답하세요: 화장품', { maxTokens: 256, timeout: 20000 });
     } catch (ge) {
       const errMsg = ge.message || '';
-      if (ge.status === 429) {
+      const ki = geminiKeyInfo();
+      const head = `사용 중인 키: ${ki.source}${ki.format ? ` (${ki.format} 형식)` : ''}\n\n`;
+      if (isKeyRejected(ge)) {
+        el.textContent = head + `키 거부 (${ge.status}) — Gemini가 이 API 키를 인정하지 않습니다.\n\n`
+          + (ki.format === 'AQ.' || !ki.format
+            ? `원인 후보: AI Studio의 새 "AQ." 형식 키는 REST 호출에서 401이 나는 사례가 많이 보고돼 있습니다.\n해결:\n① Google Cloud Console → API 및 서비스 → 사용자 인증 정보 → [API 키 만들기]로 "AIza…" 키 발급\n② 그 키에 Generative Language API 허용\n③ Vercel GEMINI_KEY 교체 → Redeploy (브라우저 칸은 비워 두기)`
+            : `해결:\n① 키가 삭제·만료됐는지 AI Studio에서 확인 후 새로 발급\n② 브라우저에 저장된 예전 키가 서버 키를 덮어쓰고 있다면 이 칸을 비우고 저장`)
+          + `\n\n원본 오류: ${errMsg}`;
+      } else if (ge.status === 429) {
         const isZeroQuota = errMsg.includes('limit: 0') || errMsg.includes('free_tier');
-        el.textContent = isZeroQuota
-          ? `쿼터 0 오류 (429)\n\n해결:\n① 모델을 gemini-2.5-flash-lite 로 변경 (AQ키 무료 1,000건)\n② 또는 aistudio.google.com/app/apikey 에서\n   "Create API key in new project" 로 새 키 발급\n③ 또는 Google Cloud Console에서 결제 계정 연결`
-          : `요청 한도 초과 (429)\n잠시 후 다시 시도하세요.\n${errMsg}`;
-      } else if (ge.status === 400) {
-        el.textContent = `잘못된 요청 (400): API 키가 유효하지 않습니다.\n\n해결:\n① 키를 다시 [저장] 후 재테스트\n② AQ 키라면 모델: gemini-2.5-flash-lite 선택\n③ aistudio.google.com/app/apikey → 새 키 재발급\n\n원본 오류: ${errMsg}`;
-      } else if (ge.status === 403) {
-        el.textContent = `접근 거부 (403): API 키가 유효하지 않거나 Gemini API가 비활성화됐습니다.\n${errMsg}`;
+        el.textContent = head + (isZeroQuota
+          ? `무료 한도 0 (429) — 이 모델은 유료 전용입니다.\n해결: [모델 불러오기] 후 Flash 계열로 변경`
+          : `요청 한도 초과 (429) — 1~2분 뒤 다시 시도하세요.\n${errMsg}`);
+      } else if (isModelProblem(ge)) {
+        el.textContent = head + `모델 사용 불가 (${ge.status}) — 설정된 모델을 이 계정에서 쓸 수 없습니다.\n해결: [내 계정에서 사용 가능한 모델 불러오기]를 누르면 자동 교정됩니다.\n\n원본 오류: ${errMsg}`;
       } else {
-        el.textContent = `오류${ge.status ? ` (${ge.status})` : ''}: ${errMsg}`;
+        el.textContent = head + `오류${ge.status ? ` (${ge.status})` : ''}: ${errMsg}`;
       }
       el.style.color = 'var(--red)'; return;
     }
     if (reply) {
-      el.textContent = `연결 성공 — 모델: ${K.model()} · 응답: "${reply.trim()}"`;
+      const ki = geminiKeyInfo();
+      const via = window._geminiKeySource && window._geminiKeySource.used === 'server' ? ' · 브라우저 키가 거부돼 서버 키로 연결됨(브라우저 칸을 비우는 것을 권장)' : '';
+      el.textContent = `연결 성공 — 모델: ${K.model()} · 키: ${ki.source}${via} · 응답: "${reply.trim()}"`;
       el.style.color = 'var(--grn)';
       setStatus('st-gemini', '확인됨', true);
     } else {
@@ -5293,7 +5345,7 @@ async function testGemini() {
       el.style.color = 'var(--yel)';
     }
   } catch (e) {
-    el.textContent = e.name === 'AbortError' ? '타임아웃 (12초 초과)' : '연결 실패: ' + e.message;
+    el.textContent = e.name === 'AbortError' ? '타임아웃 (20초 초과)' : '연결 실패: ' + e.message;
     el.style.color = 'var(--red)';
   }
 }

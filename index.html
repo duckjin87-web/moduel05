@@ -51,7 +51,7 @@
         <div class="ap-sec">
           <div class="ap-label">Gemini API <span class="ap-status" id="st-gemini">미설정</span></div>
           <div class="ap-row">
-            <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy... 또는 AQ...">
+            <input type="password" class="ap-in" id="k-gemini" placeholder="AIzaSy... (비워 두면 서버 키 사용)">
             <button class="ap-btn ap-save" id="btnSaveGemini">저장</button>
             <button class="ap-btn ap-test" id="btnTestGemini">테스트</button>
           </div>
@@ -66,7 +66,7 @@
             <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
             <option value="gemini-2.5-flash">gemini-2.5-flash</option>
           </select>
-          <div class="ap-hint">발급: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · 목록은 계정·지역마다 다르므로 위 버튼으로 실제 가능한 모델을 조회하세요. 예측용 모델이 없거나 한도를 넘으면 보조용으로 자동 재시도합니다.</div>
+          <div class="ap-hint">발급: <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Cloud Console 사용자 인증 정보</a>에서 <b>AIza…</b> 키 권장(AI Studio의 새 AQ. 키는 401 사례 다수) · Vercel에 GEMINI_KEY가 있으면 <b>이 칸은 비워 두세요</b>(입력 시 서버 키보다 우선) · 목록은 계정·지역마다 다르므로 위 버튼으로 실제 가능한 모델을 조회하세요. 예측용 모델이 없거나 한도를 넘으면 보조용으로 자동 재시도합니다.</div>
           <div id="r-gemini" class="ap-result"></div>
         </div>
         <div class="ap-sec">

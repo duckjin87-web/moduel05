@@ -30,7 +30,9 @@ const ENV_ALIASES = {
 };
 const readEnv = name => {
   for (const n of (ENV_ALIASES[name] || [name])) {
-    if (process.env[n]) return process.env[n];
+    /* 앞뒤 공백·줄바꿈 제거 — 대시보드에 붙여넣을 때 섞인 공백이 '키 무효'의 흔한 원인이다 */
+    const v = String(process.env[n] || '').trim();
+    if (v) return v;
   }
   return '';
 };
@@ -40,7 +42,7 @@ const HOST_RULES = {
   'openapi.naver.com':                  { env: null, naverHeaders: true },
   'apis.data.go.kr':                    { env: 'DATAGO_KEY' },
   'ecos.bok.or.kr':                     { env: 'ECOS_KEY' },
-  'generativelanguage.googleapis.com':  { env: 'GEMINI_KEY' },
+  'generativelanguage.googleapis.com':  { env: 'GEMINI_KEY', headerKey: 'x-goog-api-key' },
   'www.googleapis.com':                 { env: 'YOUTUBE_KEY' },
   'plus.kipris.or.kr':                  { env: 'KIPRIS_KEY' },
   'kipo-api.kipi.or.kr':                { env: 'KIPRIS_KEY' },
@@ -56,6 +58,8 @@ const HOST_RULES = {
   'www.thebk.co.kr':                    { env: null },
   'www.cmn.co.kr':                      { env: null },
   'www.kbanker.co.kr':                  { env: null },
+  /* 공개 뉴스 RSS — 박람회 일정 갱신·트렌드 리포트 감지에 쓴다(키 불필요) */
+  'news.google.com':                    { env: null },
 };
 
 export default async function handler(req, res) {
@@ -85,7 +89,7 @@ export default async function handler(req, res) {
       })(),
       public:  probe('공공데이터', ENV_ALIASES.DATAGO_KEY),
       ecos:    probe('ECOS', ['ECOS_KEY']),
-      gemini:  probe('Gemini', ['GEMINI_KEY']),
+      gemini:  Object.assign(probe('Gemini', ['GEMINI_KEY']), { format: (() => { const k = readEnv('GEMINI_KEY'); return !k ? null : k.startsWith('AIza') ? 'AIza' : k.startsWith('AQ.') ? 'AQ.' : 'other'; })() }),
       youtube: probe('YouTube', ['YOUTUBE_KEY']),
       kipris:  probe('KIPRIS', ['KIPRIS_KEY']),
     };
@@ -114,6 +118,15 @@ export default async function handler(req, res) {
   if (!rule) return res.status(403).json({ error: `허용되지 않은 호스트: ${target.hostname}` });
 
   /* 센티널 → 실키 치환 (쿼리·경로 모두 — ECOS는 키가 경로 세그먼트) */
+  const headers = {};
+  /* Gemini는 키를 URL이 아니라 x-goog-api-key 헤더로 보낸다(공식 권장 방식).
+     AI Studio의 새 'AQ.' 형식 키는 ?key= 방식에서 401이 나는 사례가 보고돼 있다. */
+  if (rule.headerKey && target.searchParams.get('key') === '__BK__') {
+    const key = readEnv(rule.env);
+    if (!key) return res.status(502).json({ error: `서버에 ${rule.env} 키가 등록되지 않았습니다 — Vercel 환경변수를 확인하세요` });
+    target.searchParams.delete('key');
+    headers[rule.headerKey] = key;
+  }
   let urlStr = target.toString();
   if (urlStr.includes('__BK__')) {
     const key = rule.env ? readEnv(rule.env) : null;
@@ -121,7 +134,6 @@ export default async function handler(req, res) {
     urlStr = urlStr.replace(/__BK__/g, encodeURIComponent(key));
   }
 
-  const headers = {};
   if (rule.naverHeaders) {
     if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
       return res.status(502).json({ error: '서버에 NAVER_CLIENT_ID/SECRET이 등록되지 않았습니다' });
