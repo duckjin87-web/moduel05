@@ -129,28 +129,7 @@
         </div>
       </div>
     </div>
-    <div class="rep-wrap">
-      <button class="btn-hd btn-report" id="btnRepPanel">BM 보고서</button>
-      <div class="rep-panel" id="repPanel">
-        <div class="rp-hd">
-          <span class="rp-title">BM 보고서</span>
-          <button class="rp-close" id="btnRepClose">×</button>
-        </div>
-        <div class="rp-body">
-          <button class="btn-regen" id="btnGenReport" style="margin-bottom:8px;width:100%">보고서 생성</button>
-          <textarea class="rp-ta" id="repText" readonly placeholder="[보고서 생성] 클릭 시 현재 분석 결과가 텍스트로 정리됩니다."></textarea>
-          <div class="rp-actions">
-            <button class="btn-copy" id="btnCopyReport">복사</button>
-            <button class="btn-regen" id="btnClearReport">초기화</button>
-          </div>
-          <div class="rp-actions" style="margin-top:6px">
-            <button class="btn-copy" id="btnExportPdf">PDF로 내보내기</button>
-            <button class="btn-copy" id="btnExportCsv">Excel로 내보내기(.csv)</button>
-          </div>
-          <div class="rp-export-note">※ PDF는 브라우저 인쇄 기능을 이용합니다. Excel 내보내기는 호환을 위해 CSV(쉼표분리텍스트) 형식으로 생성되며, 네이티브 .xlsx 파일이 아닙니다 — Excel에서 정상적으로 열립니다.</div>
-        </div>
-      </div>
-    </div>
+    <button class="btn-hd btn-report" id="btnRepPanel" title="지금까지의 분석을 임원 보고용 1장으로 정리합니다">보고서</button>
     <button class="btn-hd btn-collect" id="btnCollect">전체 수집 실행</button>
   </div>
 </div>
@@ -294,7 +273,7 @@
           <li><b>ZONE 1 — 예측 TOP5</b>: Gemini가 위 데이터를 종합 분석해 도출한 "앞으로 뜰 화장품 유형 TOP5"가 표시됩니다. 상단 탭으로 6개월 / 1년 예측을 전환할 수 있습니다.</li>
           <li>TOP5 항목을 <b>클릭</b>하면 <b>ZONE 2 — 제조사 매칭</b>에 TRACK A(기등록 업체) · TRACK B(신규처 후보)가 자동으로 표시됩니다.</li>
           <li><b>ZONE 3 — 법령·규제</b>에서 최신 화장품 관련 법령·고시 변경사항을 시행일 기준 긴급도별로 확인합니다.</li>
-          <li><b>[BM 보고서] → [보고서 생성]</b>을 클릭하면 지금까지의 분석 결과가 텍스트로 정리됩니다. [복사]로 보고서·회의자료에 바로 활용하세요.</li>
+          <li><b>[보고서]</b>를 누르면 핵심 요약 → 시장 신호 → AI 예측 → 주목할 변화 → 제형·설비 → 일정 → 데이터 한계 순서의 임원용 1장이 열립니다. [인쇄 / PDF]로 저장하거나 [텍스트 복사]로 메일·메신저에 붙여 넣으세요.</li>
         </ol>
       </section>
 
@@ -376,6 +355,22 @@
   </div>
 </div>
 
+<!-- ── 보고서: 결론 먼저 → 근거 → 일정 → 데이터 한계 순서의 임원용 1장 ── -->
+<div class="rpt-overlay" id="rptOverlay">
+  <div class="rpt-sheet">
+    <div class="rpt-bar">
+      <span class="rpt-bar-title">보고서</span>
+      <button class="btn-regen" id="btnGenReport">최신 데이터로 다시 만들기</button>
+      <button class="btn-copy" id="btnExportPdf">인쇄 / PDF</button>
+      <button class="btn-regen" id="btnCopyReport">텍스트 복사</button>
+      <button class="btn-regen" id="btnClearReport">텍스트 보기</button>
+      <button class="btn-regen" id="btnExportCsv">Excel(.csv)</button>
+      <button class="rp-close" id="btnRepClose" aria-label="닫기">×</button>
+    </div>
+    <textarea class="rp-ta rpt-ta" id="repText" readonly hidden></textarea>
+    <div id="rptBody"></div>
+  </div>
+</div>
 <div class="print-report" id="printReport"></div>
 
 <script src="app.js"></script>

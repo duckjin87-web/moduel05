@@ -376,12 +376,9 @@ function loadKeys() {
 
 function toggleApiPanel() {
   document.getElementById('apiPanel').classList.toggle('open');
-  document.getElementById('repPanel').classList.remove('open');
+  closeReport();
 }
-function toggleRepPanel() {
-  document.getElementById('repPanel').classList.toggle('open');
-  document.getElementById('apiPanel').classList.remove('open');
-}
+function toggleRepPanel() { openReport(); }
 function toggleGuidePanel() {
   document.getElementById('guideOverlay').classList.toggle('open');
 }
@@ -638,17 +635,12 @@ JSON만 출력: {"expos":[{"name":"정확한 행사명","date":"YYYY.MM.DD 또�
 }
 
 /* ════ ZONE 4 박람회 렌더 (편집형 + 실행 관리) ════ */
-function renderZ4() {
-  const el = document.getElementById('z4');
-  if (!el) return;
+/* 박람회 행별 최종 일정 계산 — 화면(renderZ4)과 보고서가 함께 쓴다 */
+function computeExpoRows() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const verified = window._expoVerified || {};
   const manual = getExpoManualConfirm();
-  const meta = getExpoMeta();
-  const fmtAgo = ts => { const days = Math.floor((now - ts) / 86400000); return days <= 0 ? '오늘' : `${days}일 전`; };
-  const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-
   const sched = getExpoSchedule();
   const schedMap = (sched && sched.schedule) || {};
   const startOf = ds => { const p = String(ds || '').split('~')[0].trim().split('.'); return p[0] ? new Date(p[0], (p[1] || 1) - 1, p[2] || 1) : null; };
@@ -677,6 +669,23 @@ function renderZ4() {
     if (a.passed !== b.passed) return a.passed ? 1 : -1;
     return (a.daysLeft ?? 9999) - (b.daysLeft ?? 9999);
   });
+
+  return rows;
+}
+
+function renderZ4() {
+  const el = document.getElementById('z4');
+  if (!el) return;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const verified = window._expoVerified || {};
+  const manual = getExpoManualConfirm();
+  const meta = getExpoMeta();
+  const fmtAgo = ts => { const days = Math.floor((now - ts) / 86400000); return days <= 0 ? '오늘' : `${days}일 전`; };
+  const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+  const sched = getExpoSchedule();
+  const rows = computeExpoRows();
 
   /* 상단 임박 요약(참고) — 개최 D-30 이내 또는 마감 임박 건수 */
   const soon = rows.filter(r => !r.passed && r.daysLeft !== null && r.daysLeft <= 30).length;
@@ -5362,13 +5371,248 @@ function setSdot(id, state) {
 }
 
 /* ════ 보고서 생성 ════ */
+/* ════════════ 보고서 (임원용) ════════════
+   처음 보는 사람도 1~2분 안에 판단할 수 있게, 컨설팅·리서치 브리핑에서 흔히 쓰는 순서를 따른다.
+     ① 핵심 요약(결론 먼저 — BLUF·피라미드 원칙)  ② 시장 신호 4개 신호등  ③ AI 예측 TOP5
+     ④ 주목할 변화(오른 것·내린 것)  ⑤ 제형·설비(CAPA)  ⑥ 다가오는 일정(규제·박람회)
+     ⑦ 데이터 신뢰도와 한계  ⑧ 용어
+   숫자마다 '실데이터/샘플/미연결'을 함께 적어, 근거가 약한 숫자가 결론처럼 읽히지 않게 한다. */
+
+const RPT_GLOSSARY = [
+  ['신호 점수', '1~5점. 3점이 평소 수준(중립), 4점 이상이면 수요를 밀어 올리는 쪽, 2점 이하면 끌어내리는 쪽입니다.'],
+  ['실데이터 / 샘플', '실데이터는 이번에 실제로 받아 온 값, 샘플은 연결이 안 돼 넣어 둔 예시 값입니다. 샘플은 판단 근거로 쓰지 마세요.'],
+  ['신뢰도(커버리지)', '제형 점수를 계산할 때 SNS·검색·신제품·글로벌 4개 근거 중 실제로 잡힌 비율입니다. 50% 미만은 \'데이터 부족\'으로 표시합니다.'],
+  ['고성장 / 관찰 / 유지', '제형 점수 80점 이상 / 70점대 / 60점대. 고성장은 설비·협력사 선확보 검토 대상입니다.'],
+  ['CAPA', '생산 설비 능력. 해당 제형을 만들려면 어떤 충진·성형·포장 설비가 필요한지를 뜻합니다.'],
+  ['D-day', '시행일·개최일까지 남은 날짜입니다.'],
+];
+
+function rptSignalRows() {
+  const hist = Array.isArray(window._history) ? window._history : [];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  return ['climate', 'society', 'economy', 'culture'].map(k => {
+    const v = SIG_DATA[k];
+    const base = [...hist].reverse().find(h => h.date <= weekAgo && h.sample && !h.sample[k] && typeof (h.sig || {})[k] === 'number');
+    const score = v && typeof v.score === 'number' ? v.score : null;
+    const delta = base && score !== null && v && !v._sample ? Math.round((score - base.sig[k]) * 10) / 10 : null;
+    return { key: k, name: SIG_NAME_KO[k], score, sample: !v || !!v._sample, interpret: (v && v.interpret) || '', delta, baseDate: base && base.date };
+  });
+}
+
+function rptPredFailure() {
+  const pe = window._predError || {};
+  const st = pe.status;
+  const cause = st === 401 || st === 403 || /API key not valid|API_KEY_INVALID/i.test(pe.message || '') ? 'Gemini API 키가 거부됨'
+    : st === 429 ? '사용 한도 초과' : st === 404 ? '설정된 AI 모델을 쓸 수 없음'
+    : pe.message ? '응답 오류' : 'AI 예측을 아직 실행하지 않음';
+  const fix = cause === 'Gemini API 키가 거부됨'
+    ? 'Google Cloud Console에서 "AIza…" 형식 키를 새로 발급 → Vercel 환경변수 GEMINI_KEY 교체 → Redeploy (브라우저 키 칸은 비움)'
+    : cause === '사용 한도 초과' ? '1~2분 뒤 다시 실행하거나 유료 등급으로 전환'
+    : cause === '설정된 AI 모델을 쓸 수 없음' ? 'API 설정 → [내 계정에서 사용 가능한 모델 불러오기]'
+    : cause === 'AI 예측을 아직 실행하지 않음' ? '[전체 수집 실행]을 누르세요' : 'API 설정 → [연결 테스트]로 원인 확인';
+  return { cause, fix, raw: [st, pe.message].filter(Boolean).join(' · ') };
+}
+
+function rptMovers() {
+  const pool = [];
+  const add = (arr, src) => (arr || []).forEach(t => { if (typeof t.delta === 'number') pool.push({ name: t.name, delta: t.delta, src }); });
+  add(window._dlTrends, '네이버 검색');
+  add(window._salesTrends, '네이버쇼핑 클릭');
+  add(window._exportTrends, '관세청 수출');
+  add(window._ytTrends, 'YouTube 영상 수');
+  add(window._gtrends, 'Google 검색(미국)');
+  (window._kwSurge || []).forEach(t => pool.push({ name: t.name, delta: t.fresh ? null : t.delta, fresh: !!t.fresh, src: '업계 뉴스 언급' }));
+  const up = pool.filter(x => x.fresh || x.delta > 0).sort((a, b) => (b.fresh - a.fresh) || (b.delta - a.delta)).slice(0, 5);
+  const down = pool.filter(x => !x.fresh && x.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5);
+  return { up, down };
+}
+
+function rptReadiness() {
+  const sig = k => SIG_DATA[k] && !SIG_DATA[k]._sample;
+  const feeds = window._rssFeedStatus || [];
+  const feedOk = feeds.filter(f => f.ok).length;
+  const predOk = PREDICTIONS.length && !predsAreSample();
+  const R = (area, ok, part, detail, impact, fix) => ({ area, status: ok ? 'ok' : part ? 'part' : 'off', detail, impact, fix });
+  return [
+    R('기후 (기상청·Open-Meteo)', sig('climate'), false, sig('climate') ? '정상' : '샘플 값', '계절성 제품(선케어·보습) 판단', '공공데이터 키(DATAGO_KEY) 등록'),
+    R('사회·인구 (통계·공공데이터)', sig('society'), false, sig('society') ? '정상' : '샘플 값', '인구·생활 변화 신호', '공공데이터 키(DATAGO_KEY) 등록'),
+    R('경제 (한국은행 ECOS·관세청)', sig('economy'), !!window._exportTrends, sig('economy') ? '정상' : window._exportTrends ? '수출만 수집' : '샘플 값', '구매력·수출 실적', 'ECOS_KEY·DATAGO_KEY 등록'),
+    R('검색·쇼핑 (네이버 DataLab)', !!(window._dlTrends && window._salesTrends), !!(window._dlTrends || window._salesTrends),
+      window._dlTrends || window._salesTrends ? '정상' : (window._dlErr || '미연결'), '소비자 관심·구매 의도 — 제형 점수 30%', '네이버 Client ID/Secret 등록'),
+    R('업계 뉴스 (RSS)', feeds.length && feedOk === feeds.length, feedOk > 0,
+      feeds.length ? `${feedOk}/${feeds.length}개 매체 응답` : '미수집', '키워드 급증 감지', '응답 없는 매체는 피드 주소 변경 여부 확인'),
+    R('AI 예측 (Gemini)', predOk, false, predOk ? '정상' : rptPredFailure().cause, '예측 TOP5 전체', predOk ? '' : rptPredFailure().fix),
+    R('SNS (YouTube·Reddit)', !!(window._ytTrends && window._reddit), !!(window._ytTrends || window._reddit),
+      [window._ytTrends ? '' : 'YouTube 미연결', window._reddit ? '' : 'Reddit 차단'].filter(Boolean).join(' · ') || '정상',
+      '제형 점수 35% — 빠지면 점수 신뢰도 하락', 'YOUTUBE_KEY 등록 (Reddit은 서버 접근 차단 — 대체 경로 필요)'),
+    R('글로벌 (Google Trends·해외 보도)', !!window._gtrends, !!(window._expoTrends || ((window._globalRetail || {}).formulations || []).length),
+      window._gtrends ? '정상' : '해외 보도만 수집(Google Trends 실패)', '수출 선행 신호 — 제형 점수 10%', 'Google Trends는 비공식 경로라 실패가 잦음'),
+    R('신제품 (식약처 등록 품목)', !!window._supplyTrends, !!(window._newsTrends || window._productRadar),
+      window._supplyTrends ? '정상' : '뉴스로 대체', '공급 측 신호 — 제형 점수 25%', '공공데이터 키(DATAGO_KEY) 등록'),
+  ];
+}
+
+function rptUpcoming() {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const regs = REGS.map(r => {
+    const m = String(r.date).match(/(\d{4})[.\-](\d{1,2})(?:[.\-](\d{1,2}))?/);
+    const d = m ? new Date(+m[1], +m[2] - 1, +(m[3] || 1)) : null;
+    return { r, days: d ? Math.ceil((d - today) / 86400000) : null };
+  }).filter(x => x.days !== null && x.days >= -90).sort((a, b) => a.days - b.days).slice(0, 5);
+  let expos = [];
+  try { expos = computeExpoRows().filter(e => !e.passed && e.daysLeft !== null).slice(0, 4); } catch {}
+  return { regs, expos };
+}
+
+function reportModel() {
+  const signals = rptSignalRows();
+  const realCount = signals.filter(s => !s.sample).length;
+  const predOk = PREDICTIONS.length && !predsAreSample();
+  const forms = (window._formRadar || []).slice(0, 5);
+  const movers = rptMovers();
+  const upcoming = rptUpcoming();
+  const readiness = rptReadiness();
+  const offCount = readiness.filter(r => r.status === 'off').length;
+
+  /* 핵심 요약 — 보고서 전체에서 가장 중요한 4줄 */
+  const bluf = [];
+  if (predOk) {
+    const p = PREDICTIONS[0];
+    bluf.push(`<b>유망 유형 1위는 ${escHtml(p.type)}</b>${p.confidence != null ? `(신뢰도 ${p.confidence}%)` : ''}, 출시 적기는 ${escHtml(p.season || '—')}입니다.`);
+  } else {
+    bluf.push(`<b>이번 회차 AI 예측은 생성되지 않았습니다</b> — ${escHtml(rptPredFailure().cause)}. 아래 시장 신호·제형 지표로 판단하세요.`);
+  }
+  const real = signals.filter(s => !s.sample && s.score !== null).sort((a, b) => b.score - a.score);
+  if (real.length) {
+    const hi = real[0], lo = real[real.length - 1];
+    bluf.push(`시장 신호는 <b>${hi.name} ${hi.score}/5</b>가 가장 강하고${real.length > 1 ? ` ${lo.name} ${lo.score}/5가 가장 약합니다` : ''}. (4개 중 실데이터 ${realCount}개)`);
+  } else {
+    bluf.push('시장 신호 4개가 모두 샘플 값이라 이번 회차 신호 판단은 보류합니다.');
+  }
+  const topForm = forms.find(f => !f.thin) || forms[0];
+  if (topForm) bluf.push(`제형은 <b>${escHtml(topForm.name)} ${topForm.score}점(${escHtml(topForm.grade)})</b>이 가장 앞서며, 필요 설비는 ${escHtml((topForm.capa || [])[0] || '—')}입니다.`);
+  const nextReg = upcoming.regs.find(x => x.days >= 0);
+  if (nextReg) bluf.push(`가장 가까운 규제는 <b>${escHtml(nextReg.r.title)}</b> (D-${nextReg.days}) — ${escHtml(nextReg.r.action || '')}`);
+  if (offCount) bluf.push(`<span class="rpt-warn">데이터 경로 ${offCount}곳이 연결되지 않아 일부 결론의 신뢰도가 낮습니다 — 6. 데이터 신뢰도와 한계 참고.</span>`);
+
+  const now = new Date();
+  return { now, period: (document.getElementById('hdPeriod') || {}).textContent || '', signals, realCount, predOk, forms, movers, upcoming, readiness, bluf };
+}
+
+function reportHtml(m) {
+  const fmtD = d => `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  const light = s => s.sample || s.score === null ? 'na' : s.score >= 3.5 ? 'up' : s.score <= 2.5 ? 'down' : 'flat';
+  const lightLbl = { up: '수요 견인', flat: '중립', down: '수요 둔화', na: '판단 보류' };
+  const pct = d => `${d >= 0 ? '+' : ''}${d}%`;
+  const stLbl = { ok: '정상', part: '일부', off: '미연결' };
+  const sec = (n, title, sub, body) => `<section class="rpt-sec"><h3><span class="rpt-n">${n}</span>${title}${sub ? `<small>${sub}</small>` : ''}</h3>${body}</section>`;
+
+  const sigTable = `<table class="rpt-tbl"><thead><tr><th>신호</th><th>점수</th><th>판단</th><th>1주 전 대비</th><th>해석</th></tr></thead><tbody>${
+    m.signals.map(s => { const l = light(s); return `<tr>
+      <td><b>${s.name}</b></td>
+      <td class="num">${s.score !== null ? s.score.toFixed(1) : '—'}<span class="rpt-sub">${s.sample ? '샘플' : '실데이터'}</span></td>
+      <td><span class="rpt-light rl-${l}">${lightLbl[l]}</span></td>
+      <td class="num">${s.delta === null ? '<span class="rpt-sub">비교 기록 없음</span>' : `${s.delta > 0 ? '▲' : s.delta < 0 ? '▼' : '–'} ${Math.abs(s.delta).toFixed(1)}`}</td>
+      <td class="rpt-interp">${escHtml(s.sample ? '연결되지 않아 예시 값입니다 — 판단에 쓰지 마세요.' : s.interpret)}</td></tr>`; }).join('')
+  }</tbody></table>`;
+
+  let predBody;
+  if (m.predOk) {
+    predBody = `<table class="rpt-tbl"><thead><tr><th>순위</th><th>유형</th><th>제형·패키징</th><th>신뢰도</th><th>출시 적기</th></tr></thead><tbody>${
+      PREDICTIONS.slice(0, 5).map(p => `<tr><td class="num">${p.rank}</td><td><b>${escHtml(p.type)}</b></td>
+        <td>${escHtml([p.formulation, p.packaging].filter(Boolean).join(' · '))}</td>
+        <td class="num">${p.confidence != null ? p.confidence + '%' : '—'}</td><td>${escHtml(p.season || '—')}</td></tr>`).join('')
+    }</tbody></table>`;
+  } else {
+    const f = rptPredFailure();
+    predBody = `<div class="rpt-fail"><b>예측 결과 없음 — ${escHtml(f.cause)}</b>
+      <div>조치: ${escHtml(f.fix)}</div>${f.raw ? `<div class="rpt-sub">원본 오류: ${escHtml(f.raw)}</div>` : ''}
+      <div class="rpt-sub">화면에 보이는 예시 항목은 실제 예측이 아니므로 보고서에서 뺐습니다.</div></div>`;
+  }
+
+  const moverList = (arr, cls) => arr.length ? `<ul class="rpt-movers ${cls}">${arr.map(x =>
+    `<li><b>${escHtml(x.name)}</b> <span class="mv">${x.fresh ? '신규 등장' : pct(x.delta)}</span> <span class="rpt-sub">${x.src}</span></li>`).join('')}</ul>`
+    : '<div class="rpt-sub">측정된 항목 없음</div>';
+  const moversBody = `<div class="rpt-2col"><div><h4>오른 것</h4>${moverList(m.movers.up, 'mv-up')}</div><div><h4>내린 것</h4>${moverList(m.movers.down, 'mv-down')}</div></div>
+    <div class="rpt-sub">기준: 최근 3개월 vs 직전 3개월(검색·쇼핑·수출), 최근 30일 vs 직전 30일(뉴스·YouTube).</div>`;
+
+  const formBody = m.forms.length ? `<table class="rpt-tbl"><thead><tr><th>제형</th><th>점수</th><th>등급</th><th>신뢰도</th><th>필요 설비(CAPA)</th></tr></thead><tbody>${
+    m.forms.map(f => `<tr><td><b>${escHtml(f.name)}</b></td><td class="num">${f.score}</td>
+      <td><span class="fr-grade ${gradeCls(f.grade)}">${escHtml(f.grade)}</span></td><td class="num">${f.coverage}%</td>
+      <td>${escHtml((f.capa || []).join(' / '))}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="rpt-sub">제형 신호 없음 — [전체 수집 실행] 후 다시 생성하세요.</div>';
+
+  const upBody = `<div class="rpt-2col"><div><h4>규제·법령</h4><ul class="rpt-dl">${m.upcoming.regs.map(x =>
+      `<li><span class="rpt-dd ${x.days < 0 ? 'dd-now' : x.days <= 90 ? 'dd-soon' : ''}">${x.days < 0 ? '시행 중' : 'D-' + x.days}</span>
+        <div><b>${escHtml(x.r.title)}</b><div class="rpt-sub">${escHtml(x.r.date)} · ${escHtml(x.r.auth || '')} — ${escHtml(x.r.action || '')}</div></div></li>`).join('') || '<li class="rpt-sub">예정 없음</li>'}</ul></div>
+    <div><h4>국내 박람회</h4><ul class="rpt-dl">${m.upcoming.expos.map(e =>
+      `<li><span class="rpt-dd ${e.daysLeft <= 30 ? 'dd-soon' : ''}">D-${e.daysLeft}</span>
+        <div><b>${escHtml(e.x.name)}</b><div class="rpt-sub">${escHtml(e.dateStr || '')} · ${escHtml(e.x.location || '')}${e.v && e.v.status === 'estimated' ? ' · 추정 일정' : ''}</div></div></li>`).join('') || '<li class="rpt-sub">예정 없음</li>'}</ul></div></div>`;
+
+  const readyBody = `<table class="rpt-tbl rpt-ready"><thead><tr><th>데이터</th><th>상태</th><th>영향</th><th>보완 방법</th></tr></thead><tbody>${
+    m.readiness.map(r => `<tr><td><b>${escHtml(r.area)}</b><div class="rpt-sub">${escHtml(r.detail)}</div></td>
+      <td><span class="rpt-st st-${r.status}">${stLbl[r.status]}</span></td><td>${escHtml(r.impact)}</td>
+      <td>${r.status === 'ok' ? '<span class="rpt-sub">—</span>' : escHtml(r.fix)}</td></tr>`).join('')
+  }</tbody></table>`;
+
+  const gloss = `<dl class="rpt-gloss">${RPT_GLOSSARY.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>`;
+
+  return `<article class="rpt">
+    <header class="rpt-hd">
+      <div class="rpt-kicker">CosmeDB · 화장품 트렌드 예측·소싱</div>
+      <h2>트렌드 예측 보고서</h2>
+      <div class="rpt-meta">작성 ${fmtD(m.now)} · ${escHtml(m.period)} · 실데이터 신호 ${m.realCount}/4</div>
+    </header>
+    <section class="rpt-bluf"><h3>핵심 요약</h3><ul>${m.bluf.map(b => `<li>${b}</li>`).join('')}</ul></section>
+    ${sec('1', '시장 신호', '수요를 움직이는 4개 외부 요인', sigTable)}
+    ${sec('2', 'AI 예측 TOP5', '향후 출시 유망 유형', predBody)}
+    ${sec('3', '주목할 변화', '실제로 증감을 측정한 항목만', moversBody)}
+    ${sec('4', '제형·설비', '어떤 제형이 뜨고 어떤 설비가 필요한가', formBody)}
+    ${sec('5', '다가오는 일정', '대응 기한이 정해진 항목', upBody)}
+    ${sec('6', '데이터 신뢰도와 한계', '숫자를 읽기 전에 확인', readyBody)}
+    ${sec('7', '용어', '', gloss)}
+    <footer class="rpt-ft">AI 예측과 공개 데이터를 바탕으로 자동 작성한 보고서입니다. 투자·발주 전에 담당 부서 확인이 필요합니다.</footer>
+  </article>`;
+}
+
+/* 텍스트 판 — 메일·메신저 붙여넣기용. 같은 모델을 쓴다 */
+function reportText(m) {
+  const strip = s => String(s).replace(/<[^>]+>/g, '');
+  const L = [];
+  L.push('[트렌드 예측 보고서]');
+  L.push(`작성 ${m.now.toLocaleDateString('ko-KR')} · ${m.period} · 실데이터 신호 ${m.realCount}/4`);
+  L.push('─'.repeat(40));
+  L.push('■ 핵심 요약'); m.bluf.forEach(b => L.push('  • ' + strip(b)));
+  L.push(''); L.push('■ 1. 시장 신호 (1~5점, 3=중립)');
+  m.signals.forEach(s => L.push(`  • ${s.name}: ${s.score !== null ? s.score.toFixed(1) : '—'} [${s.sample ? '샘플' : '실데이터'}]${s.delta !== null ? ` (1주 전 대비 ${s.delta >= 0 ? '+' : ''}${s.delta})` : ''} — ${s.sample ? '판단 보류' : s.interpret}`));
+  L.push(''); L.push('■ 2. AI 예측 TOP5');
+  if (m.predOk) PREDICTIONS.slice(0, 5).forEach(p => L.push(`  ${p.rank}위. ${p.type} (신뢰도 ${p.confidence}%) — 출시 적기 ${p.season}`));
+  else { const f = rptPredFailure(); L.push(`  ⚠ 예측 없음 — ${f.cause}`); L.push(`    조치: ${f.fix}`); }
+  L.push(''); L.push('■ 3. 주목할 변화');
+  L.push('  오른 것: ' + (m.movers.up.map(x => `${x.name} ${x.fresh ? '신규' : (x.delta >= 0 ? '+' : '') + x.delta + '%'}(${x.src})`).join(', ') || '없음'));
+  L.push('  내린 것: ' + (m.movers.down.map(x => `${x.name} ${x.delta}%(${x.src})`).join(', ') || '없음'));
+  L.push(''); L.push('■ 4. 제형·설비');
+  m.forms.forEach(f => L.push(`  • ${f.name} ${f.score}점 · ${f.grade} · 신뢰도 ${f.coverage}% · 설비: ${(f.capa || []).join(' / ')}`));
+  L.push(''); L.push('■ 5. 다가오는 일정');
+  m.upcoming.regs.forEach(x => L.push(`  • [규제 ${x.days < 0 ? '시행 중' : 'D-' + x.days}] ${x.r.title} (${x.r.date})`));
+  m.upcoming.expos.forEach(e => L.push(`  • [박람회 D-${e.daysLeft}] ${e.x.name} (${e.dateStr})`));
+  L.push(''); L.push('■ 6. 데이터 신뢰도와 한계');
+  m.readiness.forEach(r => L.push(`  • ${r.area}: ${r.status === 'ok' ? '정상' : r.status === 'part' ? '일부' : '미연결'} — ${r.detail}${r.status !== 'ok' && r.fix ? ` → ${r.fix}` : ''}`));
+  return L;
+}
+
+function openReport() {
+  const m = reportModel();
+  document.getElementById('rptBody').innerHTML = reportHtml(m);
+  document.getElementById('rptOverlay').classList.add('open');
+  document.getElementById('apiPanel').classList.remove('open');
+}
+function closeReport() { document.getElementById('rptOverlay').classList.remove('open'); }
+
+/* 텍스트 보고서 = 요약판 + 부록(세부 지표 전체) */
 function genReport() {
-  const period = document.getElementById('hdPeriod').textContent;
-  const lines = [];
-  lines.push('[트렌드 예측 & 소싱 검증 보고서]');
-  lines.push(period);
-  lines.push('─'.repeat(40));
-  lines.push('');
+  const lines = reportText(reportModel());
+  lines.push('', '─'.repeat(40), '[부록 — 세부 지표]', '');
   lines.push('▶ 4대 신호 종합');
   Object.entries(SIG_DATA).forEach(([k, v]) => {
     if (v) lines.push(`  ${k}: ${v.score}/5${v._sample ? ' [샘플]' : ' [실데이터]'} — ${v.interpret}`);
@@ -5515,7 +5759,7 @@ function genReport() {
 
 function copyReport() {
   const ta = document.getElementById('repText');
-  if (!ta.value) genReport();
+  genReport();
   navigator.clipboard.writeText(ta.value).then(() => showToast('보고서 복사 완료'));
 }
 
@@ -5523,7 +5767,7 @@ function copyReport() {
 function exportReportPDF() {
   const ta = document.getElementById('repText');
   if (!ta.value) genReport();
-  document.getElementById('printReport').textContent = ta.value;
+  document.getElementById('printReport').innerHTML = reportHtml(reportModel());
   window.print();
 }
 
@@ -6130,7 +6374,8 @@ function init() {
   /* 버튼 이벤트 */
   document.getElementById('btnApiSet').addEventListener('click', toggleApiPanel);
   document.getElementById('btnRepPanel').addEventListener('click', toggleRepPanel);
-  document.getElementById('btnRepClose').addEventListener('click', toggleRepPanel);
+  document.getElementById('btnRepClose').addEventListener('click', closeReport);
+  document.getElementById('rptOverlay').addEventListener('click', e => { if (e.target.id === 'rptOverlay') closeReport(); });
   document.getElementById('btnGuide').addEventListener('click', toggleGuidePanel);
   document.getElementById('btnGuideClose').addEventListener('click', toggleGuidePanel);
   document.getElementById('btnCollect').addEventListener('click', collectAll);
@@ -6154,9 +6399,9 @@ function init() {
   document.getElementById('btnSaveBackend').addEventListener('click', () => saveKey('backend'));
   document.getElementById('btnTestBackend').addEventListener('click', testBackend);
   document.getElementById('btnShowCollected').addEventListener('click', showCollectedData);
-  document.getElementById('btnGenReport').addEventListener('click', genReport);
+  document.getElementById('btnGenReport').addEventListener('click', () => { document.getElementById('rptBody').innerHTML = reportHtml(reportModel()); showToast('보고서를 최신 데이터로 다시 만들었습니다'); });
   document.getElementById('btnCopyReport').addEventListener('click', copyReport);
-  document.getElementById('btnClearReport').addEventListener('click', () => { document.getElementById('repText').value = ''; });
+  document.getElementById('btnClearReport').addEventListener('click', () => { genReport(); const t = document.getElementById('repText'); t.hidden = !t.hidden; });
   document.getElementById('btnExportPdf').addEventListener('click', exportReportPDF);
   document.getElementById('btnExportCsv').addEventListener('click', exportReportCSV);
 
@@ -6168,7 +6413,6 @@ function init() {
   /* 패널 외부 클릭 닫기 */
   document.addEventListener('click', e => {
     if (!e.target.closest('.api-wrap')) document.getElementById('apiPanel').classList.remove('open');
-    if (!e.target.closest('.rep-wrap')) document.getElementById('repPanel').classList.remove('open');
   });
 
   /* 가이드 모달 — 배경 클릭 시 닫기 */

@@ -943,20 +943,6 @@ table.ht td.num { font-variant-numeric: tabular-nums; }
 /* ═══════════════════════════════════════
    보고서 패널
 ═══════════════════════════════════════ */
-.rep-wrap { position: relative; }
-.rep-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 6px); right: 0;
-  width: 360px;
-  background: var(--w);
-  border: .5px solid var(--bg3);
-  border-radius: var(--r2);
-  box-shadow: var(--s2);
-  z-index: 200;
-  overflow: hidden;
-}
-.rep-panel.open { display: block; }
 .rp-hd {
   padding: 9px 13px;
   background: var(--bg2);
@@ -979,14 +965,73 @@ table.ht td.num { font-variant-numeric: tabular-nums; }
 .btn-regen { font-size: 10px; padding: 4px 12px; border-radius: var(--r); border: .5px solid var(--bg3); background: var(--bg2); color: var(--ink); cursor: pointer; font-family: inherit; }
 .rp-export-note { font-size: 9px; color: var(--ink3); line-height: 1.6; margin-top: 6px; }
 
-.print-report { display: none; white-space: pre-wrap; }
+/* ═══════════ 보고서 (임원용 1장) ═══════════ */
+.rpt-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(20,30,24,.45); display: none; overflow-y: auto; padding: 24px 16px; }
+.rpt-overlay.open { display: block; }
+.rpt-sheet { max-width: 900px; margin: 0 auto; background: var(--w); border-radius: var(--r2); box-shadow: var(--s2); }
+.rpt-bar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 16px; background: var(--w); border-bottom: .5px solid var(--bg3); border-radius: var(--r2) var(--r2) 0 0; }
+.rpt-bar-title { font-size: 12px; font-weight: 800; color: var(--ink); margin-right: auto; }
+.rpt-ta { margin: 12px 16px 0; width: calc(100% - 32px); min-height: 220px; }
+.rpt { padding: 28px 36px 32px; color: var(--ink); font-size: 12px; line-height: 1.65; }
+.rpt-hd { border-bottom: 2px solid var(--acc); padding-bottom: 12px; margin-bottom: 18px; }
+.rpt-kicker { font-size: 10px; font-weight: 700; color: var(--acc); letter-spacing: .04em; }
+.rpt-hd h2 { font-size: 22px; margin: 2px 0 4px; letter-spacing: -.01em; }
+.rpt-meta { font-size: 10.5px; color: var(--ink3); }
+.rpt-bluf { background: #eef4f0; border-left: 4px solid var(--acc); border-radius: var(--r); padding: 12px 16px; margin-bottom: 22px; }
+.rpt-bluf h3 { font-size: 13px; margin: 0 0 6px; color: var(--acc); }
+.rpt-bluf ul { margin: 0; padding-left: 18px; }
+.rpt-bluf li { margin: 3px 0; font-size: 12.5px; }
+.rpt-warn { color: #8a5a12; }
+.rpt-sec { margin-bottom: 22px; break-inside: avoid; }
+.rpt-sec h3 { display: flex; align-items: baseline; gap: 8px; font-size: 14px; margin: 0 0 8px; padding-bottom: 5px; border-bottom: .5px solid var(--bg3); }
+.rpt-sec h3 small { font-size: 10.5px; font-weight: 500; color: var(--ink3); }
+.rpt-sec h4 { font-size: 11.5px; margin: 0 0 6px; color: var(--ink2); }
+.rpt-n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--acc); color: #fff; font-size: 11px; flex: none; align-self: center; }
+.rpt-tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.rpt-tbl th { text-align: left; font-size: 10px; font-weight: 700; color: var(--ink3); padding: 5px 8px; border-bottom: 1px solid var(--bg3); white-space: nowrap; }
+.rpt-tbl td { padding: 7px 8px; border-bottom: .5px solid var(--bg2); vertical-align: top; }
+.rpt-tbl td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rpt-interp { color: var(--ink2); }
+.rpt-sub { display: block; font-size: 10px; color: var(--ink3); font-weight: 400; }
+.rpt-tbl td.num .rpt-sub { display: block; }
+.rpt-light, .rpt-st { display: inline-block; font-size: 10px; font-weight: 700; padding: 1.5px 8px; border-radius: 9px; white-space: nowrap; }
+.rl-up { background: #ddeee5; color: #1c5c42; }
+.rl-flat { background: var(--bg2); color: var(--ink2); }
+.rl-down { background: #f5e1e1; color: #8a3a3a; }
+.rl-na, .st-off { background: #f3eedd; color: #7a6320; }
+.st-ok { background: #ddeee5; color: #1c5c42; }
+.st-part { background: #e3ebf5; color: #2f5687; }
+.rpt-fail { background: #fbf3f3; border: .5px solid #e7c9c9; border-radius: var(--r); padding: 10px 14px; }
+.rpt-fail > div { margin-top: 4px; }
+.rpt-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.rpt-movers, .rpt-dl { list-style: none; margin: 0; padding: 0; }
+.rpt-movers li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 4px 0; border-bottom: .5px solid var(--bg2); }
+.rpt-movers .rpt-sub { display: inline; margin-left: auto; }
+.mv-up .mv { color: var(--grn); font-weight: 700; }
+.mv-down .mv { color: var(--red); font-weight: 700; }
+.rpt-dl li { display: flex; gap: 10px; padding: 6px 0; border-bottom: .5px solid var(--bg2); }
+.rpt-dd { flex: none; min-width: 56px; text-align: center; font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: var(--r); background: var(--bg2); color: var(--ink2); align-self: flex-start; }
+.rpt-dd.dd-soon { background: #fdf0d5; color: #8a5a12; }
+.rpt-dd.dd-now { background: #f5e1e1; color: #8a3a3a; }
+.rpt-gloss { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 11px; }
+.rpt-gloss dt { font-weight: 700; }
+.rpt-gloss dd { margin: 0; color: var(--ink2); }
+.rpt-ft { margin-top: 10px; padding-top: 10px; border-top: .5px solid var(--bg3); font-size: 10px; color: var(--ink3); }
+@media (max-width: 640px) {
+  .rpt { padding: 18px 16px; }
+  .rpt-2col { grid-template-columns: 1fr; }
+  .rpt-tbl { display: block; overflow-x: auto; }
+}
+
+.print-report { display: none; }
 @media print {
+  @page { size: A4; margin: 14mm; }
   body * { visibility: hidden; }
   .print-report, .print-report * { visibility: visible; }
-  .print-report {
-    display: block; position: absolute; left: 0; top: 0; width: 100%;
-    padding: 24px; font-family: 'Courier New', monospace; font-size: 11px; color: #000;
-  }
+  .print-report { display: block; position: absolute; left: 0; top: 0; width: 100%; color: #000; }
+  .print-report .rpt { padding: 0; font-size: 10.5px; }
+  .print-report .rpt-sec { break-inside: avoid; }
+  .print-report * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 .btn-regen:hover { background: var(--bg3); }
 
