@@ -2948,18 +2948,42 @@ function ingredientSignals() {
 const gradeCls = g => g === '고성장' ? 'fg-hi' : g === '관찰' ? 'fg-watch' : g === '유지' ? 'fg-keep' : 'fg-low';
 /* 제형 레이더 표기 정책: 커버리지 50% 미만은 '데이터 부족'으로 낮음 계열 표시 */
 
+/* 각 축이 지금 실제로 데이터를 받고 있는가 — '—'가 '0'인지 '미연결'인지 구분하려면 필요하다 */
+function radarAxisStatus() {
+  const P = radarPools();
+  const why = {
+    sns: [
+      !window._ytTrends ? `YouTube 미연결(${window._ytErr || 'YOUTUBE_KEY 미등록'})` : null,
+      !window._reddit ? 'Reddit 미수집(서버에서 차단)' : null,
+    ].filter(Boolean).join(' · '),
+    search: (!window._dlTrends && !window._salesTrends) ? '네이버 검색·쇼핑 미연결(네이버 키 필요)' : '',
+    launch: (!window._supplyTrends && !window._productRadar && !window._newsTrends && !((window._trendReports || {}).keywords || []).length) ? '식약처·출시보도·뉴스 미연결' : '',
+    global: (!window._gtrends && !window._expoTrends && !((window._globalRetail || {}).formulations || []).length) ? 'Google Trends 실패 · 해외 보도 없음' : '',
+  };
+  const out = {};
+  Object.keys(FORM_WEIGHTS).forEach(k => { out[k] = { live: P[k].length > 0, why: why[k] || '' }; });
+  return out;
+}
+
 function renderFormulationRadar() {
   const el = document.getElementById('zForm');
   if (!el) return;
   const rows = window._formRadar;
   if (!rows || !rows.length) { el.style.display = 'none'; return; }
   const top = rows.slice(0, 8);
+  const ax = radarAxisStatus();
+  const offline = Object.keys(ax).filter(k => !ax[k].live);
   el.innerHTML = `
     <div class="zone-hd">
       <div class="zone-title">제형 트렌드 레이더 <span class="ztag">성분 → 제형 → 패키징 → 생산설비(CAPA)</span></div>
-      <button class="btn-hd btn-bt-toggle" onclick="openEvolutionPaths()">제형 진화 경로</button>
+      <button class="btn-hd btn-bt-toggle" onclick="openEvolutionPaths()" title="한 제형이 뜨면 다음에 어떤 제형·설비 수요가 따라오는지 보여주는 지도">제형 진화 경로 ?</button>
       <span class="zmodel">SNS 35 · 검색 30 · 신제품 25 · 글로벌 10</span>
     </div>
+    ${offline.length ? `<div class="fr-axis-off">
+      <b>미연결 축</b> ${offline.map(k => `<span class="fr-off-chip" title="${escHtml(ax[k].why)}">${FORM_WLABEL[k]}</span>`).join('')}
+      <span class="fr-off-why">${escHtml(offline.map(k => ax[k].why).filter(Boolean).join(' / '))}</span>
+      <span class="fr-off-note">— 이 축은 <b>데이터가 0인 것이 아니라 수집 경로가 연결되지 않은 것</b>입니다. 점수는 나머지 축만으로 계산하고, 그만큼 신뢰도를 낮춰 표시합니다.</span>
+    </div>` : ''}
     <div class="fr-grid">${top.map(r => `
       <div class="fr-card" onclick="openFormulationChain('${r.code}')" title="클릭 시 패키징·설비(CAPA)·팀별 액션 확인">
         <div class="fr-top">
@@ -2972,10 +2996,12 @@ function renderFormulationRadar() {
         <div class="fr-grade ${gradeCls(r.grade)}">${r.grade}</div>
         <div class="fr-bars">${Object.keys(FORM_WEIGHTS).map(k => {
           const c = r.comp[k];
-          return `<div class="fr-bar-row" title="${FORM_WLABEL[k]} ${Math.round(FORM_WEIGHTS[k]*100)}%${c ? ` — ${c.score}점 (${c.srcs.join('·')})` : ' — 데이터 없음'}">
+          /* 값이 없을 때 이유를 구분한다: 축 자체가 미연결 vs 연결됐지만 이 제형 언급 없음 */
+          const na = c ? '' : (ax[k].live ? '언급 없음' : '미연결');
+          return `<div class="fr-bar-row${na === '미연결' ? ' fr-off' : ''}" title="${FORM_WLABEL[k]} ${Math.round(FORM_WEIGHTS[k]*100)}%${c ? ` — ${c.score}점 (${c.srcs.join('·')})` : na === '미연결' ? ` — 미연결: ${ax[k].why}` : ' — 수집은 됐지만 이 제형 관련 신호 없음'}">
             <span class="fr-bl">${FORM_WLABEL[k]}</span>
             <span class="fr-bt"><b data-grow="${c ? c.score : 0}%"></b></span>
-            <span class="fr-bv">${c ? c.score : '—'}</span>
+            <span class="fr-bv${na ? ' fr-bv-na' : ''}">${c ? c.score : na}</span>
           </div>`;
         }).join('')}</div>
         <div class="fr-foot">신뢰도 ${r.coverage}% · ${r.srcCount}개 채널 포착 · 설비: ${escHtml(r.capa[0])}</div>
@@ -3068,7 +3094,14 @@ function openFormulationChain(code) {
 
 function openEvolutionPaths() {
   const nm = c => (FORMULATIONS.find(f => f.code === c) || {}).name || c;
-  const body = EVOLUTION_PATHS.map(p => `<div class="gm-block">
+  const intro = `<div class="gm-block"><div class="gm-block-title">이 지도는 무엇인가</div>
+    <div class="gm-p">제형 트렌드는 따로따로 생기지 않고 <b>앞 제형의 인기가 다음 제형으로 옮겨 가는 경로</b>를 따릅니다.
+      예를 들어 시트마스크 → 바이오셀룰로오스 → 하이드로겔 → 아이패치로 옮겨 가면, 끝에서는 <b>개별 트레이 포장 설비</b> 수요가 생깁니다.</div>
+    <div class="gm-p"><b>읽는 법</b> — 경로 <b>앞쪽 제형의 점수가 오르면</b> 뒤쪽 제형과 설비 수요가 몇 분기 뒤 따라올 가능성이 큽니다.
+      즉 지금 뒤쪽 설비·협력사를 미리 확보할지 판단하는 근거입니다. 숫자는 현재 제형 레이더 점수, 초록 테두리는 고성장 제형입니다.</div>
+    <div class="gm-note2">경로는 업계 전개 사례를 바탕으로 정의한 가설이며, 자동 학습된 결과가 아닙니다. 점수가 없는 제형은 이번 수집에서 신호가 잡히지 않은 것입니다.</div>
+  </div>`;
+  const body = intro + EVOLUTION_PATHS.map(p => `<div class="gm-block">
     <div class="gm-block-title">${escHtml(p.title)}</div>
     <div class="evo-line">${p.codes.map(c => {
       const s = (window._formRadar || []).find(x => x.code === c);

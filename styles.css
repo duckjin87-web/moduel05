@@ -1272,3 +1272,14 @@ table.ht td.num { font-variant-numeric: tabular-nums; }
   .collect-prog::after { animation: none; opacity: 0; }
   .pc-enter { animation: none; opacity: 1; transform: none; }
 }
+
+/* ═══ 제형 레이더 — 미연결 축 표시 ═══ */
+.fr-axis-off { margin: 10px 14px 0; padding: 8px 12px; background: var(--bg2); border: .5px dashed var(--bg3); border-radius: var(--r);
+  font-size: 10.5px; color: var(--ink2); line-height: 1.7; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.fr-axis-off b { font-weight: 700; color: var(--ink); }
+.fr-off-chip { font-size: 9.5px; font-weight: 700; padding: 1px 7px; border-radius: 9px; background: var(--w); border: .5px dashed var(--ink3); color: var(--ink3); }
+.fr-off-why { color: var(--ink3); }
+.fr-off-note { color: var(--ink3); width: 100%; }
+.fr-bar-row.fr-off .fr-bl { color: var(--ink3); text-decoration: line-through; text-decoration-color: rgba(0,0,0,.25); }
+.fr-bar-row.fr-off .fr-bt { background: repeating-linear-gradient(90deg, var(--bg3) 0 3px, transparent 3px 6px); }
+.fr-bv-na { font-size: 8.5px !important; width: auto !important; color: var(--ink3) !important; white-space: nowrap; }
