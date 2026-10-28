@@ -489,6 +489,26 @@ if (history.length > 730) history = history.slice(-730);
 fs.writeFileSync(histPath, JSON.stringify(history));
 console.log(`누적 이력: ${history.length}일치 (오늘 ${rec.date} · 실데이터 ${rec.real}/4 · RSS ${rec.volume.rss}건)`);
 
+/* ══════════ 국내 박람회 다음 회차 일정 — data/expos.json (월 1회) ══════════
+   매일 돌리면 같은 검색을 반복할 뿐이라, 파일이 없거나 이번 달에 아직 갱신하지 않았을 때만 실행한다.
+   브라우저의 [일정 업데이트] 버튼과 같은 함수(refreshExpoSchedules)를 쓴다. */
+const expoPath = path.join(root, 'data', 'expos.json');
+let expoPrev = null;
+try { expoPrev = JSON.parse(fs.readFileSync(expoPath, 'utf8')); } catch {}
+const thisMonth = new Date().toISOString().slice(0, 7);
+if (!expoPrev || String(expoPrev.updatedAt || '').slice(0, 7) !== thisMonth || process.env.FORCE_EXPO === '1') {
+  console.log('박람회 다음 회차 일정 갱신 (월 1회)...');
+  try {
+    const res = await sandbox.refreshExpoSchedules();
+    fs.writeFileSync(expoPath, JSON.stringify(res, null, 2));
+    const vals = Object.values(res.schedule);
+    console.log(` · 확정 ${vals.filter(v => v.status === 'confirmed').length} · 추정 ${vals.filter(v => v.status === 'estimated').length} · 신규 발견 ${res.discovered.length}`);
+  } catch (e) {
+    console.log(` · 박람회 갱신 실패: ${e.message || e} — 기존 파일 유지`);
+  }
+} else {
+  console.log(`박람회 일정: 이번 달 갱신 완료(${expoPrev.updatedAt}) — 생략`);
+}
 
 fs.writeFileSync(path.join(root, 'data', 'trends.json'), JSON.stringify(out, null, 2));
 

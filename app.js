@@ -176,31 +176,31 @@ const REGS = [
 /* confirmed: true → 주최측 공식 발표(홈페이지·보도)로 정확한 개최일이 이미 공개된 건
    confirmed: false → 매년/격년 통상 개최 시기 패턴에 근거한 추정일(공식 발표 전) */
 const EXPOS = [
-  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', org:'대한화장품미용산업대전 사무국', month:'매년 5월경',
+  {name:'코스모뷰티 서울(서울국제화장품미용박람회)', type:'expo', q:'코스모뷰티 서울 박람회', aliases:['코스모뷰티','서울국제화장품미용박람회'], cycle:1, org:'대한화장품미용산업대전 사무국', month:'매년 5월경',
    nextDate:'2026.05.27~2026.05.29', confirmed:true, location:'서울 코엑스 A·B홀',
    focus:'국내 최대 규모 화장품·뷰티 종합전 — OEM/ODM·소재사 부스 다수, 국내 신규처 탐색에 유용. 2026년판 820부스 역대 최대 규모로 개최(종료)',
    url:'https://www.cosmobeautyseoul.com', srcLabel:'코스모뷰티 서울 공식 홈페이지'},
-  {name:'in-cosmetics Korea', type:'expo', org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.01~2026.07.03',
+  {name:'in-cosmetics Korea', type:'expo', q:'인코스메틱스 코리아', aliases:['in-cosmetics','인코스메틱스'], cycle:1, org:'Informa Markets', month:'매년 7월', nextDate:'2026.07.01~2026.07.03',
    confirmed:true, location:'서울 코엑스 C·D·E홀', focus:'화장품 원료·성분 전문 박람회(국내 개최) — 신규 원료·포뮬레이션 트렌드 탐색',
    url:'https://www.in-cosmetics.com/korea', srcLabel:'in-cosmetics Korea 공식 홈페이지'},
-  {name:'K-BEAUTY EXPO KOREA', type:'expo', org:'KINTEX·KOTRA', month:'매년 10월', nextDate:'2026.10.15~2026.10.17',
+  {name:'K-BEAUTY EXPO KOREA', type:'expo', q:'K-뷰티 엑스포 코리아 킨텍스', aliases:['K-BEAUTY EXPO','K뷰티 엑스포','K-뷰티 엑스포','케이뷰티엑스포'], cycle:1, org:'KINTEX·KOTRA', month:'매년 10월', nextDate:'2026.10.15~2026.10.17',
    confirmed:true, location:'경기 고양 킨텍스', focus:'코트라·킨텍스 공동 주관 수출상담회 성격 — 해외 바이어 매칭, 신규 수출처 발굴에 유용',
    url:'https://www.kbeautyexpo.com', srcLabel:'K-BEAUTY EXPO KOREA 공식 홈페이지'},
-  {name:'부산국제화장품미용박람회(BICE)', type:'expo', org:'벡스코', month:'매년 9월경', nextDate:'2026.09.10',
+  {name:'부산국제화장품미용박람회(BICE)', type:'expo', q:'부산국제화장품미용박람회', aliases:['부산국제화장품','BICE','부산뷰티'], cycle:1, org:'벡스코', month:'매년 9월경', nextDate:'2026.09.10',
    confirmed:false, location:'부산 벡스코', focus:'영남권 화장품·뷰티 종합전 — 지역 OEM/ODM·소재사 탐색. 공식 발표 전(추정 일정)',
    url:'https://www.bexco.co.kr', srcLabel:'벡스코 전시일정 안내'},
-  {name:'대구국제뷰티엑스포', type:'expo', org:'엑스코', month:'매년 6월경', nextDate:'2026.06.11',
+  {name:'대구국제뷰티엑스포', type:'expo', q:'대구국제뷰티엑스포', aliases:['대구국제뷰티엑스포','대구뷰티엑스포'], cycle:1, org:'엑스코', month:'매년 6월경', nextDate:'2026.06.11',
    confirmed:true, location:'대구 엑스코', focus:'대구·경북권 뷰티 산업 박람회 — 지역 소재·뷰티기기 트렌드 확인(종료)',
    url:'https://www.beautyexpo.kr', srcLabel:'대구국제뷰티엑스포 공식 홈페이지'},
-  {name:'올리브영 뷰티 기획전(다이브인페스티벌 등 시즌 세일)', type:'retail', org:'CJ올리브영', month:'연 수회(2~3월/6~7월/10~11월)',
+  {name:'올리브영 뷰티 기획전(다이브인페스티벌 등 시즌 세일)', type:'retail', q:'올영세일 일정', aliases:['올영세일','올리브영','다이브인'], cycle:0, org:'CJ올리브영', month:'연 수회(2~3월/6~7월/10~11월)',
    nextDate:'2026.10.22', confirmed:false, location:'전국 매장·온라인',
    focus:'국내 최대 뷰티 리테일러 시즌 기획전 — 큐레이션 카테고리로 소비 트렌드 선행 포착. 매회 구체 일정은 임박 시점에 공개',
    url:'https://www.oliveyoung.co.kr', srcLabel:'올리브영 공식 홈페이지'},
-  {name:'코리아팩(KOREA PACK)', type:'equipment', org:'한국포장기계협회', month:'격년(짝수년) 3~4월',
+  {name:'코리아팩(KOREA PACK)', type:'equipment', q:'코리아팩 KOREA PACK 킨텍스', aliases:['코리아팩','KOREA PACK','국제포장기자재전'], cycle:2, org:'한국포장기계협회', month:'격년(짝수년) 3~4월',
    nextDate:'2028.03.28', confirmed:false, location:'경기 킨텍스',
    focus:'국내 최대 충진·성형·자동화 설비전 — 2026년부터 ICPI WEEK(국제 제약·화장품위크)와 통합 개최되어 화장품 제조설비 신기술이 가장 먼저 공개되는 자리. 2026년판은 이미 종료(3.31~4.3) — 다음은 2028년 격년 개최(정확한 일정 미발표)',
    url:'https://www.koreapack.org', srcLabel:'KOREA PACK 공식 홈페이지'},
-  {name:'한국포장전(H-PACK)', type:'equipment', org:'월간포장타임즈', month:'매년 10월',
+  {name:'한국포장전(H-PACK)', type:'equipment', q:'한국포장전 H-PACK', aliases:['한국포장전','H-PACK','HPACK'], cycle:1, org:'월간포장타임즈', month:'매년 10월',
    nextDate:'2026.10.27', confirmed:false, location:'경기 킨텍스',
    focus:'포장기계·자재·용기·친환경 패키징 솔루션 전문전(식품·제약·화장품 공통) — 신규 패키징 소재·기술 트렌드 확인. 2025년판은 10.28~31 개최, 2026년판 정확한 일정 미발표(추정)',
    url:'http://hpack.org', srcLabel:'한국포장전(H-PACK) 공식 홈페이지'},
@@ -649,12 +649,27 @@ function renderZ4() {
   const fmtAgo = ts => { const days = Math.floor((now - ts) / 86400000); return days <= 0 ? '오늘' : `${days}일 전`; };
   const fmtDate = ts => new Date(ts).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
 
+  const sched = getExpoSchedule();
+  const schedMap = (sched && sched.schedule) || {};
+  const startOf = ds => { const p = String(ds || '').split('~')[0].trim().split('.'); return p[0] ? new Date(p[0], (p[1] || 1) - 1, p[2] || 1) : null; };
   const rows = getAllExpos().map(x => {
-    const v = manual[x.name] ? null : verified[x.name];
-    const dateStr = (v && v.confirmedDate) ? v.confirmedDate : x.nextDate;
-    const parts = String(dateStr || '').split('~')[0].trim().split('.');
-    const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
-    const daysLeft = isNaN(d) ? null : Math.ceil((d - today) / 86400000);
+    let v = manual[x.name] ? null : verified[x.name];
+    /* 일정 우선순위: 담당자 확인 > 다음 회차 갱신 결과 > 수집 시 뉴스 확인 > 기본값.
+       이미 지난 날짜는 다음 회차가 있으면 그쪽을 쓴다 — '종료'가 계속 남지 않게 */
+    const s = manual[x.name] ? null : schedMap[x.name];
+    const cands = [
+      s && s.date ? { date: s.date, v: { status: s.status, checkedAt: s.checkedAt, link: s.link, src: s.src, next: true } } : null,
+      v && v.confirmedDate ? { date: v.confirmedDate, v } : null,
+      { date: x.nextDate, v },
+    ].filter(Boolean);
+    const pick = cands.find(c => { const d = startOf(c.date); return d && d >= today; }) || cands[cands.length - 1];
+    v = manual[x.name] ? null : pick.v;
+    let dateStr = pick.date;
+    /* 수시 행사(기획전 등)는 다음 회차 기사가 없으면 '종료'가 아니라 '미정'으로 둔다 */
+    const pd = startOf(dateStr);
+    if (s && s.status === 'unknown' && pd && pd < today) { dateStr = null; v = { status: 'unknown', checkedAt: s.checkedAt }; }
+    const d = startOf(dateStr);
+    const daysLeft = !d || isNaN(d) ? null : Math.ceil((d - today) / 86400000);
     const passed = daysLeft !== null && daysLeft < 0;
     return { x, v, dateStr, daysLeft, passed };
   });
@@ -671,6 +686,8 @@ function renderZ4() {
     <button class="ebtn-tool" onclick="exportExpos()">내보내기</button>
     <button class="ebtn-tool" onclick="document.getElementById('expoImportFile').click()">가져오기</button>
     <input type="file" id="expoImportFile" accept=".json" style="display:none" onchange="importExpos(this.files[0]);this.value=''">
+    <button class="ebtn-tool ebtn-upd" onclick="runExpoUpdate(this)" title="공개 뉴스(네이버·Google 뉴스)에서 각 행사의 다음 회차 일정을 찾고, 새 국내 행사를 발견합니다">일정 업데이트</button>
+    <span class="expo-upd-note">${sched && sched.updatedAt ? `최근 갱신 ${fmtDate(new Date(sched.updatedAt).getTime())}` : '아직 갱신 전'} · 매월 1회 자동</span>
     ${soon ? `<span class="expo-soon">개최 임박(30일 내) ${soon}건</span>` : ''}
   </div>`;
 
@@ -684,11 +701,13 @@ function renderZ4() {
 
     let confirmTag, lastChecked = '';
     if (m) { confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">✓ 담당자 확인</span>`; lastChecked = `담당자 확인: ${fmtDate(m.confirmedAt)} · 재확인 권고: ${fmtDate(m.nextCheckDue)}`; }
-    else if (v?.status === 'confirmed') { confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정(뉴스)</span>`; lastChecked = `자동 확인: ${fmtAgo(v.checkedAt)}`; }
+    else if (v?.status === 'confirmed') { confirmTag = `<span style="font-size:9px;font-weight:700;color:var(--grn,#15803d)">확정(뉴스)</span>`; lastChecked = `${v.next ? '다음 회차 ' : ''}자동 확인: ${fmtAgo(v.checkedAt)}${v.src ? ` · 출처 ${v.src}` : ''}`; }
+    else if (v?.status === 'unknown') { confirmTag = `<span style="font-size:9px;color:var(--ink3)">다음 일정 미발표</span>`; lastChecked = `수시 행사 — 다음 회차 기사 없음 · 갱신: ${fmtAgo(v.checkedAt)}`; }
+    else if (v?.status === 'estimated') { confirmTag = `<span style="font-size:9px;font-weight:700;color:#92500e">추정(통상 주기)</span>`; lastChecked = `다음 회차 기사가 아직 없어 통상 개최 주기로 추정 · 갱신: ${fmtAgo(v.checkedAt)} — 공식 발표 시 자동 반영`; }
     else if (v?.status === 'likely') { confirmTag = `<span style="font-size:9px;font-weight:700;color:#92500e">유력</span>`; lastChecked = `관련 기사 발견(날짜 미특정) · 자동 확인: ${fmtAgo(v.checkedAt)}`; }
     else { confirmTag = `<span style="font-size:9px;color:var(--ink3)">추정</span>`; lastChecked = v?.checkedAt ? `자동 확인: ${fmtAgo(v.checkedAt)} (일치 정보 없음)` : (x._custom ? '사용자 추가 행사' : x._auto ? '자동 발견(뉴스 기반) — 공식 홈페이지 확인 필요' : '자동 확인 안 됨(네이버 키 필요)'); }
 
-    const dateConfirmed = !!m || v?.status === 'confirmed' || !!x.confirmed;
+    const dateConfirmed = !!m || v?.status === 'confirmed' || (!!x.confirmed && !v?.next && v?.status !== 'unknown');   /* 다음 회차로 넘어간 추정 일정엔 지난 회차의 '확정'을 쓰지 않는다 */
     const titleTag = dateConfirmed ? `<span class="exp-confirmed">확정</span>` : `<span class="exp-tentative">예정</span>`;
     const statusBadge = md.status ? `<span class="exp-status ${EXPO_STATUS_CLS[md.status] || ''}">${escHtml(md.status)}</span>` : '';
     const originTag = x._custom ? '<span class="exp-custom-tag">내 추가</span>' : x._auto ? '<span class="exp-auto-tag">자동 발견</span>' : '';
@@ -727,6 +746,203 @@ function renderZ4() {
       </div>
     </details>`;
   }).join('');
+}
+
+/* ════════════ 박람회 다음 회차 일정 갱신 ════════════
+   예전 확인 로직은 '현재 등록된 연도'로만 검색해, 행사가 끝나면 다음 회차를 찾지 못하고
+   종료 상태로 남았다. 여기서는 끝난(또는 미정) 행사의 '다음 회차'를 공개 뉴스에서 찾는다.
+     · 검색원: 네이버 뉴스(키 있으면) + Google 뉴스 RSS(키 불필요) — 서버·브라우저 공용
+     · 날짜 추출: 연도 있는 형식(2027년 5월 26일~28일, 2027.5.26) 우선, 연도 없는 형식은
+       같은 문장의 연도·대상 연도로 보정. 여러 기사에서 같은 날짜가 나오면 득표로 확정.
+     · 못 찾으면 통상 개최 주기로 다음 회차를 '추정'으로 표시 — 종료 행사가 현재 계획처럼
+       남지 않게 한다.
+   서버는 매월 1회(data/expos.json), 화면은 [일정 업데이트] 버튼으로 즉시 갱신한다. */
+const EXPO_REFRESH_DAYS = 30;
+/* 전시장 단위 식별 — 같은 이름류(예: 'K뷰티 엑스포')의 다른 지역 행사를 걸러내는 데 쓴다 */
+const HALL_ALIASES = [['코엑스','COEX'],['킨텍스','KINTEX'],['벡스코','BEXCO'],['엑스코','EXCO'],['세텍','SETEC'],['aT센터'],['DDP'],['송도컨벤시아'],['수원메쎄'],['김대중컨벤션'],['대전컨벤션'],['창원컨벤션','CECO'],['제주국제컨벤션','ICC']];
+function hallsIn(text) {
+  const t = String(text || '').toUpperCase();
+  return HALL_ALIASES.filter(a => a.some(n => t.includes(n.toUpperCase()))).map(a => a[0]);
+}
+const VENUE_RE = /코엑스|COEX|킨텍스|KINTEX|벡스코|BEXCO|엑스코|EXCO|세텍|SETEC|aT센터|DDP|송도컨벤시아|수원메쎄|김대중컨벤션|대전컨벤션|창원컨벤션|제주국제컨벤션|서울|부산|대구|광주|대전|인천|고양|수원|제주|창원|청주/;
+
+async function expoNewsSearch(query, cap = 20) {
+  const out = [];
+  const nid = K.naverID(), nsec = K.naverSec();
+  if (nid && nsec) {
+    const j = await fetchNaverAPI(`https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query)}&display=${Math.min(cap, 30)}&sort=sim`, nid, nsec, 9000).catch(() => null);
+    (j && !j._error ? j.items || [] : []).forEach(it => out.push({
+      title: String(it.title || '').replace(/<[^>]+>/g, ''), desc: String(it.description || '').replace(/<[^>]+>/g, ''),
+      link: it.link || '', pub: it.pubDate ? new Date(it.pubDate).getTime() : NaN, src: '네이버 뉴스' }));
+  }
+  try {
+    const xml = await fetchProxy(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`, 9000);
+    if (xml && /<item[\s>]/i.test(xml)) {
+      [...xml.matchAll(/<item[\s>][\s\S]*?<\/item>/gi)].slice(0, cap).forEach(m => {
+        const blk = m[0];
+        const g = re => { const x = blk.match(re); return x ? x[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim() : ''; };
+        out.push({ title: g(/<title[^>]*>([\s\S]*?)<\/title>/i), desc: g(/<description[^>]*>([\s\S]*?)<\/description>/i),
+          link: g(/<link[^>]*>([\s\S]*?)<\/link>/i), pub: new Date(g(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i)).getTime(), src: 'Google 뉴스' });
+      });
+    }
+  } catch {}
+  return out;
+}
+
+/* 본문에서 개최일 후보 추출 — 시작일(Date)·종료일·표기 문자열 */
+function extractEventDates(text, defaultYear) {
+  const t = String(text || '');
+  const found = [];
+  const pad = n => String(n).padStart(2, '0');
+  const push = (y, m1, d1, m2, d2) => {
+    y = +y; m1 = +m1; d1 = +d1;
+    if (!(y >= 2020 && y <= 2035 && m1 >= 1 && m1 <= 12 && d1 >= 1 && d1 <= 31)) return;
+    const start = new Date(y, m1 - 1, d1);
+    let end = null;
+    if (d2) {
+      const em = m2 ? +m2 : m1, ed = +d2;
+      if (em >= 1 && em <= 12 && ed >= 1 && ed <= 31) {
+        end = new Date(em < m1 ? y + 1 : y, em - 1, ed);
+        if (end < start || (end - start) > 15 * 86400000) end = null;   /* 박람회는 길어야 2주 */
+      }
+    }
+    const str = `${y}.${pad(m1)}.${pad(d1)}` + (end ? `~${end.getFullYear()}.${pad(end.getMonth() + 1)}.${pad(end.getDate())}` : '');
+    found.push({ start, end, str });
+  };
+  /* ① 연도 포함: 2027년 5월 26일~28일 / 2027. 5. 26.~28. / 2027-05-26 */
+  for (const m of t.matchAll(/(20\d{2})\s*(?:년|[.\-/])\s*(\d{1,2})\s*(?:월|[.\-/])\s*(\d{1,2})\s*(?:일|\.)?\s*(?:\([^)]{1,3}\))?\s*(?:[~∼\-–]|부터)\s*(?:(?:20\d{2})\s*(?:년|[.\-/])\s*)?(?:(\d{1,2})\s*(?:월|[.\-/])\s*)?(\d{1,2})\s*(?:일|\.)?/g))
+    push(m[1], m[2], m[3], m[4], m[5]);
+  for (const m of t.matchAll(/(20\d{2})\s*(?:년|[.\-/])\s*(\d{1,2})\s*(?:월|[.\-/])\s*(\d{1,2})\s*일?/g))
+    push(m[1], m[2], m[3]);
+  /* ② 연도 생략: 5월 26일부터 28일까지 / 5.26~28 — 문장 속 연도나 대상 연도로 보정 */
+  const ctxYear = (t.match(/(20\d{2})\s*년?/) || [])[1] || defaultYear;
+  if (ctxYear) {
+    for (const m of t.matchAll(/(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*(?:\([^)]{1,3}\))?\s*(?:[~∼\-–]|부터)\s*(?:(\d{1,2})\s*월\s*)?(\d{1,2})\s*일/g))
+      push(ctxYear, m[1], m[2], m[3], m[4]);
+    for (const m of t.matchAll(/(?<![\d.])(\d{1,2})\.(\d{1,2})\s*(?:\([^)]{1,3}\))?\s*[~∼\-–]\s*(?:(\d{1,2})\.)?(\d{1,2})(?![\d.])/g))
+      push(ctxYear, m[1], m[2], m[3], m[4]);
+  }
+  return found;
+}
+
+/* 통상 개최 주기로 다음 회차 추정 — cycle 1=매년, 2=격년, 0=수시(추정 안 함) */
+function rollForwardDate(dateStr, cycle, today) {
+  const parts = String(dateStr || '').split('~')[0].trim().split('.').map(Number);
+  if (!parts[0] || !cycle) return null;
+  let y = parts[0];
+  const m = parts[1] || 1, d = parts[2] || 1;
+  while (new Date(y, m - 1, d) < today) y += cycle;
+  return `${y}.${String(m).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+}
+
+/* 행사 한 건의 다음 회차 찾기 */
+async function findNextEdition(x, today) {
+  const ty = today.getFullYear();
+  const cur = String(x.nextDate || '').split('~')[0].split('.').map(Number);
+  const curDate = cur[0] ? new Date(cur[0], (cur[1] || 1) - 1, cur[2] || 1) : null;
+  /* 아직 안 열린 행사는 그 회차를, 끝난 행사는 다음 회차를 찾는다 */
+  const targetYears = curDate && curDate >= today ? [cur[0]] : x.cycle === 0 ? [ty, ty + 1] : [ty, ty + 1, ty + 2].filter(y => !cur[0] || y > cur[0] || y === ty);
+  const tokens = (x.aliases && x.aliases.length ? x.aliases : [x.name.split('(')[0]]).map(a => a.toLowerCase().replace(/\s/g, ''));
+  const myHalls = hallsIn(x.location);
+  const votes = new Map();
+  for (const y of targetYears.slice(0, 2)) {
+    const items = await expoNewsSearch(`${x.q || x.name} ${y}`);
+    for (const it of items) {
+      if (Number.isFinite(it.pub) && today - it.pub > 540 * 86400000) continue;   /* 1년 반 지난 기사 제외 */
+      const text = `${it.title} ${it.desc}`;
+      const norm = text.toLowerCase().replace(/\s/g, '');
+      if (!tokens.some(tk => norm.includes(tk))) continue;                         /* 다른 행사 기사 제외 */
+      const th = hallsIn(text);
+      if (myHalls.length && th.length && !th.some(h => myHalls.includes(h))) continue;   /* 같은 이름류의 다른 전시장 행사 제외 */
+      for (const d of extractEventDates(text, y)) {
+        if (d.start < today || !targetYears.includes(d.start.getFullYear())) continue;
+        if (x.cycle === 0 && d.start - today > 200 * 86400000) continue;           /* 기획전은 가까운 회차만 */
+        const v = votes.get(d.str) || { ...d, n: 0, link: it.link, src: it.src };
+        v.n += d.end ? 2 : 1;                                                       /* 기간이 함께 적힌 표기에 가중 */
+        votes.set(d.str, v);
+      }
+    }
+    if (votes.size) break;
+  }
+  const best = [...votes.values()].sort((a, b) => (b.n - a.n) || (a.start - b.start))[0];
+  if (best) return { date: best.str, status: 'confirmed', link: best.link, src: best.src, votes: best.n };
+  const est = rollForwardDate(x.nextDate, x.cycle, today);
+  return est ? { date: est, status: 'estimated' } : { date: null, status: 'unknown' };
+}
+
+/* 공개 뉴스에서 국내 신규 행사 발견 — 행사명·국내 장소·미래 날짜가 한 기사에 함께 있을 때만 */
+async function discoverExposFromNews(today, known) {
+  const ty = today.getFullYear();
+  const queries = [`화장품 박람회 ${ty + 1}`, `뷰티 엑스포 ${ty + 1} 개최`, `화장품 전시회 개최 ${ty}`, `뷰티 박람회 개막`];
+  const knownN = new Set(known.map(normExpoName));
+  const found = new Map();
+  for (const q of queries) {
+    for (const it of await expoNewsSearch(q, 15)) {
+      const text = `${it.title} ${it.desc}`;
+      if (!/화장품|뷰티|코스메틱|K-?뷰티|미용/i.test(text) || !VENUE_RE.test(text)) continue;
+      if (/해외|미국|중국|일본|태국|베트남|두바이|라스베이거스|홍콩|싱가포르|파리|밀라노|볼로냐/.test(it.title)) continue;
+      const nm = (it.title.match(/[「『"'“‘]?([가-힣A-Za-z0-9&·\- ]{2,24}?(?:박람회|엑스포|EXPO|Expo|페어|FAIR|Fair|위크|WEEK|전시회|쇼))/) || [])[1];
+      if (!nm) continue;
+      const name = nm.replace(/^(제\s?\d+회|\d{4}|올해|내년)\s*/, '').trim();
+      if (name.length < 4 || knownN.has(normExpoName(name)) || /^(화장품|뷰티)\s?(박람회|엑스포|전시회)$/.test(name)) continue;
+      const d = extractEventDates(text, ty).filter(x => x.start >= today && x.start - today < 400 * 86400000)[0];
+      if (!d) continue;
+      const loc = (text.match(VENUE_RE) || [''])[0];
+      if (!found.has(normExpoName(name))) found.set(normExpoName(name), {
+        name, type: /패키징|포장|설비|기자재/.test(text) ? 'equipment' : 'expo', org: '', location: loc,
+        nextDate: d.str, confirmed: false, cycle: 1,
+        focus: `자동 발견(${it.src}) — 국내 화장품·뷰티 행사로 감지. 공식 홈페이지에서 일정·장소를 최종 확인하세요.`,
+        url: it.link, srcLabel: '근거 기사' });
+    }
+  }
+  return [...found.values()].slice(0, 8);
+}
+
+/* 전체 갱신 — 서버(월 1회)·버튼 공용 */
+async function refreshExpoSchedules() {
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const schedule = {};
+  const base = EXPOS.filter(x => x.cycle !== undefined);
+  for (const x of base) {
+    try { schedule[x.name] = { ...(await findNextEdition(x, today)), checkedAt: Date.now() }; }
+    catch { schedule[x.name] = { date: rollForwardDate(x.nextDate, x.cycle, today), status: 'estimated', checkedAt: Date.now() }; }
+  }
+  let discovered = [];
+  try { discovered = await discoverExposFromNews(today, getAllExpos().map(x => x.name)); } catch {}
+  return { updatedAt: new Date().toISOString(), schedule, discovered };
+}
+
+/* 갱신 결과 저장·병합 — 서버 자료(data/expos.json)와 버튼 결과 중 최신 것을 쓴다 */
+function getExpoSchedule() {
+  let local = null, server = window._expoServer || null;
+  try { local = JSON.parse(ls('expo_schedule') || 'null'); } catch {}
+  const t = o => (o && o.updatedAt ? new Date(o.updatedAt).getTime() : 0);
+  return t(local) >= t(server) ? (local || server) : server;
+}
+async function loadExpoServerSchedule() {
+  try {
+    const r = await fetch('data/expos.json', { cache: 'no-store' });
+    if (r.ok) window._expoServer = await r.json();
+  } catch {}
+  return window._expoServer;
+}
+async function runExpoUpdate(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '일정 확인 중...'; }
+  try {
+    const res = await refreshExpoSchedules();
+    ls('expo_schedule', JSON.stringify(res));
+    /* 새로 발견한 행사는 기존 자동 발견 목록에 합친다(삭제한 행사는 다시 넣지 않음) */
+    const auto = getExpoAuto();
+    const have = new Set(getAllExpos().map(x => normExpoName(x.name)));
+    const dismissed = new Set(getExpoAutoDismissed().map(normExpoName));
+    res.discovered.forEach(d => { if (!have.has(normExpoName(d.name)) && !dismissed.has(normExpoName(d.name))) auto.push(d); });
+    saveExpoAuto(auto);
+    const ok = Object.values(res.schedule).filter(v => v.status === 'confirmed').length;
+    showToast(`박람회 일정 업데이트 — 확정 ${ok}건 · 추정 ${Object.keys(res.schedule).length - ok}건 · 신규 발견 ${res.discovered.length}건`);
+  } catch (e) {
+    showToast('일정 업데이트 실패: ' + (e.message || e));
+  }
+  renderZ4();
 }
 
 /* 박람회 일정 확정 여부 확인(A안 — 3단계 신뢰도) — 공식 API가 없어 네이버 뉴스 검색으로
@@ -5091,6 +5307,10 @@ async function collectAll() {
   setStep('⑥ 박람회 일정 확인·국내 행사 자동 발견 중...', '일정 확인', 0.74);
   window._expoVerified = await verifyExpoSchedules();
   await discoverDomesticExpos();
+  {
+    const sc = getExpoSchedule();
+    if (!sc || !sc.updatedAt || Date.now() - new Date(sc.updatedAt).getTime() > EXPO_REFRESH_DAYS * 86400000) await runExpoUpdate();
+  }
   renderZ4();
 
   const periodLabel = PERIOD_LABEL[currentPeriod] || '6개월';
@@ -5900,6 +6120,7 @@ function init() {
   renderZ1();
   renderZ3();
   renderZ4();
+  loadExpoServerSchedule().then(() => renderZ4());
   renderScoreboard();
   renderFunnel();
 

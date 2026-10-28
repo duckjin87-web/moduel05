@@ -835,6 +835,9 @@ table.ht td.num { font-variant-numeric: tabular-nums; }
 .ebtn-add:hover { background: var(--acc2); }
 .ebtn-tool { background: var(--w); color: var(--ink2); }
 .ebtn-tool:hover { background: var(--bg2); }
+.ebtn-upd { border-color: var(--acc); color: var(--acc); font-weight: 600; }
+.ebtn-upd:disabled { opacity: .6; cursor: wait; }
+.expo-upd-note { font-size: 9px; color: var(--ink3); }
 .expo-soon { margin-left: auto; font-size: 9px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 2px 8px; border-radius: 10px; }
 
 /* ── 제목 상태·커스텀 배지 ── */
