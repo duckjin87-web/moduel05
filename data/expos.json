@@ -1,0 +1,46 @@
+{
+  "updatedAt": "2026-10-29T00:40:23.200Z",
+  "schedule": {
+    "코스모뷰티 서울(서울국제화장품미용박람회)": {
+      "date": "2027.05.27",
+      "status": "estimated",
+      "checkedAt": 1793234417914
+    },
+    "in-cosmetics Korea": {
+      "date": "2027.07.01",
+      "status": "estimated",
+      "checkedAt": 1793234418913
+    },
+    "K-BEAUTY EXPO KOREA": {
+      "date": "2027.10.15",
+      "status": "estimated",
+      "checkedAt": 1793234419539
+    },
+    "부산국제화장품미용박람회(BICE)": {
+      "date": "2027.09.10",
+      "status": "estimated",
+      "checkedAt": 1793234420041
+    },
+    "대구국제뷰티엑스포": {
+      "date": "2027.06.11",
+      "status": "estimated",
+      "checkedAt": 1793234420632
+    },
+    "올리브영 뷰티 기획전(다이브인페스티벌 등 시즌 세일)": {
+      "date": null,
+      "status": "unknown",
+      "checkedAt": 1793234421123
+    },
+    "코리아팩(KOREA PACK)": {
+      "date": "2028.03.28",
+      "status": "estimated",
+      "checkedAt": 1793234421346
+    },
+    "한국포장전(H-PACK)": {
+      "date": "2027.10.27",
+      "status": "estimated",
+      "checkedAt": 1793234421838
+    }
+  },
+  "discovered": []
+}
