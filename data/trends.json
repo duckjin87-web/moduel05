@@ -1,17 +1,17 @@
 {
-  "collectedAt": "2026-11-07T00:42:01.228Z",
+  "collectedAt": "2026-11-08T00:16:27.925Z",
   "sig": {
     "climate": {
-      "score": 2.8,
-      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 -7.9℃ → 시즌 지연 가능성 · 평년 기준 전망: 1개월 후(12월) 평균최고 6.7℃ · 3개월 후(2월) 평균최고 0.6℃ · 6개월 후(5월) 평균최고 19.2℃",
+      "score": 2.6999999999999997,
+      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 -8.5℃ → 시즌 지연 가능성 · 16일 단기예보 하강추세(-4℃, 참고용) → 보습라인 전환 고려 · 평년 기준 전망: 1개월 후(12월) 평균최고 7.2℃ · 3개월 후(2월) 평균최고 1℃ · 6개월 후(5월) 평균최고 19.2℃",
       "chips": [
-        "기온 1.7℃",
+        "기온 4.2℃",
         "PM10 —",
-        "습도 39%",
-        "UV 1.9",
-        "평년대비 -7.9℃",
-        "16일추세 -0.9℃",
-        "평년전망 1m 6.7℃/3m 0.6℃/6m 19.2℃"
+        "습도 46%",
+        "UV 0.65",
+        "평년대비 -8.5℃",
+        "16일추세 -4℃",
+        "평년전망 1m 7.2℃/3m 1℃/6m 19.2℃"
       ],
       "_sample": false
     },
@@ -79,7 +79,7 @@
         "platform": "@cosme",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 10
+        "items": 11
       },
       {
         "platform": "샤오홍슈",
@@ -138,6 +138,11 @@
       "axis": "소비"
     },
     {
+      "name": "쿠션",
+      "count": 4,
+      "axis": "제형"
+    },
+    {
       "name": "수출",
       "count": 4,
       "axis": "소비"
@@ -151,11 +156,6 @@
       "name": "오일",
       "count": 3,
       "axis": "제형"
-    },
-    {
-      "name": "세라마이드",
-      "count": 3,
-      "axis": "성분"
     }
   ],
   "rssFeedStatus": [
@@ -219,7 +219,7 @@
         "publisher": "올리브영 인사이트 스튜디오",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 8,
+        "items": 7,
         "site": "https://corp.oliveyoung.com/ko/trend/insight-studio/8"
       },
       {
@@ -235,6 +235,13 @@
         "title": "트렌디어 AI, ‘K-뷰티 트렌드 서밋 2025’ 개막 - 코스인코리아닷컴",
         "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE9YN3NrOFVUTm5OM2hxUzFZb3ZMX2trN3poRXgtUnVsTWVSWkZrWFlyRDRyd0F4d2lRbTQ1M3RkUE1CTkpZSTdWMjNwdVVQQUlzc2YtTm9FZ08xd19rNEVIaGZncw?oc=5",
         "date": "Mon, 03 Nov 2025 08:00:00 GMT",
+        "publisher": "트렌디어 라이브러리",
+        "via": "news"
+      },
+      {
+        "title": "화장품신문 (Beautynury.com) :: [뷰티누리×트렌디어] 2027 헤어 트렌드, 헤어케어가 스킨케어의 문법으로 재편 - 뷰티누리",
+        "link": "https://news.google.com/rss/articles/CBMiX0FVX3lxTE1RVHJOVG1TMDVuUkprYVNSTk5jZzRfX1dsM0JRTEF6SWZrRjJEalFnd1JLZ2VSZUxRb3JkWWgteUJRZ0VsWlU3WU5kSTRGcUZHU3NGbUJHSkVmMzNWNS1r?oc=5",
+        "date": "Thu, 29 Oct 2026 07:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -260,9 +267,9 @@
         "via": "news"
       },
       {
-        "title": "트렌디어AI, ‘트렌드 검증 AI’ 공개... “한 달 걸리던 시장 검증, 하루로 압축” - 코스인코리아닷컴",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTFBpMXhiNlVvd1VHQ2pHQXA4bGJ2WFpyVzRiandzSldNX2VrZmVjbHJBb0FNbUFWUklHMUhzUGh1QVY2WmtSaklUSVZsckQtbUp1ME1tMzRMSUFYLVFvU2pVSTR3cw?oc=5",
-        "date": "Tue, 03 Mar 2026 08:00:00 GMT",
+        "title": "트렌디어, 'K-뷰티 트렌드 서밋 2024' 91개국 바이어 22,000명 참여 '대성황' - 코스인코리아닷컴",
+        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE9EOFVJODNqeE41Y3NIVDFBaFMxRXVELTJIY3AyRk1OVkFiV3dvNHktczNpV2g0NkVFV3llTE5Vb1BxUGIyckJhX21CSGducF9LNXBhOV80U0lkdGVnakJxVWt3Zw?oc=5",
+        "date": "Tue, 05 Nov 2024 08:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -277,13 +284,6 @@
         "title": "메저커머스, 일본‧동남아 뷰티시장 AI 분석 시작 - 코스모닝",
         "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE1TekNmdVM0UmhEY2w3aHBpbVQ0UzlyNDNzQTI5OFlnWlNqaUd3Z0ZkeHFxZW1QejF4QTRpLWpOZUhKLUc5dDhVQkF0Vm55a0F2LURGWmF5RkJYUm53Q2c?oc=5",
         "date": "Wed, 07 Dec 2022 08:00:00 GMT",
-        "publisher": "트렌디어 라이브러리",
-        "via": "news"
-      },
-      {
-        "title": "트렌디어, 'K-뷰티 트렌드 서밋 2024' 91개국 바이어 22,000명 참여 '대성황' - 코스인코리아닷컴",
-        "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE9EOFVJODNqeE41Y3NIVDFBaFMxRXVELTJIY3AyRk1OVkFiV3dvNHktczNpV2g0NkVFV3llTE5Vb1BxUGIyckJhX21CSGducF9LNXBhOV80U0lkdGVnakJxVWt3Zw?oc=5",
-        "date": "Tue, 05 Nov 2024 08:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -323,9 +323,9 @@
         "via": "news"
       },
       {
-        "title": "화해 ‘2026 뷰티 트렌드 리포트’ 발표 - 코스모닝",
-        "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9kUnhNVFRXWHJ6VmphSFpPcTNsS0ZzTHlZZ3g2MExMUzFiLXJYY1BBczliYXE0U0NVVjY5Y2RGMjh5amFtdWxyNndxODJLNHMweWZDVktMcmdDVE9wQ2c?oc=5",
-        "date": "Tue, 26 Aug 2025 07:00:00 GMT",
+        "title": "화해 1250만 사용자 데이터로 읽은 2026 뷰티 트렌드 FIND 발표 - 한경매거진",
+        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBSaFBmRkNEbDVoTEtiQ3NoNGVLS1RJWXhvMFVseW9HQm9NcHZwY2k2TmZUdzhVaEREN0hPY0o2cFF0dFp6dHdMZWw2V1cxZkt2RnhqcktlMElibllMelVROGtPZ3dVRmtnNDFn?oc=5",
+        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -337,9 +337,9 @@
         "via": "news"
       },
       {
-        "title": "화해, 日 도쿄서 첫 K뷰티 쇼케이스 진행 - 지디넷코리아",
-        "link": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE14a3VHVndwUXlRNkZDYVJnLUZDRmxZT1FXdFo2R2g3czdTdk15bUFMdjZwMkhsU0hvYU9Ub1RiX1Nfc3NkajFSQnpCbWwySUlrd094WkNB?oc=5",
-        "date": "Wed, 11 Feb 2026 08:00:00 GMT",
+        "title": "글로벌 더마 뷰티102조 시장의 함정: ‘성분 스펙’ 경쟁에 병드는 피부 - 한국섬유신문",
+        "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE9maVh6MlllYVkzd2thOXlidUdHcE91NEZNWERwWUR3T2Q1VzUwS1FwNC11Z3NpNmczZ2VocjBscGdIRk9RSjliN2dpRUdKLWpJb0tfaERQbVpUREdJRVRacURVdmNXRzRp?oc=5",
+        "date": "Wed, 22 Apr 2026 07:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -393,16 +393,16 @@
         "via": "news"
       },
       {
-        "title": "‘2025 올리브영 어워즈’ 발표... 1.8억 건 빅데이터로 선정된 K뷰티 1위 제품은? - 인사이트",
-        "link": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFBnZk9HcmlSUmVpX3h0Y2ZTakRwWW9wTS1HOV9iaDM2VzEtRHlQTTBHUXZ0Uzdyd3hMSF8zQWU1M19TN2ZKaThZNTU5R0RXQQ?oc=5",
-        "date": "Wed, 24 Dec 2025 08:00:00 GMT",
-        "publisher": "올리브영 인사이트 스튜디오",
-        "via": "news"
-      },
-      {
         "title": "대한화장품산업연구원, 英 화장품 광고·사우디 포장 규제 변화 집중 분석 - 코스인코리아닷컴",
         "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE4xYmhZV2lxRVE3OFpDU2ZpNFVVcTN0UmQyNjdOLVAtUWdVNzNHcUdlZEJYM2pKWlRXRkFGcFhGdzdWM0pNaE9iNDh0T3Btc0ZEcllJOHlOTnZtcUd4OW1YVk1DTQ?oc=5",
         "date": "Thu, 05 Nov 2026 03:22:41 GMT",
+        "publisher": "대한화장품산업연구원",
+        "via": "news"
+      },
+      {
+        "title": "대한화장품산업연구원, ‘2026 피부특성 정보 활용 세미나’ 개최... 9월 29일 - CNC NEWS",
+        "link": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE1KRXZ4UWtFTFduOEFpNXBiWEdneWhTa3AzYkt3MEd5QzFBUXRER2hFS0hzaWs3bHprSUdHSmMzaWg1cm1QVXN4b05DMXJ1NmhwZjhRRldoX1dIYV9SRnpKWUhn?oc=5",
+        "date": "Mon, 14 Sep 2026 07:00:00 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       },
@@ -447,19 +447,12 @@
         "date": "Mon, 22 Sep 2025 07:00:00 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
-      },
-      {
-        "title": "대한화장품산업연구원, 미국 뷰티시장 소비자 조사 결과 발표 - THE K BEAUTY SCIENCE",
-        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE9jd2prWC1jZ0dsdWRuNkFtWXdVSnF4M255U2Q1d0EtdjRMNnROZmhkVjlwV1MxU0MzWGhSWHFnc1c3MFhkd3FzV3czazFmTjVmWWJoT25PWm1OcTRJVFAyQkdPQVBITlF3Smhj?oc=5",
-        "date": "Sun, 21 Sep 2025 07:00:00 GMT",
-        "publisher": "대한화장품산업연구원",
-        "via": "news"
       }
     ],
     "keywords": [
       {
         "name": "K뷰티",
-        "count": 5,
+        "count": 3,
         "axis": "소비"
       },
       {
@@ -476,6 +469,11 @@
         "name": "보습",
         "count": 1,
         "axis": "기능"
+      },
+      {
+        "name": "더마",
+        "count": 1,
+        "axis": "소비"
       },
       {
         "name": "다이소",
@@ -526,6 +524,11 @@
       "axis": "소비"
     },
     {
+      "name": "쿠션",
+      "count": 4,
+      "axis": "제형"
+    },
+    {
       "name": "수출",
       "count": 4,
       "axis": "소비"
@@ -539,22 +542,17 @@
       "name": "오일",
       "count": 3,
       "axis": "제형"
-    },
-    {
-      "name": "세라마이드",
-      "count": 3,
-      "axis": "성분"
     }
   ],
   "kwSurge": null,
   "kwHighFreq": null,
-  "rssText": "수원시, 5~7일 수원컨벤션센터서 ‘2026 뷰티썸 수원‘ 개최 “뷰티트렌드를 한자리에서 만날 수 있는 페스티벌 아니에요? 전시와 체험까지 너무 기대되는데요!” 수원시 홍보대사인 대세 걸그룹 ‘리센느’가 너무 가보고 싶다고 입을 모으는 뷰티박람회가 있다. 뷰티에 관한 모든 것을 모아 둔 ‘2026 수원 뷰티썸(BEAUTY SUM)’이다. 아름다움이 시작되는 원료부터 유지하는 이너뷰티까지 뷰티 산업의 현재와 미래 발전 방향을 가늠해 볼 수 있는 자리다.◇뷰티의 모든 것이 수원컨벤션센터에 모인다!‘2026 뷰티썸 수원’은 오는 5~7일 3일간 수원컨벤션센터에서 개최된다. 뷰티 업계 관계자는 물론 아 와이어트 권규석·권규원 대표 부친상 와이어트 권규석, 권규원 대표의 부친 권성근님이 11월 5일 별세했다. 향년 74세.빈소는 삼성서울병원 장례식장 17호실에 마련됐으며, 발인은 11월 7일(토) 오전 7시 15분에 엄수된다. 장지는 충현동산.- 빈소: 삼성서울병원 장례식장 17호실- 발인: 11월 7일(토) 오전 7시 15분- 장지: 충현동산 SBA, 오만 무스카트에 ‘서울 라이프스타일 거점‘ 오픈 서울시의 경쟁력을 만드는 중소기업 지원기관 서울경제진흥원(SBA)은 ‘서울 라이프스타일 거점 진출사업’을 통해 서울기업의 중동 진출 지원에 본격적으로 나선다.서울경제진흥원은 파트너사인 ‘㈜크로스컴바인’과 협력하여 지난 10월 5일 중동 오만 무스카트에 서울 라이프스타일 기업 30개사의 현지 시장성 검증을 위한 테스트베드 거점을 본격 오픈했다고 밝혔다. 이어 10월 22일에는 오만 현지 주요 관계자를 초청한 론칭 행사를 성황리에 개최하며 서울기업의 오만 시장 진출을 위한 교두보를 마련했다.이번 거점에는 오만 진출에 처음 도전하는 뷰티 한국 여성 55.9% ‘약국템’ 썼다…1020 트러블·4050 안티에이징 외국인 관광객 사이에서 약국이 K-뷰티 쇼핑 명소로 떠오른 가운데 국내 여성도 절반 이상이 약국 스킨케어 제품을 써본 것으로 나타났다. 대학내일20대연구소가 전국 15~56세 여성 1200명을 대상으로 ‘스킨케어·헤어&바디케어 행태 및 트렌드 2026’ 조사를 진행한 결과, 응답자의 55.9%가 약국 스킨케어 제품, 이른바 ‘약국템’을 사용해 본 경험이 있었다. 특히 연령대에 따라 약국템을 쓰게 된 계기와 약국템에 기대하는 효과가 뚜렷하게 갈렸다.약국템을 현재 사용 중이라는 응답은 19.4%, 과거 사용해 봤다는 응답은 36.5%로 비욘드 X 다마고치, 올영 단독 콜라보 에디션 출시 LG생활건강의 라이프 스타일 브랜드 ‘비욘드’가 글로벌 기업 반다이(BANDAI)와 협업해 ‘다마고치’ 한정 에디션을 11월 올리브영 온·오프라인 매장에서 선보였다. 비욘드의 베스트셀러 올리브영 NO.1 핸드크림과 바디 피부도 얼굴처럼 세밀하게 관리하는 스키니피케이션(Skinification) 트렌드를 반영한 ‘바디타민’ 라인에 다마고치 특유의 친근하고 유쾌한 캐릭터 감성을 더한 것이 특징이다.‘비욘드 X 다마고치’ 콜라보 에디션은 올리브영 1위 ‘클래식 핸드크림 딥 모이스처’를 비롯해 비욘드의 대표 바디 케어 제품으로 구성했다. 에이피 뷰티, 듀얼 리페어 리프트 M.D. 크림 미스트 아모레퍼시픽의 하이엔드 스킨케어 브랜드 에이피 뷰티(AP BEAUTY)가 피부 특수 케어 솔루션인 M.D. 라인의 신제품 ‘듀얼 리페어 리프트 M.D. 크림 미스트’를 출시했다.이번 신제품은 에이피 뷰티의 대표 제품 ‘듀얼 리페어 리프트 크림’의 핵심 성분을 담은 고기능성 크림 미스트다. 연어 유래 PDRN 대비 2.1배 높은 리페어 효과를 나타내는 고순도 228K PDRN과 EXOYNE™(엑소인) 성분이 피부과 관리) 후 건조하고 민감해진 피부의 장벽을 회복시켜주고 탄력 개선에 도움을 준다. 여기에 고분자 TRF H.A.(티알에프 더샘, 수분 탄력 플럼핑 스킨케어 ‘콜라겐 레티날 캡슐 세럼’ 더샘(대표이사 임진서)이 수분과 탄력을 동시에 케어하는 플럼핑 스킨케어 ‘콜라겐 레티날 캡슐 세럼’을 출시했다.신제품 ‘콜라겐 레티날 캡슐 세럼’은 콜라겐 워터와 7종 콜라겐, 엘에스화장품, JAJALE과 쌀 배아유 기반 화장품 원료 공동개발… 신규 INCI 등재 추진  이광주 피플게이트 대표 (前 패션비즈 이사) 아들 철희 군 피플게이트 이광주 대표(前 패션비즈 이사)·백현미 여사의 아들 철희 군이 주인경 양과 화촉을 밝힌다.- 일시 : 11월 8일 14시 00분- 장소 : 강남 루클라비 더 화이트 2층 (서울 강남구 논현로 742)&nbsp;\r\n\t\t\t\t\r\n\t\t\t\t0 | 0\r\n\t\t\t\t\r\n\t\t\t\t뷰티누리의 모든 컨텐츠는 저작권법의 보호를 받습니다. 무단 전재, 복사, 배포 등을 금합니다. 라보에이치, GLP-1 사용자 대상 두피 관리 만족도 조사  애경산업, 취약계층에 희망꾸러미 6800세트 지원  동국제약 센텔리안24, 영국·동유럽 유통망 확대  유씨엘, 저분자 피부 재생 소재 연구 국제 학술지 게재  아모레퍼시픽재단, 일본서 K-뷰티 체험 프로그램 운영  연작, 성수서 '베이스 프렙' 체험형 팝업 운영  퀸잇, 역대급 블프 ‘2026 럭퀸세일’ 개최…할인 상품 10배 확대  영국 소액 수입품 관세 면제 폐지…사우디, 주사기형 화장품 용기 금지  주가로 읽는 K-뷰티: 에이피알 등 성장주 급락...외국인 매수세 지속 최근 한 달간 국내 주요 화장품 종목 가운데 아모레퍼시픽을 제외한 모든 종목의 주가가 하락한 것으로 나타났다.특히 에이피알, 파마리서치, 실리콘투는 20%가 넘는 하락률을 보였다. 반면 주가 하락에도 불구하고 파마리서치, 한국콜마, LG생활건강, 에이피알은 외국인 보유율이 증가했다.뷰티경제가 네이버증권 자료를 바탕으로 11월 5일 기준 주요 화장품 기업의 주가와 외국인 보유율 변화를 한 달 전과 비교한 결과, 업종 전반에서는 주가 조정이 나타났지만 외국인 투자자들의 수급은 종목별로 차별화된 흐름을 보인 것으로 분석됐다.전통 화장품주 코스메카코리아, 누적 매출 6588억원…주가는 한 달 새 13.3% 하락 코스메카코리아는 2026년 3분기 연결 기준 매출 2475억원, 영업이익 272억원을 달성했다고 6일 밝혔다.3분기 누적 연결 매출은 6588억원으로 전년 동기 대비 42.4% 증가했다. 이는 지난해 연간 매출 6409억원을 넘어섰다. 3분기 누적 영업이익은 812억원으로 전년 동기 대비 29.9% 증가했으며, 누적 당기순이익은 503억원으로 18.7% 늘었다.한국법인 매출 첫 2000억원 돌파한국법인은 3분기 매출 2011억원, 영업이익 234억원을 기록했다. 전년 동기 대비 각각 54.9%, 61.3% 증가한 수치다. 한국법인 대법원 법원행정처, 인천해사국제상사법원 청라 본청사 후보지 현장 실사 인천해사국제상사법원 본청사 유치를 추진 중인 인천광역시 서해구가 청라국제도시의 입지 경쟁력을 앞세워 유치 활동에 속도를 내고 있다.대법원 법원행정처 관계자들이 지난 5일 인천해사국제상사법원 본청사 신축 후보지의 입지 여건을 확인하기 위해 인천 서해구 청라국제도시를 방문했다.이번 현장 실사는 본청사 건립 후보지의 실제 입지 조건과 부지 활용 가능성, 주변 기반시설 및 교통 여건 등을 직접 확인하기 위한 절차다.특히 후보지별 부지 규모와 접근성, 주변 개발 상황 등을 종합적으로 살펴봄으로써 향후 본청사 입지 검토와 선정 판단에 필요한 샤넬, 성수동·인천공항 동시 공략…한국 시장 강화 샤넬이 홀리데이 시즌을 맞아 서울 성수동과 인천국제공항에서 체험형 마케팅을 전개하며 한국 시장을 강화하고 있다.샤넬은 11월 21일부터 12월 31일까지 서울 성수동에서 '샤넬 홀리데이 팝업'을 운영한다. 또한 롯데면세점과 협업해 인천국제공항 제2터미널에서 '샤넬 홀리데이 메가 포디움'도 선보인다.롯데면세점은 샤넬과 협업해 인천국제공항 제2터미널에서 '샤넬 홀리데이 메가 포디움'을 운영한다. 오는 12월 25일까지 진행되는 이번 포디움은 생모리츠의 설산과 산장에서 영감을 받아 조성됐으며, 홀리데이 한정판 제품과 면세점 전용 상품을 K-뷰티 브랜드, 홀리데이 컬렉션 시장 합류 글로벌 뷰티 브랜드들이 이미 홀리데이 컬렉션을 잇따라 선보이며 연말 시장 선점 경쟁에 돌입했다.K-뷰티 브랜드도 최근 한정판 패키",
+  "rssText": "수원시, 5~7일 수원컨벤션센터서 ‘2026 뷰티썸 수원‘ 개최 “뷰티트렌드를 한자리에서 만날 수 있는 페스티벌 아니에요? 전시와 체험까지 너무 기대되는데요!” 수원시 홍보대사인 대세 걸그룹 ‘리센느’가 너무 가보고 싶다고 입을 모으는 뷰티박람회가 있다. 뷰티에 관한 모든 것을 모아 둔 ‘2026 수원 뷰티썸(BEAUTY SUM)’이다. 아름다움이 시작되는 원료부터 유지하는 이너뷰티까지 뷰티 산업의 현재와 미래 발전 방향을 가늠해 볼 수 있는 자리다.◇뷰티의 모든 것이 수원컨벤션센터에 모인다!‘2026 뷰티썸 수원’은 오는 5~7일 3일간 수원컨벤션센터에서 개최된다. 뷰티 업계 관계자는 물론 아 와이어트 권규석·권규원 대표 부친상 와이어트 권규석, 권규원 대표의 부친 권성근님이 11월 5일 별세했다. 향년 74세.빈소는 삼성서울병원 장례식장 17호실에 마련됐으며, 발인은 11월 7일(토) 오전 7시 15분에 엄수된다. 장지는 충현동산.- 빈소: 삼성서울병원 장례식장 17호실- 발인: 11월 7일(토) 오전 7시 15분- 장지: 충현동산 SBA, 오만 무스카트에 ‘서울 라이프스타일 거점‘ 오픈 서울시의 경쟁력을 만드는 중소기업 지원기관 서울경제진흥원(SBA)은 ‘서울 라이프스타일 거점 진출사업’을 통해 서울기업의 중동 진출 지원에 본격적으로 나선다.서울경제진흥원은 파트너사인 ‘㈜크로스컴바인’과 협력하여 지난 10월 5일 중동 오만 무스카트에 서울 라이프스타일 기업 30개사의 현지 시장성 검증을 위한 테스트베드 거점을 본격 오픈했다고 밝혔다. 이어 10월 22일에는 오만 현지 주요 관계자를 초청한 론칭 행사를 성황리에 개최하며 서울기업의 오만 시장 진출을 위한 교두보를 마련했다.이번 거점에는 오만 진출에 처음 도전하는 뷰티 한국 여성 55.9% ‘약국템’ 썼다…1020 트러블·4050 안티에이징 외국인 관광객 사이에서 약국이 K-뷰티 쇼핑 명소로 떠오른 가운데 국내 여성도 절반 이상이 약국 스킨케어 제품을 써본 것으로 나타났다. 대학내일20대연구소가 전국 15~56세 여성 1200명을 대상으로 ‘스킨케어·헤어&바디케어 행태 및 트렌드 2026’ 조사를 진행한 결과, 응답자의 55.9%가 약국 스킨케어 제품, 이른바 ‘약국템’을 사용해 본 경험이 있었다. 특히 연령대에 따라 약국템을 쓰게 된 계기와 약국템에 기대하는 효과가 뚜렷하게 갈렸다.약국템을 현재 사용 중이라는 응답은 19.4%, 과거 사용해 봤다는 응답은 36.5%로 비욘드 X 다마고치, 올영 단독 콜라보 에디션 출시 LG생활건강의 라이프 스타일 브랜드 ‘비욘드’가 글로벌 기업 반다이(BANDAI)와 협업해 ‘다마고치’ 한정 에디션을 11월 올리브영 온·오프라인 매장에서 선보였다. 비욘드의 베스트셀러 올리브영 NO.1 핸드크림과 바디 피부도 얼굴처럼 세밀하게 관리하는 스키니피케이션(Skinification) 트렌드를 반영한 ‘바디타민’ 라인에 다마고치 특유의 친근하고 유쾌한 캐릭터 감성을 더한 것이 특징이다.‘비욘드 X 다마고치’ 콜라보 에디션은 올리브영 1위 ‘클래식 핸드크림 딥 모이스처’를 비롯해 비욘드의 대표 바디 케어 제품으로 구성했다. 에이피 뷰티, 듀얼 리페어 리프트 M.D. 크림 미스트 아모레퍼시픽의 하이엔드 스킨케어 브랜드 에이피 뷰티(AP BEAUTY)가 피부 특수 케어 솔루션인 M.D. 라인의 신제품 ‘듀얼 리페어 리프트 M.D. 크림 미스트’를 출시했다.이번 신제품은 에이피 뷰티의 대표 제품 ‘듀얼 리페어 리프트 크림’의 핵심 성분을 담은 고기능성 크림 미스트다. 연어 유래 PDRN 대비 2.1배 높은 리페어 효과를 나타내는 고순도 228K PDRN과 EXOYNE™(엑소인) 성분이 피부과 관리) 후 건조하고 민감해진 피부의 장벽을 회복시켜주고 탄력 개선에 도움을 준다. 여기에 고분자 TRF H.A.(티알에프 더샘, 수분 탄력 플럼핑 스킨케어 ‘콜라겐 레티날 캡슐 세럼’ 더샘(대표이사 임진서)이 수분과 탄력을 동시에 케어하는 플럼핑 스킨케어 ‘콜라겐 레티날 캡슐 세럼’을 출시했다.신제품 ‘콜라겐 레티날 캡슐 세럼’은 콜라겐 워터와 7종 콜라겐, 엘에스화장품, JAJALE과 쌀 배아유 기반 화장품 원료 공동개발… 신규 INCI 등재 추진  이광주 피플게이트 대표 (前 패션비즈 이사) 아들 철희 군 피플게이트 이광주 대표(前 패션비즈 이사)·백현미 여사의 아들 철희 군이 주인경 양과 화촉을 밝힌다.- 일시 : 11월 8일 14시 00분- 장소 : 강남 루클라비 더 화이트 2층 (서울 강남구 논현로 742)&nbsp;\r\n\t\t\t\t\r\n\t\t\t\t0 | 0\r\n\t\t\t\t\r\n\t\t\t\t뷰티누리의 모든 컨텐츠는 저작권법의 보호를 받습니다. 무단 전재, 복사, 배포 등을 금합니다. 라보에이치, GLP-1 사용자 대상 두피 관리 만족도 조사  애경산업, 취약계층에 희망꾸러미 6800세트 지원  동국제약 센텔리안24, 영국·동유럽 유통망 확대  유씨엘, 저분자 피부 재생 소재 연구 국제 학술지 게재  아모레퍼시픽재단, 일본서 K-뷰티 체험 프로그램 운영  연작, 성수서 '베이스 프렙' 체험형 팝업 운영  퀸잇, 역대급 블프 ‘2026 럭퀸세일’ 개최…할인 상품 10배 확대  영국 소액 수입품 관세 면제 폐지…사우디, 주사기형 화장품 용기 금지  [China K-Beauty Report ③] K-Beauty’s Next Growth Phase in China Will Be Driven by Product Performance, Not Hallyu Chinese consumers continue to view K-beauty favorably, but the factors driving purchase decisions are changing.A survey conducted by Beauty Economy in collaboration with field professionals and consumers in China suggests that while Korean cultural influence remains a source of awareness, actual pur K-Beauty Moisturizer Sales on China's Tmall Jump 53.8%, Led by Torriden The Korean moisturizer category on China's Tmall Korea Pavilion recorded strong growth in October 2026, driven by rising demand for hydration-focused skincare products and expanding competition among K-beauty brands.According to data compiled by Beauty Economy, total sales volume of the Top 10 Korea 10월 티몰 K-뷰티 쿠션 분석⑥: 판매량 25.5% 증가...애경 횡보 속 아모레 질주 [편집자 주] 뷰티경제는 2019년부터 중국 티몰(Tmall) 한국관의 K-뷰티 8개 주요 품목의 판매 데이터를 추적·분석하고 있다. 이번 기사에서는 쿠션 카테고리의 10월 판매 동향을 바탕으로 중국 시장의 변화와 소비 트렌드를 살펴본다.중국 티몰(Tmall) 한국관 쿠션 시장이 2026년 10월 성장세를 나타낸 것으로 조사됐다.뷰티경제가 집계한 결과, 2026년 10월 티몰 한국관 쿠션 TOP10 제품의 총 판매량은 13만3000개로 나타났다. 이는 2025년 10월 10만6000개 대비 25.5% 증가한 수치다.특히 에이지투웨니 K-water, 아시아물위원회 회장기관 재선출…국제 물관리 협력 주도 한국수자원공사(K-water)가 아시아 물관리 분야의 국제 협력을 이끄는 아시아물위원회(AWC) 회장기관으로 재선출됐다. 6일 태국 방콕에서 열린 제26차 AWC 이사회에서 2026년 11월부터 2029년 11월까지 3년간 회장기관직을 연임하게 됐다.AWC는 아시아 지역의 물 문제 해결과 국제 협력 강화를 위해 설립된 물 분야 국제협력 플랫폼으로, 현재 28개국 194개 회원기관이 참여하고 있다.K-water는 2016년 AWC 설립을 주도한 이후 회장기관이자 사무국 운영기관",
   "climateTrend": {
     "trend16": {
-      "week1": 12.1,
-      "week2": 11.2,
-      "delta": -0.9
+      "week1": 12.5,
+      "week2": 8.6,
+      "delta": -4
     },
-    "deviation": -7.9
+    "deviation": -8.5
   }
 }
