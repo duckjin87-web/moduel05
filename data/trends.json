@@ -1,15 +1,17 @@
 {
-  "collectedAt": "2026-11-11T01:07:28.824Z",
+  "collectedAt": "2026-11-12T02:09:28.965Z",
   "sig": {
     "climate": {
       "score": 2.9,
-      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 16일 단기예보 하강추세(-5℃, 참고용) → 보습라인 전환 고려",
+      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 16일 단기예보 하강추세(-3.5℃, 참고용) → 보습라인 전환 고려 · 평년 기준 전망: 1개월 후(12월) 평균최고 6.1℃ · 3개월 후(2월) 평균최고 6.4℃ · 6개월 후(5월) 평균최고 22.3℃",
       "chips": [
-        "기온 7.5℃",
+        "기온 9.5℃",
         "PM10 —",
-        "습도 82%",
-        "UV 2.3",
-        "16일추세 -5℃"
+        "습도 86%",
+        "UV 2.7",
+        "평년대비 +1.3℃",
+        "16일추세 -3.5℃",
+        "평년전망 1m 6.1℃/3m 6.4℃/6m 22.3℃"
       ],
       "_sample": false
     },
@@ -37,13 +39,13 @@
       "score": 3,
       "method": "v2",
       "components": [],
-      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 52종 언급 집계 · 축 분포 소비>기능>제형 · 최다 \"메이크업·수출·올리브영·더마·크림\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
+      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 51종 언급 집계 · 축 분포 소비>기능>제형 · 최다 \"메이크업·수출·크림·올리브영·더마\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
       "chips": [
         "기사 160건",
         "모멘텀 미측정",
-        "메이크업 9건",
+        "메이크업 11건",
         "수출 9건",
-        "올리브영 6건"
+        "크림 6건"
       ],
       "_sample": true
     }
@@ -83,7 +85,7 @@
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 34
+        "items": 33
       }
     ],
     "formulations": []
@@ -97,7 +99,7 @@
   "newsTrends": [
     {
       "name": "메이크업",
-      "count": 9,
+      "count": 11,
       "axis": "소비"
     },
     {
@@ -106,22 +108,17 @@
       "axis": "소비"
     },
     {
-      "name": "올리브영",
+      "name": "크림",
       "count": 6,
+      "axis": "제형"
+    },
+    {
+      "name": "올리브영",
+      "count": 5,
       "axis": "소비"
     },
     {
       "name": "더마",
-      "count": 6,
-      "axis": "소비"
-    },
-    {
-      "name": "크림",
-      "count": 5,
-      "axis": "제형"
-    },
-    {
-      "name": "무신사",
       "count": 5,
       "axis": "소비"
     },
@@ -136,19 +133,24 @@
       "axis": "기능"
     },
     {
-      "name": "글로우",
-      "count": 3,
-      "axis": "기능"
-    },
-    {
       "name": "PDRN",
       "count": 3,
       "axis": "성분"
     },
     {
+      "name": "무신사",
+      "count": 3,
+      "axis": "소비"
+    },
+    {
       "name": "다이소",
       "count": 3,
       "axis": "소비"
+    },
+    {
+      "name": "글로우",
+      "count": 3,
+      "axis": "기능"
     },
     {
       "name": "퍼퓸",
@@ -307,6 +309,13 @@
         "via": "news"
       },
       {
+        "title": "화해, 올해 뷰티 트렌드 공개… \"정밀 검색과 일상 노화 관리가 대세\" - 머니투데이 - 머니투데이",
+        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1iY28wY0F1aEhvSUk1RVJvNXkxOWlVNS1fVWdoZFl2RHEzU3NTWVBIYWxRdHdQVkl0cDRIcGRwT0dUc1pneVAzT1RTOXlqTUlFQzdsU3Z0cFlsYWl2SHVUNUlkRnVRaEJUVHfSAW9BVV95cUxQOEQzWkhvay1NZDhaemlsbUNON2tTX3JtRGdwOGpZYkpJMU9IUkUzV0dSRldDTVE3emlEa0hlNHo5SC1pTnVQWVUzT055WVZSYXRGUFQ3NDlzMVBkTmJwdWdjdzQ5VGV0czRwd1E5Y1E?oc=5",
+        "date": "Mon, 02 Mar 2026 08:00:00 GMT",
+        "publisher": "화해 비즈니스 인사이트",
+        "via": "news"
+      },
+      {
         "title": "화해, 1250만 데이터 기반 ‘2026 뷰티 트렌드 리포트’ 공개 - 벤처스퀘어",
         "link": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE1iREw1LUlfV3ZJUzZvTU5vOHJUSEptSzU5WkdMQWh5TDJRblN3RzhXU2R6UkI0OFBlS0lnc0dvSko5bnM1NWNFUVVQalF2bTQ?oc=5",
         "date": "Fri, 27 Feb 2026 08:00:00 GMT",
@@ -321,9 +330,9 @@
         "via": "news"
       },
       {
-        "title": "화해, 올해 뷰티 트렌드 공개… \"정밀 검색과 일상 노화 관리가 대세\" - 머니투데이 - 머니투데이",
-        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1iY28wY0F1aEhvSUk1RVJvNXkxOWlVNS1fVWdoZFl2RHEzU3NTWVBIYWxRdHdQVkl0cDRIcGRwT0dUc1pneVAzT1RTOXlqTUlFQzdsU3Z0cFlsYWl2SHVUNUlkRnVRaEJUVHfSAW9BVV95cUxQOEQzWkhvay1NZDhaemlsbUNON2tTX3JtRGdwOGpZYkpJMU9IUkUzV0dSRldDTVE3emlEa0hlNHo5SC1pTnVQWVUzT055WVZSYXRGUFQ3NDlzMVBkTmJwdWdjdzQ5VGV0czRwd1E5Y1E?oc=5",
-        "date": "Mon, 02 Mar 2026 08:00:00 GMT",
+        "title": "‘보습’ 검색은 줄고 ‘레티날’ 검색은 500% 늘었다 – K뷰티 소비자, 무엇이 달라졌나 - 플래텀(Platum)",
+        "link": "https://news.google.com/rss/articles/CBMiSEFVX3lxTE8yWnB2OUNHZGJXMlUxRHFaT2xLRFkwRUd0SHFYNlpTdFhIbmdFa2U1UWFHZTlmWEVBWWJ4eEhOd2hSXzBBUl9jaw?oc=5",
+        "date": "Fri, 27 Feb 2026 05:43:07 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -331,13 +340,6 @@
         "title": "화해, 2026 뷰티 트렌드 ‘F.I.N.D’ 발표 - 주간신문씨엠엔",
         "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTE0wUmpvN1RqRWhrMHE2R2VmX1JPY19OcHlxd09tTnFWeTJwdmU2V3Z6a05XcFNpZXlfalpwQkdmZlpIN1VxT1JXRy1KajI3MWlfa2pUS2RKOUJpdHdLNlY4T1pQam5zZnY2MkpJ?oc=5",
         "date": "Thu, 05 Mar 2026 08:00:00 GMT",
-        "publisher": "화해 비즈니스 인사이트",
-        "via": "news"
-      },
-      {
-        "title": "‘보습’ 검색은 줄고 ‘레티날’ 검색은 500% 늘었다 – K뷰티 소비자, 무엇이 달라졌나 - 플래텀(Platum)",
-        "link": "https://news.google.com/rss/articles/CBMiSEFVX3lxTE8yWnB2OUNHZGJXMlUxRHFaT2xLRFkwRUd0SHFYNlpTdFhIbmdFa2U1UWFHZTlmWEVBWWJ4eEhOd2hSXzBBUl9jaw?oc=5",
-        "date": "Fri, 27 Feb 2026 05:43:07 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -478,7 +480,7 @@
   "kwVolume": [
     {
       "name": "메이크업",
-      "count": 9,
+      "count": 11,
       "axis": "소비"
     },
     {
@@ -487,22 +489,17 @@
       "axis": "소비"
     },
     {
-      "name": "올리브영",
+      "name": "크림",
       "count": 6,
+      "axis": "제형"
+    },
+    {
+      "name": "올리브영",
+      "count": 5,
       "axis": "소비"
     },
     {
       "name": "더마",
-      "count": 6,
-      "axis": "소비"
-    },
-    {
-      "name": "크림",
-      "count": 5,
-      "axis": "제형"
-    },
-    {
-      "name": "무신사",
       "count": 5,
       "axis": "소비"
     },
@@ -517,19 +514,24 @@
       "axis": "기능"
     },
     {
-      "name": "글로우",
-      "count": 3,
-      "axis": "기능"
-    },
-    {
       "name": "PDRN",
       "count": 3,
       "axis": "성분"
     },
     {
+      "name": "무신사",
+      "count": 3,
+      "axis": "소비"
+    },
+    {
       "name": "다이소",
       "count": 3,
       "axis": "소비"
+    },
+    {
+      "name": "글로우",
+      "count": 3,
+      "axis": "기능"
     },
     {
       "name": "퍼퓸",
@@ -539,13 +541,13 @@
   ],
   "kwSurge": null,
   "kwHighFreq": null,
-  "rssText": "티르티르, 日 도쿄서 '뷰티 호텔' 열었다…체험형 팝업 성료 글로벌 메이크업 브랜드 티르티르(TIRTIR)가 일본 도쿄에서 호텔 콘셉트의 체험형 팝업스토어 ‘글램 스위트 오브 글로우(Glam Suite Of Glow)’를 성공적으로 마무리했다.티르티르는 지난 11월 3일부터 8일까지 총 6일간 일본 도쿄 오모테산도에서 이번 팝업을 진행했다. 호텔에 체크인한 뒤 각 공간을 경험하는 과정을 뷰티 체험과 연결해 구성한 것이 특징으로, 사전 예약 개시 하루 만에 전 회차 예약이 마감되며 행사 시작 전부터 높은 관심을 모았다.이번 팝업은 제품 판매보다 소비자들이 티르티르의 다양한 제품과 컬러를 직접 필로디, 2026 코스모프로프 아시아 홍콩 박람회 참가 주식회사 제이디티앤티 (대표 방지현)가 전개하고 있는 프리미엄 패밀리 스킨케어 브랜드 필로디 (Feelody)가 2026년 11월 11일부터 13일까지 HKCEC에서 개최되는 2026 코스모프로프 아시아 홍콩 (Cosmoprof Asia Hong Kong) 박람회에 참가한다고 밝혔다. 특히 금번 박람회에 제이디티앤티는 서울시 산하의 K-뷰티 유망 기업의 디자인, 유통, 수출 등 전 과정을 통합 지원하는 서울뷰티허브와 협업하여 참가 예정이다.올해로 29회째를 맞은 이번 전시회는 스킨케어, 헤어, 메이크업, 네일, 화장품 원료, 패키징 이옴, 마이크로바이옴 기반 트러블 케어 라인 리뉴얼 뉴셀렉트가 전개하는 스킨케어 브랜드 이옴(EIOM)이 브랜드 리뉴얼을 통해 마이크로바이옴 기반 스킨케어 전문성을 강화하고, 주요 트러블 케어 제품의 성분 구성을 개선했다고 밝혔다.이번 리뉴얼은 마이크로바이옴을 기반으로 피부 본연의 균형을 고려하는 브랜드 방향성을 강화하는 데 초점을 맞췄다. 특히 과도한 피지와 묵은 각질 등 트러블 피부의 주요 고민을 세심하게 관리할 수 있도록 핵심 제품의 성분 구성을 보완하고, 피부 진정과 밸런스 케어까지 고려해 제품 경쟁력을 높였다.대표 제품인 ‘트러블 바이옴 패치 마스크’는 기존 티트리 바이옴과 마리엔메이, ‘무신사 뷰티 성수점’ 입점 K-뷰티 스킨케어 브랜드 마리엔메이(Mary&May, 대표 조규태)가 서울 성수동 ‘무신사 뷰티 성수점’에 입점하며 국내 오프라인 유통 접점을 확대한다. 11월 10일(화) 프리오픈을 거쳐 11일(수) 정식 오픈하며, ‘스피큘 PDRN 크림 라인(Spicule PDRN Cream Line)’과 ‘센서티브 수딩 젤 크림(Sensitive Soothing Gel Cream)’ 등 주요 스킨케어 제품을 선보인다.전 세계 70여 개국에 진출해 해외 매출 비중 85% 이상을 기록하고 있는 마리엔메이는 글로벌 시장에서 쌓아 온 브랜드 경험을 아모레퍼시픽, ‘밋유어뷰티 멘토링’ 1기 성료 아모레퍼시픽이 미래세대의 자기이해와 진로탐색을 지원하는 ‘밋유어뷰티(MEET YOUR BEAUTY) 멘토링’ 1기를 마무리했다.이번 프로그램은 전남 진도군 석교중학교 학생 30명을 대상으로 10월 13일부터 11월 4일까지 3회에 걸쳐 진행했다. 아모레퍼시픽과 월드비전, 오리진디자인, 진도교육지원청이 협력해 지역 청소년들이 자신의 관심사와 강점을 이해하고 다양한 진로와 미래의 가능성을 탐색할 수 있도록 마련했다.‘밋유어뷰티’는 미래세대가 ‘나다운 아름다움’을 발견하고 자신만의 진로와 기회를 만들어갈 수 있도록 지원하는 아모레퍼시픽의 아모레퍼시픽, ‘오토파지 활성화’ 통한 노화 피부 개선 기전 규명 아모레퍼시픽이 나이가 들수록 저하되는 피부 장벽 기능에 주목해, 독자 개발한 역노화 소재 &#39;레드플라보노이드(RE.D Flavonoid®)&#39;의 오토파지(Autophagy, 자가포식) 활성화 메커니즘과 피부 개선 효능을 과학적으로 규명했다. 이번 연구는 아모레퍼시픽이 KAIST와의 공동연구를 통해 피부 역노화의 가능성을 확인하고, 그 과정에서 핵심 소재로 주목한 레드플라보노이드에 대한 후속 연구다.아모레퍼시픽은 노화 피부의 장벽 기능 저하가 &#39;오토파지 기능 저하&#39;와 밀접하게 연관되어 있음을 확인하고, 이를 CJ올리브영, AI 쇼핑 어시스 올리브영, AI 쇼핑 어시스턴트 '올영 티키' 시범 운영  아모레퍼시픽, '밋유어뷰티 멘토링' 1기 성료  아모레퍼시픽, 노화 피부 장벽 개선하는 오토파지 활성화 기전 규명  '코스모프로프 아시아 2026' 개막…K-뷰티 기업 488개사 홍콩 총집결  무신사 100번째 매장은 '뷰티'…올리브영과 성수 격돌  해외 소비자의 '관심'… 매출로 바꾸는 방법은?  日 고급 뷰티 브랜드 ‘데코르테’ 얼타 뷰티 입점  미국 화장품협회, 중간선거 관련 공식 입장문 공개  라라레서피, 무신사 성수 입점… 해외 이어 국내 유통 확대  설화수, 카카오톡 기프트X와 북촌서 홀리데이 체험 운영  China's K-Beauty Market Rebalances as Functional Skincare Outpaces Traditional Categories China's appetite for Korean beauty products showed diverging trends across categories in October 2026, with growth concentrated in functional skincare and premium complexion products, while traditionally strong segments such as sheet masks and sun care continued to lose momentum.According to Beauty K-뷰티, 수출 호조 속 해외 각국서 체험형 마케팅으로 현지 공략 최근 뷰티업계가 제품 판매를 넘어 소비자 경험을 제공하는 체험형 마케팅을 강화하고 있다.팝업스토어와 메이크업 클래스, 문화 전시, 맞춤형 서비스 등을 통해 브랜드를 직접 경험하게 하는 전략이 글로벌 시장 공략의 핵심 수단으로 자리 잡고 있다.특히 K-뷰티 기업들은 글로벌 소비자와의 접점을 확대하기 위해 일본, 미국, 몽골 등 주요 해외 시장에서 체험형 마케팅을 적극 전개하고 있다.일본에서는 캐릭터 협업 팝업스토어와 메이크업 클래스, 터치업 서비스 등을 통해 소비자 친밀도와 신제품 인지도를 높이고 있으며, 미국에서는 퍼스널 쉐이드 매 BASF가 본 K-뷰티의 경쟁력은? &quot;과학적 효능 입증 더해야&quot; 글로벌 화학기업 BASF가 K-뷰티의 핵심 경쟁력으로 혁신적인 성분과 차별화된 텍스처, 소비자가 체감할 수 있는 성능을 꼽았다.다만 글로벌 시장에서 지속적인 성장을 이어가기 위해서는 K-뷰티 특유의 창의성에 과학적 효능 입증을 더하고, 고기능 스킨케어와 웰니스 등 새로운 영역에 대한 기술 역량을 강화해야 한다고 진단했다.뷰티경제의 추가 취재에 따르면 BASF는 최근 '인-코스메틱스 아시아 2026(in-cosmetics Asia 2026)'에서 공개한 'Beyond Beauty: Future Unlocked'를 통해 글로벌 뷰티 시 10월 티몰 뷰티 트렌드 리포트①: 마스크팩 TOP10 판매량 41.9%↓...K-뷰티 68.4%↓ [편집자 주] 뷰티경제는 2022년 7월부터 중국 최대 전자상거래 플랫폼 티몰(Tmall)을 통해 8개 주요 품목의 중국 뷰티시장 동향을 분석하고 있다. 아울러 국내 화장품의 중국 시장 경쟁력도 함께 진단하고 있다. 이번 기사에서는 2026년 10월 티몰 마스크팩 소비 트렌드를 점검한다.중국 티몰 마스크팩 시장의 경쟁 구도가 1년 만에 달라졌다.지난해 중국 로컬 브랜드가 판매량 상위권을 독식한 것과 달리 올해는 프랑스 브랜드가 1·2위를 차지하며 시장 전면에 부상했다. 반면 K-뷰티 마스크팩의 시장 영향력은 축소된 것으로 나타났다. 주가로 읽는 K-뷰티: 중견주, 외국인은 담고 기관은 관망 최근 5거래일 동안 중견 화장품주의 주가가 일제히 하락한 것으로 나타났다. 외국인 투자자들은 일부 종목을 중심으로 매수세를 보였지만 기관투자자들은 전반적으로 관망하는 모습이었다.뷰티경제가 네이버증권 자료를 바탕으로 한국화장품, 토니모리, 에이블씨엔씨, 잇츠한불, 애경산업 등 국내 중견 화장품주 5개 종목의 최근 5거래일(11월 3일~9일) 투자자별 수급과 주가 흐름을 분석",
+  "rssText": "머리 건조 시간 줄여주는 ‘그래비티 퀵 드라이 샴푸’ 12일 출시 KAIST 화학과 이해신 석좌교수 연구팀의 교원 창업기업인 폴리페놀팩토리가 머리 말리는 시간을 획기적으로 줄여주는 ‘그래비티 퀵 드라이 샴푸’를 선보이며 헤어케어 시장에 새로운 지평을 열고 있다. 기존의 모발 건조 속도를 높이기 위한 경쟁이 주로 드라이어의 성능 향상에 머물렀던 것과 달리, 이번 신제품은 ‘샴푸 단계’ 그 자체에서부터 건조 효율을 극대화한다는 점에서 차별화된 혁신을 보여주고 있다.실제 소비자들의 반응은 정식 출시 이전부터 뜨겁게 달아올랐다. 지난 5일 올리브영을 통해 먼저 선보인 사전 출시 물량은 단 24분 만에 전 이미인, '코스모팩 아시아 2026'서 마스크·패치 신제품 17종 공개 화장품 ODM 전문기업 이미인(IMINE)이 ‘코스모팩 아시아 2026(COSMOPACK ASIA 2026)’에 참가해 2027년 봄·여름(SS) 시즌 마스크·패치 신제품 17종을 글로벌 바이어들에게 선보였다고 12일 밝혔다. 피부 온도에 반응하는 금실 캡슐 마스크, 진공 흡착 구조로 얼굴에 착 붙는 하이드로겔 등 소재와 구조를 글로벌 최신 트렌드에 맞춰 새로 설계한 제품들이다.코스모팩 아시아는 아시아·태평양 지역 대표 B2B 뷰티박람회인 ‘코스모프로프 아시아’ 가운데 화장품 공급망을 다루는 전시로, 화장품 원료, 패키징, 제조 설 시그닉(signiq), ‘자작나무 PDRN 수분광 세럼·크림’ 감성 뷰티 브랜드 ‘시그닉’(signiq)이 핀란드산 자작나무 유래 PDRN 함유 원료를 20만 ppm 고함량으로 담아 피부 속수분과 수분 장벽을 집중 케어해 주는 ‘자작나무 PDRN 수분광 세럼·크림’을 새롭게 출시했다.자작나무 PDRN 수분광 세럼·크림은 건조함과 속당김, 푸석한 피부결 등 피부가 보내는 수분 부족 신호에 주목해 개발됐다. 애경산업 연구소는 피부 천연 보습 인자(NMF)를 닮은 자작나무 유래 성분의 특성에 착안해 피부 본연의 수분 장벽을 케어하는 데 초점을 맞췄으며, 특허 출원한 순도 99% 핀란드산 자작나무 유 BAZZAAL, 에스쁘아·데이비드 서와 LA서 ‘No Filter’ 행사 개최 K-뷰티 인플루언서 마케팅 에이전시 BAZZAAL(대표 클로이 정)은 아모레퍼시픽그룹의 메이크업 브랜드 에스쁘아(espoir), 포토그래퍼 데이비드 서(David Suh)와 함께 지난달 29일(현지 시간) 미국 로스앤젤레스에서 크리에이터 초청 뷰티 행사 ‘No Filter’를 열었다고 12일 밝혔다.행사는 데이비드 서가 운영하는 LA 사진 스튜디오 ‘DASU Studios’에서 열렸고, 미국 현지 크리에이터 약 20명이 초청됐다. BAZZAAL은 에스쁘아와 정한 콘셉트로 프로그램을 짜고, 크리에이터 섭외와 공간 연출, 현장 운영을 한국응용과학기술학회, 중국 ‘미건강산업 글로벌 발전 세미나’ 참석 한국응용과학기술학회(회장 양재찬 The Korean Society of Applied Science and Technology, KSAST)는 지난 11월 6일 중국 샤먼이공대학교에서 열린 ‘미건강산업 글로벌 발전 세미나’를 성공적으로 주최했다. 이번 세미나는 샤먼이공대학교(厦门理工学院）, 샤먼대학 부속제일병원（厦门大学附属第一医院）, 세계미용대회(世界美发大会） 조직위원회가 공동 주최했다.국제 세미나에는 한국응용과학기술학회 핵심 임원진 및 전문가가 대거 참여하여 학술 교류의 깊이를 더 했다. 이날 주요 참석 인사로는 한국측에서는 양재 퀵 뷰티 브랜드 센슬(SENSEL), '무신사 뷰티 성수' 입점 바쁜 사람들을 위한 &#39;퀵 뷰티&#39;를 지향하는 라이프스타일 뷰티 브랜드 센슬(SENSEL)이 11일 서울 성동구 성수동에 문을 연 &#39;무신사 뷰티 성수&#39;에 입점하며 오프라인 유통 채널 확장에 나선다.&#39;무신사 뷰티 성수&#39;는 지난 9월 오픈한 &#39;무신사 뷰티 홍대&#39;에 이은 무신사 뷰티의 두 번째 단독 매장이다. 연무장길에 지상 1~2층 규모로 들어선 매장에는 스킨케어와 메이크업, 프래그런스, 헤어·바디케어 등 약 700개 브랜드 해외 매장에 들어간 K-뷰티, 그다음은  [인터뷰] K-뷰티 해외 진출, 전시 넘어 유통 판로 지원까지  에이피알 '에이지알' 앱, 누적 다운로드 250만 건 돌파  이미인, '코스모팩 아시아 2026'서 마스크·패치 신제품 17종 공개  코스메카코리아, 자생 생물자원 화장품 소재 개발  화장품 ODM 3사, 주문 폭증에 생산 전략 제각각  올영세일 성과, 광고 '시작 전'에 갈린다  미국  헬렌 오브 트로이 인수 제안 전원일치 비토  ‘니베아 크림’ 용기 재활용 어게인 앤 어게인..  K-뷰티, 미국서 '잘 팔리는' 다음을 찾다  Skin Barrier Repair Overtakes Hydration as China’s Sheet Mask Market Evolves China’s sheet mask market is undergoing a significant transformation as consumers shift from basic hydration products toward skin repair and barrier-care solutions, reshaping competition among domestic and international beauty brands on Tmall.According to data compiled by Beauty Economy, the combine Experience Becomes the New Battleground in Global Beauty Marketing As competition intensifies across the global beauty industry, brands are increasingly shifting their focus beyond product promotion toward experiential marketing strategies designed to create meaningful consumer engagement.Pop-up stores, beauty classes, cultural exhibitions, personalized consultatio K-뷰티, 중국 수출 회복 신호…중국 재공략·글로벌 확장 '투트랙' 가속 K-뷰티의 대중국 수출이 회복 신호를 보이는 가운데 정부와 유관기관도 중국 시장 공략 지원을 강화하고 있다.산업통상자원부에 따르면 올해 10월 화장품의 대중국 수출액은 1억4,000만 달러로 지난해 같은 기간보다 23.4% 증가했다. 같은 기간 전체 화장품 수출액도 14억4,400만 달러로 57.5% 늘었다.이에 따라 한국무역협회와 대한무역투자진흥공사(KOTRA)는 중국국제수입박람회(CIIE)와 홍콩 코스모프로프를 발판으로 국내 화장품·소비재 기업의 중국 및 아시아 시장 진출 지원을 확대하고 있다.신흥 K-뷰티 브랜드, 중국 재진출 K-뷰티 美 수출 62.7%↑…리엔케이, 코스트코 25개 매장 입점 K-뷰티의 미국 수출이 급증하는 가운데, 코웨이 자회사 힐러비의 리엔케이가 세포과학 기반 스킨케어 제품을 앞세워 미국 시장 공략에 나섰다.실제 미국 시장은 K-뷰티 수출 성장을 견인하는 핵심 시장이다. 산업통상자원부에 따르면 올해 10월 화장품 수출액은 14억4,400만 달러로 지난해 같은 기간(9억1,700만 달러)보다 57.5% 증가했다. 이 가운데 미국 수출은 2억3,000만 달러로 전년 동기 대비 62.7% 늘어나 주요 수출국 가운데 높은 성장세를 기록했다.뷰티경제 취재 결과, '셀 투 셀 크림'은 현재 미국 주요 거점 지역 10월 티몰 뷰티 트렌드 리포트②: 선케어 TOP10 판매량 17.6% 증가...한국관은 34.4% 감소 [편집자 주] 뷰티경제는 2022년 7월부터 중국 최대 전자상거래 플랫폼인 티몰(Tmall)을 통해 8개 주요 품목의 중국 뷰티시장 동향을 분석하고 있다. 아울러 K-뷰티의 중국 시장 경쟁력도 함께 진단하고 있다. 이번 기사에서는 2026년 10월 티몰 선케어 소비트렌드를 점검한다.중국 티몰 선케어 시장이 성장세를 이어간 것으로 나타났다. 지난해에 이어 태국 브랜드 미스틴(Mi",
   "climateTrend": {
     "trend16": {
-      "week1": 14,
-      "week2": 8.9,
-      "delta": -5
+      "week1": 13.1,
+      "week2": 9.7,
+      "delta": -3.5
     },
-    "deviation": null
+    "deviation": 1.3
   }
 }
