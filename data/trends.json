@@ -1,17 +1,17 @@
 {
-  "collectedAt": "2026-11-14T01:20:36.414Z",
+  "collectedAt": "2026-11-15T00:52:00.095Z",
   "sig": {
     "climate": {
-      "score": 2.8,
-      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 -2.6℃ → 시즌 지연 가능성 · 평년 기준 전망: 1개월 후(12월) 평균최고 4℃ · 3개월 후(2월) 평균최고 7.3℃ · 6개월 후(5월) 평균최고 23.7℃",
+      "score": 3.4,
+      "interpret": "가을철 저온 기조 → 보습·고영양 크림 수요 우위 · 평년 대비 +3.1℃ → 시즌 조기 진입 가능성 · 평년 기준 전망: 1개월 후(12월) 평균최고 3℃ · 3개월 후(2월) 평균최고 7.3℃ · 6개월 후(5월) 평균최고 24.2℃",
       "chips": [
-        "기온 9.4℃",
+        "기온 10.6℃",
         "PM10 —",
-        "습도 96%",
-        "UV 0.3",
-        "평년대비 -2.6℃",
-        "16일추세 +0℃",
-        "평년전망 1m 4℃/3m 7.3℃/6m 23.7℃"
+        "습도 85%",
+        "UV 1.9",
+        "평년대비 +3.1℃",
+        "16일추세 -0.4℃",
+        "평년전망 1m 3℃/3m 7.3℃/6m 24.2℃"
       ],
       "_sample": false
     },
@@ -39,13 +39,13 @@
       "score": 3,
       "method": "v2",
       "components": [],
-      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 45종 언급 집계 · 축 분포 소비>제형>기능 · 최다 \"메이크업·수출·피지·더마·올리브영\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
+      "interpret": "뷰티미디어 4개 매체 기사 160건 수집 · 키워드 46종 언급 집계 · 축 분포 소비>제형>기능 · 최다 \"메이크업·수출·크림·피지·더마\" — 증감 축(검색·구매·수출)이 없어 점수는 중립 3.0 (네이버 키 등록 시 변화율 산출)",
       "chips": [
         "기사 160건",
         "모멘텀 미측정",
         "메이크업 13건",
         "수출 9건",
-        "피지 5건"
+        "크림 6건"
       ],
       "_sample": true
     }
@@ -79,24 +79,16 @@
         "platform": "@cosme",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 13
+        "items": 11
       },
       {
         "platform": "샤오홍슈",
         "mode": "뉴스 대리",
         "ok": true,
-        "items": 19
+        "items": 15
       }
     ],
     "formulations": [
-      {
-        "code": "MST",
-        "name": "미스트",
-        "mentions": 1,
-        "platforms": [
-          "Ulta"
-        ]
-      },
       {
         "code": "ESS",
         "name": "에센스·세럼",
@@ -125,6 +117,11 @@
       "axis": "소비"
     },
     {
+      "name": "크림",
+      "count": 6,
+      "axis": "제형"
+    },
+    {
       "name": "피지",
       "count": 5,
       "axis": "기능"
@@ -138,11 +135,6 @@
       "name": "올리브영",
       "count": 5,
       "axis": "소비"
-    },
-    {
-      "name": "크림",
-      "count": 5,
-      "axis": "제형"
     },
     {
       "name": "장벽",
@@ -263,16 +255,16 @@
         "via": "news"
       },
       {
-        "title": "트렌드로 연결된 K-뷰티… 112개국 바이어 만나는 ‘트렌드 서밋’ - THE K BEAUTY SCIENCE",
-        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE92eFA4UVBDcVdQajdGWDIxM1JqYzZVSnduVW5vaUZwZXBPM1kxV1R4dHNBR2pjbzRwenpEaG96WmVaUHdBbWdkR2ttTUM1OEJid1lycVVreHE0TXdUaUgwWWdvSHEtVFdpNWc?oc=5",
-        "date": "Tue, 24 Jun 2025 07:00:00 GMT",
+        "title": "트렌디어, 해외 바이어에 K뷰티 트렌드 소개 - 주간신문씨엠엔",
+        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBoMm13cURwc0R6dExlZnFGSjBLZWpYV1FiR0lQQlkwU3JoVXVjRTJmSkdRNXVUMHJNUnNtR0l4d0FuSDFCVDRKR016NE5Va3hRMDVyUktOQmtjc0JPQ1ktbm5NOTktTU9NelF3?oc=5",
+        "date": "Thu, 01 Aug 2024 07:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
       {
-        "title": "트렌디어, 해외 바이어에 K뷰티 트렌드 소개 - 주간신문씨엠엔",
-        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBoMm13cURwc0R6dExlZnFGSjBLZWpYV1FiR0lQQlkwU3JoVXVjRTJmSkdRNXVUMHJNUnNtR0l4d0FuSDFCVDRKR016NE5Va3hRMDVyUktOQmtjc0JPQ1ktbm5NOTktTU9NelF3?oc=5",
-        "date": "Thu, 01 Aug 2024 07:00:00 GMT",
+        "title": "트렌드로 연결된 K-뷰티… 112개국 바이어 만나는 ‘트렌드 서밋’ - THE K BEAUTY SCIENCE",
+        "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE92eFA4UVBDcVdQajdGWDIxM1JqYzZVSnduVW5vaUZwZXBPM1kxV1R4dHNBR2pjbzRwenpEaG96WmVaUHdBbWdkR2ttTUM1OEJid1lycVVreHE0TXdUaUgwWWdvSHEtVFdpNWc?oc=5",
+        "date": "Tue, 24 Jun 2025 07:00:00 GMT",
         "publisher": "트렌디어 라이브러리",
         "via": "news"
       },
@@ -333,13 +325,6 @@
         "via": "news"
       },
       {
-        "title": "화해, 올해 뷰티 트렌드 공개… \"정밀 검색과 일상 노화 관리가 대세\" - 유니콘팩토리",
-        "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTE1Mb0VRSWtnYVJpS2ZoN3h4NjFFUjdZdkVOTkdTU09oS3lkZEloa3Y0WkJhR2dCTThEQVFMQ0UyNUhQVkZNQVZ5SnVNUEFNZkRkTURIOUU0RVcxbHhzZmlaTFFtdk9pdGFMSks4UQ?oc=5",
-        "date": "Mon, 02 Mar 2026 08:00:00 GMT",
-        "publisher": "화해 비즈니스 인사이트",
-        "via": "news"
-      },
-      {
         "title": "화해, 1250만 데이터 기반 ‘2026 뷰티 트렌드 리포트’ 공개 - 벤처스퀘어",
         "link": "https://news.google.com/rss/articles/CBMiT0FVX3lxTE1iREw1LUlfV3ZJUzZvTU5vOHJUSEptSzU5WkdMQWh5TDJRblN3RzhXU2R6UkI0OFBlS0lnc0dvSko5bnM1NWNFUVVQalF2bTQ?oc=5",
         "date": "Fri, 27 Feb 2026 08:00:00 GMT",
@@ -347,9 +332,9 @@
         "via": "news"
       },
       {
-        "title": "자주(JAJU), 홈 셀프케어 위한 마사지 아이템 출시…관련 제품 확대 - 신세계그룹 뉴스룸",
-        "link": "https://news.google.com/rss/articles/CBMifkFVX3lxTE1NaDFLdDNtS0hYcHh1UzVLazRXYzFYckZMOVpoUnZVLXhfY3NOem1wZWM2UnNZdTBLVDdHb1Fib1NJUmJSRzEyRUdZMTNmV2lQY29HeWtBSHNqOWI0LWVIb0MwQUtfeTZnMFZOVTY5RkVBLUhwbGhianZ3cDNuZw?oc=5",
-        "date": "Wed, 11 Nov 2026 00:00:00 GMT",
+        "title": "화해 1250만 사용자 데이터로 읽은 2026 뷰티 트렌드 FIND 발표 - 한경매거진",
+        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFBSaFBmRkNEbDVoTEtiQ3NoNGVLS1RJWXhvMFVseW9HQm9NcHZwY2k2TmZUdzhVaEREN0hPY0o2cFF0dFp6dHdMZWw2V1cxZkt2RnhqcktlMElibllMelVROGtPZ3dVRmtnNDFn?oc=5",
+        "date": "Fri, 27 Feb 2026 08:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -357,6 +342,13 @@
         "title": "‘보습’ 검색은 줄고 ‘레티날’ 검색은 500% 늘었다 – K뷰티 소비자, 무엇이 달라졌나 - 플래텀(Platum)",
         "link": "https://news.google.com/rss/articles/CBMiSEFVX3lxTE8yWnB2OUNHZGJXMlUxRHFaT2xLRFkwRUd0SHFYNlpTdFhIbmdFa2U1UWFHZTlmWEVBWWJ4eEhOd2hSXzBBUl9jaw?oc=5",
         "date": "Fri, 27 Feb 2026 05:43:07 GMT",
+        "publisher": "화해 비즈니스 인사이트",
+        "via": "news"
+      },
+      {
+        "title": "자주(JAJU), 홈 셀프케어 위한 마사지 아이템 출시…관련 제품 확대 - 신세계그룹 뉴스룸",
+        "link": "https://news.google.com/rss/articles/CBMifkFVX3lxTE1NaDFLdDNtS0hYcHh1UzVLazRXYzFYckZMOVpoUnZVLXhfY3NOem1wZWM2UnNZdTBLVDdHb1Fib1NJUmJSRzEyRUdZMTNmV2lQY29HeWtBSHNqOWI0LWVIb0MwQUtfeTZnMFZOVTY5RkVBLUhwbGhianZ3cDNuZw?oc=5",
+        "date": "Wed, 11 Nov 2026 00:00:00 GMT",
         "publisher": "화해 비즈니스 인사이트",
         "via": "news"
       },
@@ -459,9 +451,9 @@
         "via": "news"
       },
       {
-        "title": "화장품산업연구원, 미국 뷰티시장 트렌드 발표 - 주간신문씨엠엔",
-        "link": "https://news.google.com/rss/articles/CBMia0FVX3lxTFAxeWJLb3dYejVKUl85UVpMVjg1UjlldXdsblkwTWpUdjhDeW5TVDZXdnFYeUNTb3VfYWFHdk4yMU5tMVdUNG5FWVdMekJXQTB0RnNsUFNTQXRteXdzMUFpRzNyRG9pa05VYXFV?oc=5",
-        "date": "Mon, 22 Sep 2025 07:00:00 GMT",
+        "title": "대한화장품산업연구원, 미국 뷰티시장 트렌드 보고서 발표 - 시장경제신문",
+        "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBOZVVHbUwwNzYzb3R3bm5WeVc0UWtkUW5QSG52bEExTXFDeGdxT1A5R1E5UzNjeWswenFlQ0t4UkthZHdRYXU5eHZiOThvUTlvNjRQQjl2dHpMN1dtV0R0M1B6UmNsczNIX1ZHcndDVzE?oc=5",
+        "date": "Fri, 19 Sep 2025 07:00:00 GMT",
         "publisher": "대한화장품산업연구원",
         "via": "news"
       }
@@ -506,6 +498,11 @@
       "axis": "소비"
     },
     {
+      "name": "크림",
+      "count": 6,
+      "axis": "제형"
+    },
+    {
       "name": "피지",
       "count": 5,
       "axis": "기능"
@@ -519,11 +516,6 @@
       "name": "올리브영",
       "count": 5,
       "axis": "소비"
-    },
-    {
-      "name": "크림",
-      "count": 5,
-      "axis": "제형"
     },
     {
       "name": "장벽",
@@ -558,13 +550,13 @@
   ],
   "kwSurge": null,
   "kwHighFreq": null,
-  "rssText": "KHIDI 지원사업 '꾸밈' K-뷰티 영토확장에 날개 한국보건산업진흥원(KHIDI)의 K-뷰티 해외 판매장 운영 지원사업을 통해 K-뷰티의 동남아시아 영토 확장을 주도할 혁신적인 오프라인 체험 거점이 아세안 최대 뷰티 격전지인 인도네시아 심장부에서 화려한 대박 흥행 신호탄을 쏘아 올렸다.국내 유망 중소 화장품 브랜드의 안전하고 폭발적인 현지 진출을 견인하는 K-뷰티 체험형 테마파크 ‘꾸밈 (GGU:MEME)’가 지난 11월 7일(금) 인도네시아 자카르타 West Jakarta의 랜드마크인 ‘센트럴 파크 몰(Central Park Mall)’ 2층에 플래그십 스토어를 공식 오픈하고, 첫 피지오겔, 겨울철 민감 피부 위한 ‘손상 장벽 리페어 존’ 팝업 오픈 LG생활건강의 더마톨로지컬 뷰티 브랜드 ‘피지오겔(PHYSIOGEL)’이 겨울철 민감해진 피부의 붉은기와 일상 속 미세손상을 케어하는 ‘레드수딩 AI’ 라인을 앞세워 체험형 팝업스토어를 열었다.피지오겔은 지난 12일부터 오는 15일까지 서울 동대문디자인플라자(DDP)에서 열리는 ‘컬리뷰티페스타2026’에 참가해 ‘손상 장벽 리페어 존’ 부스를 운영한다. 이번 팝업은 겨울철 건조한 환경과 급격한 온도 변화로 민감해지기 쉬운 피부를 위해, 장벽 케어의 중요성을 직관적으로 전달하고자 피부장벽 보수 공사장 콘셉트로 기획됐다.메인 테마로 선 스킨1004, 싱가포르 왓슨스 입점...동남아 오프라인 유통망 확대 글로벌 뷰티 밸류체인 기업 크레이버코퍼레이션(이하 크레이버, 대표 전항일)이 전개하는 원료주의 스킨케어 브랜드 스킨1004(스킨천사)가 싱가포르 주요 헬스앤뷰티(H&B) 채널인 ‘왓슨스(Watsons)’에 공식 입점하며 현지 오프라인 유통망을 강화한다.스킨1004는 싱가포르 왓슨스 전체 100개 매장 중 28개 매장에 입점해 약 30%에 달하는 오프라인 판매 거점을 확보하게 됐다. 기존 온라인 중심의 판매 기반에 주요 오프라인 유통 채널을 통한 소비자 접점을 더해 현지 소비자들의 브랜드 접근성과 제품 경험 기회를 확대한다는 전략이다 동국제약 센텔리안24, ‘컬리뷰티페스타 2026’ 참가 동국제약(대표이사 송준호)의 더마코스메틱 브랜드 센텔리안24가 11월 12일부터 15일까지 서울 동대문디자인플라자(DDP) 아트홀에서 열리는 ‘컬리뷰티페스타 2026’에 참가한다.리테일 테크 기업 컬리가 주최하는 ‘컬리뷰티페스타 2026’은 &#39;당신의 매일을 더 아름답게(Your Day, Your Beauty)&#39;라는 슬로건 아래 아침, 낮, 저녁, 밤 등 하루의 4가지 시간대를 테마로 한 공간으로 구성되어 운영된다. 센텔리안24는 이 중 ‘밤 존’에 단독 부스를 마련했다.센텔리안24 부스에서는 제품 체험과 다양한 이벤트 리쥬란코스메틱, 홍콩·대만·두바이 드럭스토어 입점 재생의학 전문기업 파마리서치(대표이사 손지훈)의 프리미엄 더마 코스메틱 브랜드 &#39;리쥬란코스메틱&#39;이 지난 10월 홍콩과 대만의 대표 드럭스토어에 대규모로 입점한 데 이어, 오는 15일 두바이 왓슨스 론칭 프로모션을 시작으로 중동 시장 공략에 본격 나선다고 13일 밝혔다.이번 확장을 통해 홍콩 대형 유통 체인인 매닝스 약 250개점과 대만 코스메드 약 600개점에 입점했으며, 아랍에미리트 두바이에서는 현지 왓슨스 매장 20여 곳 전체에 입점을 확정했다. 기존 운영 채널을 포함하면 3개 시장에서 총 1,070여 개 규모의 뷰티 브랜드 ‘씬 바이홍(SCENE BY HONG)’ 공식 론칭 25년 경력의 프로 메이크업 아티스트 홍현정(유튜브 ‘홍쓰메이크업플레이’ 홍이모)이 누구나 일상에서 프로의 메이크업 기술을 쉽고 편하게 경험할 수 있도록 만든 메이크업 브랜드 ‘씬 바이홍(SCENE BY HONG)’을 11월 공식 론칭한다.파운더 홍현정은 25년간 국내 패션·뷰티 에디토리얼과 광고 캠페인, 패션쇼는 물론 런던과 뉴욕의 글로벌 무대에서 활동하며 다양한 셀러브리티와 작업해 왔다. 2018년부터는 약 40만 명이 구독하는 유튜브 채널 ‘홍쓰메이크업플레이’를 운영하며 여성들의 현실적인 메이크업 고민에 귀 기울여  대한화장품학회, 27일 추계학술대회 개최  타임아웃, 국내 제조 기반으로 뷰티 진출… TBH글로벌 16일 프리 론칭  홍콩의 밤, K-뷰티에 취하다  피지오겔, DDP서 '피부장벽 보수 공사장' 팝업 운영  한미사이언스 아데시, 무신사·29CM 입점  선진뷰티사이언스, 하이드로겔 3개월 만에 제품화  다카사고, UAE 두바이에 크리에티브 센터..왜?  인공지능‧증강현실 접목 차세대 맞춤형 뷰티 쇼핑  무신사·올리브영, 이번엔 홍대점 '핑크' 대전  중국, 화장품 미생물 검사 '위음성' 줄인다  주가로 읽는 K-뷰티: 외인은 던지고 개인이 받았다...기관 유입 종목만 '선방' 최근 5거래일간 K-뷰티 각 부문의 주요 종목에서 외국인 이탈이 두드러지면서 단기 주가는 전반적인 조정 국면을 나타냈다.뷰티경제가 네이버증권 자료를 바탕으로 11월 6일부터 12일까지 브랜드주, ODM주, 성장주, 플랫폼주 등 각 부문의 주요 7개 종목의 투자자별 수급 및 주가 흐름을 분석한 결과, 종목별 차별화 장세가 뚜렷했던 것으로 나타났다.브랜드주: 아모레퍼시픽·LG생활건강대표 브랜드주는 외국인과 기관의 동반 매도세 속에 개인 투자자의 저가 매수세가 유입되었으나 하락세를 면치 못했다.아모레퍼시픽은 외국인(19,189주)과 기관 양승조 K-water 신임 사장 취임…국가 물관리 혁신 본격화 한국수자원공사(K-water) 제17대 사장에 양승조 전 충남도지사가 취임했다.양승조 신임 사장은 기후위기와 인공지능(AI) 전환에 대응해 국가 물관리 체계를 혁신하고, 물산업을 미래 국가 성장동력으로 육성하겠다는 구상을 밝혔다.양 사장은 13일 취임식에서 ▲국민 생명과 물안전 확보 ▲국정과제 이행 선도 ▲미래 성장엔진 물산업 육성 ▲성과 기반 양극화 해소 ▲안전·청렴·ESG를 통한 국민 신뢰 제고 ▲함께 꿈꾸고 성장하는 일터 조성 등 6대 경영 방향을 제시했다.우선 기후위기에 대응해 대체수자원 개발과 물 공급망 연계를 강화하고 녹 로레알 R&amp;I 총괄 “한국, 북아시아 ‘뷰티 트라이앵글’ 축으로 글로벌 뷰티 트렌드 주도” 글로벌 뷰티 기업 로레알 그룹이 한국·중국·일본을 잇는 북아시아 '뷰티 트라이앵글'의 오픈 이노베이션 생태계를 기반으로, 유망 뷰티 테크 스타트업의 글로벌 스케일업을 본격화한다.바바라 라베르노스(Barbara Lavernos) 로레알 그룹 연구&혁신(R&I) 총괄 수석 부사장은 최근 중국 상하이에서 열린 '제9회 중국국제수입박람회(CIIE)'에서 북아시아 스타트업 육성 프로그램 '2026 로레알 빅뱅' 시상식 연설을 통해 이 같은 글로벌 혁신 전략을 밝혔다.라베르노스 수석 부사장은 \"북아시아는 전 세계에서 가장 역동적인 뷰티 혁신 한국도로공사, 여주휴게소 시설개량 착수…K-휴게소 서비스 강화 한국도로공사가 영동고속도로 여주(인천방향)휴게소를 직계약 휴게소로 전환하고, 고객 중심의 차별화된 서비스를 제공하기 위한 시설개량 공사에 착수했다.이번 사업은 노후 시설을 정비하는 데 그치지 않고, 수익성 중심의 운영 방식에서 벗어나 공공성을 강화하고 고객에게 편안하고 쾌적한 휴식 공간을 제공하기 위해 추진된다.한국도로공사는 이를 통해 세계 최고 수준의 서비스를 갖춘 K-휴게소로 탈바꿈시킨다는 계획이다.시설개량 공사는 오는 11월 16일부터 주차장과 주요 편의시설을 중심으로 본격 진행된다.안전시설물 설치 등 사전 준비 작업이 시작됨 Europe Overtakes the U.S. and China as K-Beauty’s Largest Export Market Europe has overtaken both the United States and China to become the largest export destination for Korean cosmetics, marking a significant shift in the global K-beauty landscape.According to KOTRA, South Korea’s cosmetics exports reached USD 12.6 billion during the first te",
+  "rssText": "KHIDI 지원사업 '꾸밈' K-뷰티 영토확장에 날개 한국보건산업진흥원(KHIDI)의 K-뷰티 해외 판매장 운영 지원사업을 통해 K-뷰티의 동남아시아 영토 확장을 주도할 혁신적인 오프라인 체험 거점이 아세안 최대 뷰티 격전지인 인도네시아 심장부에서 화려한 대박 흥행 신호탄을 쏘아 올렸다.국내 유망 중소 화장품 브랜드의 안전하고 폭발적인 현지 진출을 견인하는 K-뷰티 체험형 테마파크 ‘꾸밈 (GGU:MEME)’가 지난 11월 7일(금) 인도네시아 자카르타 West Jakarta의 랜드마크인 ‘센트럴 파크 몰(Central Park Mall)’ 2층에 플래그십 스토어를 공식 오픈하고, 첫 피지오겔, 겨울철 민감 피부 위한 ‘손상 장벽 리페어 존’ 팝업 오픈 LG생활건강의 더마톨로지컬 뷰티 브랜드 ‘피지오겔(PHYSIOGEL)’이 겨울철 민감해진 피부의 붉은기와 일상 속 미세손상을 케어하는 ‘레드수딩 AI’ 라인을 앞세워 체험형 팝업스토어를 열었다.피지오겔은 지난 12일부터 오는 15일까지 서울 동대문디자인플라자(DDP)에서 열리는 ‘컬리뷰티페스타2026’에 참가해 ‘손상 장벽 리페어 존’ 부스를 운영한다. 이번 팝업은 겨울철 건조한 환경과 급격한 온도 변화로 민감해지기 쉬운 피부를 위해, 장벽 케어의 중요성을 직관적으로 전달하고자 피부장벽 보수 공사장 콘셉트로 기획됐다.메인 테마로 선 스킨1004, 싱가포르 왓슨스 입점...동남아 오프라인 유통망 확대 글로벌 뷰티 밸류체인 기업 크레이버코퍼레이션(이하 크레이버, 대표 전항일)이 전개하는 원료주의 스킨케어 브랜드 스킨1004(스킨천사)가 싱가포르 주요 헬스앤뷰티(H&B) 채널인 ‘왓슨스(Watsons)’에 공식 입점하며 현지 오프라인 유통망을 강화한다.스킨1004는 싱가포르 왓슨스 전체 100개 매장 중 28개 매장에 입점해 약 30%에 달하는 오프라인 판매 거점을 확보하게 됐다. 기존 온라인 중심의 판매 기반에 주요 오프라인 유통 채널을 통한 소비자 접점을 더해 현지 소비자들의 브랜드 접근성과 제품 경험 기회를 확대한다는 전략이다 동국제약 센텔리안24, ‘컬리뷰티페스타 2026’ 참가 동국제약(대표이사 송준호)의 더마코스메틱 브랜드 센텔리안24가 11월 12일부터 15일까지 서울 동대문디자인플라자(DDP) 아트홀에서 열리는 ‘컬리뷰티페스타 2026’에 참가한다.리테일 테크 기업 컬리가 주최하는 ‘컬리뷰티페스타 2026’은 &#39;당신의 매일을 더 아름답게(Your Day, Your Beauty)&#39;라는 슬로건 아래 아침, 낮, 저녁, 밤 등 하루의 4가지 시간대를 테마로 한 공간으로 구성되어 운영된다. 센텔리안24는 이 중 ‘밤 존’에 단독 부스를 마련했다.센텔리안24 부스에서는 제품 체험과 다양한 이벤트 리쥬란코스메틱, 홍콩·대만·두바이 드럭스토어 입점 재생의학 전문기업 파마리서치(대표이사 손지훈)의 프리미엄 더마 코스메틱 브랜드 &#39;리쥬란코스메틱&#39;이 지난 10월 홍콩과 대만의 대표 드럭스토어에 대규모로 입점한 데 이어, 오는 15일 두바이 왓슨스 론칭 프로모션을 시작으로 중동 시장 공략에 본격 나선다고 13일 밝혔다.이번 확장을 통해 홍콩 대형 유통 체인인 매닝스 약 250개점과 대만 코스메드 약 600개점에 입점했으며, 아랍에미리트 두바이에서는 현지 왓슨스 매장 20여 곳 전체에 입점을 확정했다. 기존 운영 채널을 포함하면 3개 시장에서 총 1,070여 개 규모의 뷰티 브랜드 ‘씬 바이홍(SCENE BY HONG)’ 공식 론칭 25년 경력의 프로 메이크업 아티스트 홍현정(유튜브 ‘홍쓰메이크업플레이’ 홍이모)이 누구나 일상에서 프로의 메이크업 기술을 쉽고 편하게 경험할 수 있도록 만든 메이크업 브랜드 ‘씬 바이홍(SCENE BY HONG)’을 11월 공식 론칭한다.파운더 홍현정은 25년간 국내 패션·뷰티 에디토리얼과 광고 캠페인, 패션쇼는 물론 런던과 뉴욕의 글로벌 무대에서 활동하며 다양한 셀러브리티와 작업해 왔다. 2018년부터는 약 40만 명이 구독하는 유튜브 채널 ‘홍쓰메이크업플레이’를 운영하며 여성들의 현실적인 메이크업 고민에 귀 기울여  대한화장품학회, 27일 추계학술대회 개최  타임아웃, 국내 제조 기반으로 뷰티 진출… TBH글로벌 16일 프리 론칭  홍콩의 밤, K-뷰티에 취하다  피지오겔, DDP서 '피부장벽 보수 공사장' 팝업 운영  한미사이언스 아데시, 무신사·29CM 입점  선진뷰티사이언스, 하이드로겔 3개월 만에 제품화  다카사고, UAE 두바이에 크리에티브 센터..왜?  인공지능‧증강현실 접목 차세대 맞춤형 뷰티 쇼핑  무신사·올리브영, 이번엔 홍대점 '핑크' 대전  중국, 화장품 미생물 검사 '위음성' 줄인다  K-Beauty Stocks Diverge as Foreign Selling Pressures Sector; Institutional Buying Lifts Cosmax and PharmaResearch Major South Korean cosmetics and beauty equities experienced a broad short-term correction over the past five trading sessions as persistent foreign selling weighed on investor sentiment, while selective institutional inflows propelled gains in specific ODM and high-growth stocks.According to an ana BASF APAC Chief: K-Beauty Must Look Beyond ‘Hero Ingredients’ to Delivery Systems and Formulation Science K-Beauty must evolve beyond its reliance on trending \"hero ingredients\" and double down on scientific validation, advanced delivery systems, and formulation science to sustain its global growth, according to a senior executive at German chemical giant BASF.In an exclusive written interview with The L’Oréal R&amp;I Chief Barbara Lavernos: South Korea Drives Global Trends as a Core Pillar of North Asia’s ‘Beauty Triangle’ L’Oréal Groupe is accelerating the global scale-up of emerging beauty-tech startups by leveraging what it calls North Asia’s \"Beauty Triangle\"—an interconnected open innovation ecosystem linking South Korea, China, and Japan.Speaking at the \"2026 L’Oréal Big Bang\" awards ceremony held on the sidelin 2026 광군제 뷰티 시장 8.2% 성장…더후·설화수 스킨케어 1·2위 수성 올해로 18년째를 맞은 2026년 중국 최대 쇼핑 축제인 광군제는 과거와 같은 전국적인 쇼핑 열풍에서는 벗어났지만, 소비 합리화와 플랫폼별 판매 채널 다변화 속에서 안정적인 성장세를 이어가면서 11일 막을 내렸다.특히 올해는 복잡한 할인 규정이 간소화되고 소비자들이 가격뿐 아니라 제품의 실질적인 가치를 중시하면서, 대규모 할인 행사에 집중됐던 소비가 일상적인 필요에 따른 구매로 점차 전환되는 양상을 보였다.광군제 전체 거래액 1조 7,764억 위안...전년 대비 4.8% 증가중국 시장조사업체 싱투데이터(星图数据)에 따르면, 2026 10월 티몰 뷰티 트렌드 리포트④: 크림 TOP10 판매량 52.2%↓...K-뷰티 53.8%↑ [편집자 주] 뷰티경제는 2022년 7월부터 중국 최대 전자상거래 플랫폼인 티몰(Tmall)을 통해 8개 주요 품목의 중국 뷰티시장 동향",
   "climateTrend": {
     "trend16": {
-      "week1": 9.8,
-      "week2": 9.8,
-      "delta": 0
+      "week1": 8.7,
+      "week2": 8.2,
+      "delta": -0.4
     },
-    "deviation": -2.6
+    "deviation": 3.1
   }
 }
